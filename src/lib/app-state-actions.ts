@@ -6,6 +6,7 @@ import type {
   KibbutzDropLocation,
   PickupRun,
   PickupRunItem,
+  UserRole,
 } from "@/lib/types";
 
 export type IdFactory = (prefix: string) => string;
@@ -261,6 +262,21 @@ export function updateCollectedPackagesArrival(
 export function approveJoinRequest(state: AppState, requestId: string, deps: ActionDeps) {
   const request = state.joinRequests.find((item) => item.id === requestId);
   if (!request) return state;
+  const existingUser = state.users.find((user) => user.id === request.userId);
+  const approvedRole: UserRole =
+    existingUser?.role === "admin" || existingUser?.role === "owner"
+      ? existingUser.role
+      : "member";
+  const approvedUser = {
+    id: request.userId,
+    fullName: request.fullName,
+    phone: request.phone,
+    role: approvedRole,
+    verificationStatus: "approved" as const,
+    createdAt: existingUser?.createdAt ?? request.createdAt,
+    approvedAt: deps.now(),
+    approvedByUserId: state.currentUser.id,
+  };
 
   return {
     ...state,
@@ -275,17 +291,8 @@ export function approveJoinRequest(state: AppState, requestId: string, deps: Act
         : item,
     ),
     users: [
-      ...state.users,
-      {
-        id: request.userId,
-        fullName: request.fullName,
-        phone: request.phone,
-        role: "member" as const,
-        verificationStatus: "approved" as const,
-        createdAt: request.createdAt,
-        approvedAt: deps.now(),
-        approvedByUserId: state.currentUser.id,
-      },
+      approvedUser,
+      ...state.users.filter((user) => user.id !== request.userId),
     ],
   };
 }

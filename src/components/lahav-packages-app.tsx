@@ -373,7 +373,13 @@ export function LahavPackagesApp() {
     : null;
 
   const pendingJoinRequests = state.joinRequests.filter(
-    (request) => request.status === "pending",
+    (request) =>
+      request.status === "pending" &&
+      !(
+        isOzAdminShortcut(request) &&
+        request.userId === currentUserId &&
+        (currentUser.role === "admin" || currentUser.role === "owner")
+      ),
   );
   const submittedJoinRequest =
     state.joinRequests.find((request) => request.id === submittedJoinRequestId) ??
