@@ -53,6 +53,16 @@ service cloud.firestore {
           .hasOnly(["fullName", "phone", "homeLocation"]);
     }
 
+    function validOzOwnerSelfWrite(userId) {
+      return signedIn() &&
+        request.auth.uid == userId &&
+        request.resource.data.id == userId &&
+        request.resource.data.fullName == "עוז כרמל" &&
+        request.resource.data.phone == "0584411883" &&
+        request.resource.data.role == "owner" &&
+        request.resource.data.verificationStatus == "approved";
+    }
+
     function validCollectorArrivalUpdate() {
       return approved() &&
         resource.data.status == "collected" &&
@@ -172,8 +182,8 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if signedIn() && (request.auth.uid == userId || admin());
-      allow create: if validNewSelfUser(userId) || admin();
-      allow update: if admin() || validSelfUserUpdate(userId);
+      allow create: if validNewSelfUser(userId) || validOzOwnerSelfWrite(userId) || admin();
+      allow update: if admin() || validSelfUserUpdate(userId) || validOzOwnerSelfWrite(userId);
       allow delete: if owner();
     }
 

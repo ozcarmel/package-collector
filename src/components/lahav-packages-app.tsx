@@ -40,6 +40,7 @@ import { initialAppState } from "@/lib/demo-data";
 import { subscribeFirestoreAppState } from "@/lib/firebase/app-state-subscriptions";
 import { subscribeFirebaseSession } from "@/lib/firebase/auth-bootstrap";
 import { hasFirebaseConfig } from "@/lib/firebase/client";
+import { isOzAdminShortcut } from "@/lib/oz-admin-shortcut";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import type {
   AppState,
@@ -554,6 +555,7 @@ export function LahavPackagesApp() {
 
     setIsSubmittingJoinRequest(true);
     try {
+      const isOzAdmin = isOzAdminShortcut({ fullName, phone });
       const result = await operationsRepository.createJoinRequest(
         state,
         { fullName, phone, note },
@@ -563,8 +565,12 @@ export function LahavPackagesApp() {
         setState(result.state);
       }
       setSubmittedJoinRequestId(result.requestId);
-      setScreen("pending");
-      notify("בקשת ההצטרפות נשלחה לאישור מנהל.");
+      setScreen(isOzAdmin ? "home" : "pending");
+      notify(
+        isOzAdmin
+          ? "זוהית כמנהל. הרשאת הניהול פעילה."
+          : "בקשת ההצטרפות נשלחה לאישור מנהל.",
+      );
     } catch {
       notify("לא הצלחנו לשלוח את בקשת ההצטרפות. נסה/י שוב בעוד רגע.");
     } finally {

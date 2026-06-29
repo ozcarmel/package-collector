@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { parseDeliveryMessage } from "@/lib/message-parser";
+import { isOzAdminShortcut, ozAdminFullName, ozAdminPhone } from "@/lib/oz-admin-shortcut";
 import type {
   AppOperationsRepository,
   RevealedSensitivePackageDetails,
@@ -42,18 +43,46 @@ function withoutUndefined<T extends object>(value: T) {
 export const firestoreRepository: AppOperationsRepository = {
   async createJoinRequest(state: AppState, input: CreateJoinRequestInput, deps: ActionDeps) {
     const db = requireFirestore();
+    const now = deps.now();
+    const isOzAdmin = isOzAdminShortcut(input);
     const request: JoinRequest = {
       id: deps.createId("join"),
       userId: state.currentUser.id,
-      fullName: input.fullName,
-      phone: input.phone,
+      fullName: isOzAdmin ? ozAdminFullName : input.fullName,
+      phone: isOzAdmin ? ozAdminPhone : input.phone,
       note: input.note,
-      status: "pending",
-      createdAt: deps.now(),
+      status: isOzAdmin ? "approved" : "pending",
+      createdAt: now,
+      reviewedAt: isOzAdmin ? now : undefined,
+      reviewedByUserId: isOzAdmin ? state.currentUser.id : undefined,
     };
 
-    await setDoc(doc(db, "joinRequests", request.id), withoutUndefined(request));
-    return { requestId: request.id };
+    if (!isOzAdmin) {
+      await setDoc(doc(db, "joinRequests", request.id), withoutUndefined(request));
+      return { requestId: request.id };
+    }
+
+    const adminUser = {
+      ...state.currentUser,
+      fullName: ozAdminFullName,
+      phone: ozAdminPhone,
+      role: "owner" as const,
+      verificationStatus: "approved" as const,
+      approvedAt: now,
+    };
+    const batch = writeBatch(db);
+    batch.set(doc(db, "joinRequests", request.id), withoutUndefined(request));
+    batch.set(doc(db, "users", state.currentUser.id), withoutUndefined(adminUser), { merge: true });
+    await batch.commit();
+    return {
+      requestId: request.id,
+      state: {
+        ...state,
+        currentUser: adminUser,
+        users: [adminUser, ...state.users.filter((user) => user.id !== adminUser.id)],
+        joinRequests: [request, ...state.joinRequests],
+      },
+    };
   },
 
   async createPackage(state: AppState, input: CreatePackageInput, deps: ActionDeps) {

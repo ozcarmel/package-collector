@@ -1,4 +1,5 @@
 import { parseDeliveryMessage } from "@/lib/message-parser";
+import { isOzAdminShortcut, ozAdminFullName, ozAdminPhone } from "@/lib/oz-admin-shortcut";
 import type {
   AppState,
   DeliveryPackage,
@@ -41,6 +42,39 @@ export function createJoinRequest(
   input: CreateJoinRequestInput,
   deps: ActionDeps,
 ) {
+  if (isOzAdminShortcut(input)) {
+    const now = deps.now();
+    const adminUser = {
+      ...state.currentUser,
+      fullName: ozAdminFullName,
+      phone: ozAdminPhone,
+      role: "owner" as const,
+      verificationStatus: "approved" as const,
+      approvedAt: now,
+    };
+    const request = {
+      id: deps.createId("join"),
+      userId: state.currentUser.id,
+      fullName: ozAdminFullName,
+      phone: ozAdminPhone,
+      note: input.note,
+      status: "approved" as const,
+      createdAt: now,
+      reviewedAt: now,
+      reviewedByUserId: state.currentUser.id,
+    };
+
+    return {
+      requestId: request.id,
+      state: {
+        ...state,
+        currentUser: adminUser,
+        users: [adminUser, ...state.users.filter((user) => user.id !== adminUser.id)],
+        joinRequests: [request, ...state.joinRequests],
+      },
+    };
+  }
+
   const request = {
     id: deps.createId("join"),
     userId: deps.createId("guest"),
