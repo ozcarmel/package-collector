@@ -46,6 +46,8 @@ export interface AppUser {
   createdAt: string;
   approvedAt?: string;
   approvedByUserId?: string;
+  blockedAt?: string;
+  blockedByUserId?: string;
 }
 
 export interface JoinRequest {

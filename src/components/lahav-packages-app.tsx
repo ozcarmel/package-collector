@@ -60,6 +60,8 @@ type Screen =
   | "arrival"
   | "admin";
 
+type AdminListView = "pending" | "approved" | "managers";
+
 interface DraftPackage {
   ownerName: string;
   pickupLocationId: string;
@@ -200,6 +202,7 @@ export function LahavPackagesApp() {
   const [isStartingPickupRun, setIsStartingPickupRun] = useState(false);
   const [collectingPackageId, setCollectingPackageId] = useState<string | null>(null);
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
+  const [adminListView, setAdminListView] = useState<AdminListView>("pending");
   const [screen, setScreen] = useState<Screen>(() => (hasJoinPreviewParam() ? "join" : "home"));
   const [toast, setToast] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftPackage>(emptyDraft);
@@ -810,11 +813,26 @@ export function LahavPackagesApp() {
 
     setAdminActionId(`promote-${userId}`);
     try {
-      const nextState = await operationsRepository.promoteUser(state, userId);
+      const nextState = await operationsRepository.promoteUser(state, userId, actionDeps);
       applyRepositoryState(nextState);
       notify("הרשאת מנהל ניתנה.");
     } catch {
       notify("לא הצלחנו לתת הרשאת מנהל. נסה/י שוב בעוד רגע.");
+    } finally {
+      setAdminActionId(null);
+    }
+  }
+
+  async function blockUser(userId: string) {
+    if (adminActionId) return;
+
+    setAdminActionId(`block-${userId}`);
+    try {
+      const nextState = await operationsRepository.blockUser(state, userId, actionDeps);
+      applyRepositoryState(nextState);
+      notify("המשתמש נחסם.");
+    } catch {
+      notify("לא הצלחנו לחסום את המשתמש. נסה/י שוב בעוד רגע.");
     } finally {
       setAdminActionId(null);
     }
@@ -1336,8 +1354,14 @@ export function LahavPackagesApp() {
   }
 
   function AdminScreen() {
-    const promotableUsers = state.users.filter(
+    const isOwner = currentUser.role === "owner";
+    const approvedUsers = state.users.filter(
       (user) => user.role === "member" && user.verificationStatus === "approved",
+    );
+    const managerUsers = state.users.filter(
+      (user) =>
+        (user.role === "admin" || user.role === "owner") &&
+        user.verificationStatus === "approved",
     );
 
     return (
@@ -1346,76 +1370,153 @@ export function LahavPackagesApp() {
         <p className="screen-kicker">בקשות הצטרפות, הרשאות מנהל ונקודות איסוף.</p>
 
         <div className="summary-grid" aria-label="סיכום מנהל">
-          <div className="metric">
+          <button
+            aria-pressed={adminListView === "pending"}
+            className={`metric metric-button ${adminListView === "pending" ? "selected" : ""}`}
+            onClick={() => setAdminListView("pending")}
+            type="button"
+          >
             <strong>{pendingJoinRequests.length}</strong>
             <span>ממתינים</span>
-          </div>
-          <div className="metric">
-            <strong>{state.users.length}</strong>
+          </button>
+          <button
+            aria-pressed={adminListView === "approved"}
+            className={`metric metric-button ${adminListView === "approved" ? "selected" : ""}`}
+            onClick={() => setAdminListView("approved")}
+            type="button"
+          >
+            <strong>{approvedUsers.length}</strong>
             <span>מאושרים</span>
-          </div>
-          <div className="metric">
-            <strong>{state.users.filter((user) => user.role !== "member").length}</strong>
+          </button>
+          <button
+            aria-pressed={adminListView === "managers"}
+            className={`metric metric-button ${adminListView === "managers" ? "selected" : ""}`}
+            onClick={() => setAdminListView("managers")}
+            type="button"
+          >
+            <strong>{managerUsers.length}</strong>
             <span>מנהלים</span>
-          </div>
+          </button>
         </div>
 
         <div className="stack">
-          {pendingJoinRequests.map((request) => (
-            <div className="admin-card" key={request.id}>
-              <div className="package-top">
-                <div>
-                  <div className="package-name">{request.fullName}</div>
-                  <div className="package-meta">
-                    {request.phone} · ביקש/ה להצטרף
+          {adminListView === "pending" && pendingJoinRequests.length === 0 ? (
+            <div className="card empty-state">אין בקשות שממתינות לטיפול.</div>
+          ) : null}
+
+          {adminListView === "pending"
+            ? pendingJoinRequests.map((request) => (
+                <div className="admin-card" key={request.id}>
+                  <div className="package-top">
+                    <div>
+                      <div className="package-name">{request.fullName}</div>
+                      <div className="package-meta">
+                        {request.phone} · ביקש/ה להצטרף
+                      </div>
+                    </div>
+                    <span className="badge waiting">ממתין</span>
+                  </div>
+                  {request.note ? <div className="message-preview">{request.note}</div> : null}
+                  <div className="card-actions">
+                    {isOwner ? (
+                      <button
+                        className="button primary"
+                        disabled={adminActionId !== null}
+                        onClick={() => approveJoinRequest(request.id)}
+                        type="button"
+                      >
+                        <UserCheck />
+                        {adminActionId === `approve-${request.id}` ? "מאשר..." : "אשר"}
+                      </button>
+                    ) : null}
+                    <button
+                      className="button warn"
+                      disabled={adminActionId !== null}
+                      onClick={() => rejectJoinRequest(request.id)}
+                      type="button"
+                    >
+                      <UserX />
+                      {adminActionId === `reject-${request.id}` ? "דוחה..." : "דחה"}
+                    </button>
                   </div>
                 </div>
-                <span className="badge waiting">ממתין</span>
-              </div>
-              {request.note ? <div className="message-preview">{request.note}</div> : null}
-              <div className="card-actions">
-                <button
-                  className="button primary"
-                  disabled={adminActionId !== null}
-                  onClick={() => approveJoinRequest(request.id)}
-                  type="button"
-                >
-                  <UserCheck />
-                  {adminActionId === `approve-${request.id}` ? "מאשר..." : "אשר"}
-                </button>
-                <button
-                  className="button warn"
-                  disabled={adminActionId !== null}
-                  onClick={() => rejectJoinRequest(request.id)}
-                  type="button"
-                >
-                  <UserX />
-                  {adminActionId === `reject-${request.id}` ? "דוחה..." : "דחה"}
-                </button>
-              </div>
-            </div>
-          ))}
+              ))
+            : null}
 
-          {promotableUsers.map((user) => (
-            <div className="admin-card" key={user.id}>
-              <div className="package-top">
-                <div>
-                  <div className="package-name">{user.fullName}</div>
-                  <div className="package-meta">{user.phone} · חברה רגילה</div>
+          {adminListView === "approved" && approvedUsers.length === 0 ? (
+            <div className="card empty-state">אין משתמשים מאושרים רגילים.</div>
+          ) : null}
+
+          {adminListView === "approved"
+            ? approvedUsers.map((user) => (
+                <div className="admin-card" key={user.id}>
+                  <div className="package-top">
+                    <div>
+                      <div className="package-name">{user.fullName}</div>
+                      <div className="package-meta">{user.phone} · חברה רגילה</div>
+                    </div>
+                    <span className="badge done">מאושרת</span>
+                  </div>
+                  <div className="card-actions">
+                    {isOwner ? (
+                      <button
+                        className="button"
+                        disabled={adminActionId !== null}
+                        onClick={() => promoteUser(user.id)}
+                        type="button"
+                      >
+                        <ShieldPlus />
+                        {adminActionId === `promote-${user.id}`
+                          ? "מעדכן הרשאה..."
+                          : "הענק הרשאת מנהל"}
+                      </button>
+                    ) : null}
+                    <button
+                      className="button warn"
+                      disabled={adminActionId !== null || user.id === currentUserId}
+                      onClick={() => blockUser(user.id)}
+                      type="button"
+                    >
+                      <UserX />
+                      {adminActionId === `block-${user.id}` ? "חוסם..." : "חסום משתמש"}
+                    </button>
+                  </div>
                 </div>
-                <span className="badge done">מאושרת</span>
-              </div>
-              <button
-                className="button full"
-                disabled={adminActionId !== null}
-                onClick={() => promoteUser(user.id)}
-                type="button"
-              >
-                <ShieldPlus />
-                {adminActionId === `promote-${user.id}` ? "מעדכן הרשאה..." : "הענק הרשאת מנהל"}
-              </button>
-            </div>
-          ))}
+              ))
+            : null}
+
+          {adminListView === "managers" && managerUsers.length === 0 ? (
+            <div className="card empty-state">אין מנהלים להצגה.</div>
+          ) : null}
+
+          {adminListView === "managers"
+            ? managerUsers.map((user) => (
+                <div className="admin-card" key={user.id}>
+                  <div className="package-top">
+                    <div>
+                      <div className="package-name">{user.fullName}</div>
+                      <div className="package-meta">
+                        {user.phone} · {user.role === "owner" ? "מנהל ראשי" : "מנהל"}
+                      </div>
+                    </div>
+                    <span className="badge done">
+                      {user.role === "owner" ? "ראשי" : "מנהל"}
+                    </span>
+                  </div>
+                  {isOwner && user.role === "admin" && user.id !== currentUserId ? (
+                    <button
+                      className="button warn full"
+                      disabled={adminActionId !== null}
+                      onClick={() => blockUser(user.id)}
+                      type="button"
+                    >
+                      <UserX />
+                      {adminActionId === `block-${user.id}` ? "חוסם..." : "חסום מנהל"}
+                    </button>
+                  ) : null}
+                </div>
+              ))
+            : null}
         </div>
       </>
     );

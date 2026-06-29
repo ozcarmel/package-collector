@@ -382,8 +382,39 @@ export const firestoreRepository: AppOperationsRepository = {
     });
   },
 
-  async promoteUser(_state: AppState, userId: string) {
+  async promoteUser(state: AppState, userId: string) {
+    if (state.currentUser.role !== "owner" || state.currentUser.id === userId) {
+      return;
+    }
+
     const db = requireFirestore();
     await updateDoc(doc(db, "users", userId), { role: "admin" });
+  },
+
+  async blockUser(state: AppState, userId: string, deps: ActionDeps) {
+    if (state.currentUser.id === userId) {
+      return;
+    }
+
+    const db = requireFirestore();
+    const userSnapshot = await getDoc(doc(db, "users", userId));
+    const target = userSnapshot.data() as AppState["users"][number] | undefined;
+    if (!target) return;
+
+    const canBlockRegularMember =
+      (state.currentUser.role === "admin" || state.currentUser.role === "owner") &&
+      target.role === "member" &&
+      target.verificationStatus === "approved";
+    const canBlockManager =
+      state.currentUser.role === "owner" &&
+      target.role === "admin" &&
+      target.verificationStatus === "approved";
+    if (!canBlockRegularMember && !canBlockManager) return;
+
+    await updateDoc(doc(db, "users", userId), {
+      verificationStatus: "blocked",
+      blockedAt: deps.now(),
+      blockedByUserId: state.currentUser.id,
+    });
   },
 };

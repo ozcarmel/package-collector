@@ -318,6 +318,20 @@ select:focus-visible {
   line-height: 1.25;
 }
 
+.metric-button {
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+}
+
+.metric-button.selected {
+  border-color: #6e9f67;
+  background: #eef6df;
+  box-shadow:
+    0 0 0 2px rgb(36 118 79 / 12%),
+    var(--card-shadow);
+}
+
 .section-title-row {
   display: flex;
   align-items: center;

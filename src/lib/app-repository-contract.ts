@@ -89,5 +89,7 @@ export interface AppOperationsRepository {
     deps: ActionDeps,
   ): RepositoryStateResult;
 
-  promoteUser(state: AppState, userId: string): RepositoryStateResult;
+  promoteUser(state: AppState, userId: string, deps: ActionDeps): RepositoryStateResult;
+
+  blockUser(state: AppState, userId: string, deps: ActionDeps): RepositoryStateResult;
 }

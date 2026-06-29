@@ -313,11 +313,53 @@ export function rejectJoinRequest(state: AppState, requestId: string, deps: Acti
   };
 }
 
-export function promoteUser(state: AppState, userId: string) {
+export function promoteUser(state: AppState, userId: string, _deps: ActionDeps) {
+  if (state.currentUser.role !== "owner" || state.currentUser.id === userId) {
+    return state;
+  }
+
   return {
     ...state,
     users: state.users.map((user) =>
-      user.id === userId ? { ...user, role: "admin" as const } : user,
+      user.id === userId && user.role === "member" && user.verificationStatus === "approved"
+        ? { ...user, role: "admin" as const }
+        : user,
+    ),
+  };
+}
+
+export function blockUser(state: AppState, userId: string, deps: ActionDeps) {
+  if (state.currentUser.id === userId) {
+    return state;
+  }
+
+  const target = state.users.find((user) => user.id === userId);
+  if (!target) return state;
+
+  const canBlockRegularMember =
+    (state.currentUser.role === "admin" || state.currentUser.role === "owner") &&
+    target.role === "member" &&
+    target.verificationStatus === "approved";
+  const canBlockManager =
+    state.currentUser.role === "owner" &&
+    target.role === "admin" &&
+    target.verificationStatus === "approved";
+
+  if (!canBlockRegularMember && !canBlockManager) {
+    return state;
+  }
+
+  return {
+    ...state,
+    users: state.users.map((user) =>
+      user.id === userId
+        ? {
+            ...user,
+            verificationStatus: "blocked" as const,
+            blockedAt: deps.now(),
+            blockedByUserId: state.currentUser.id,
+          }
+        : user,
     ),
   };
 }

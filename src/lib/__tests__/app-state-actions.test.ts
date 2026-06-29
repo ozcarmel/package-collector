@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   approveJoinRequest,
+  blockUser,
   createJoinRequest,
   createPackage,
   getWaitingPackageCount,
@@ -213,7 +214,78 @@ describe("app state actions", () => {
     const memberId = state.users.find((user) => user.role === "member")?.id;
     expect(memberId).toBeTruthy();
 
-    const promoted = promoteUser(state, memberId ?? "");
+    const promoted = promoteUser(state, memberId ?? "", createTestDeps());
     expect(promoted.users.find((user) => user.id === memberId)?.role).toBe("admin");
+  });
+
+  it("blocks an approved member without removing user history", () => {
+    const state = cloneState();
+    const deps = createTestDeps();
+    const memberId = state.users.find((user) => user.role === "member")?.id;
+    expect(memberId).toBeTruthy();
+
+    const blocked = blockUser(state, memberId ?? "", deps);
+
+    expect(blocked.users).toHaveLength(state.users.length);
+    expect(blocked.users.find((user) => user.id === memberId)).toMatchObject({
+      verificationStatus: "blocked",
+      blockedByUserId: state.currentUser.id,
+      blockedAt: "2026-06-28T10:00:00.000Z",
+    });
+  });
+
+  it("allows owner to block an admin but prevents admins from blocking managers", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const memberId = state.users.find((user) => user.role === "member")?.id ?? "";
+    const withAdmin = promoteUser(state, memberId, deps);
+    expect(withAdmin.users.find((user) => user.id === memberId)?.role).toBe("admin");
+
+    const ownerBlocked = blockUser(withAdmin, memberId, deps);
+    expect(ownerBlocked.users.find((user) => user.id === memberId)?.verificationStatus).toBe(
+      "blocked",
+    );
+
+    const adminState: AppState = {
+      ...withAdmin,
+      currentUser: withAdmin.users.find((user) => user.id === memberId)!,
+    };
+    const ownerId = adminState.users.find((user) => user.role === "owner")?.id ?? "";
+    const adminBlockedOwner = blockUser(adminState, ownerId, deps);
+    expect(adminBlockedOwner.users.find((user) => user.id === ownerId)?.verificationStatus).toBe(
+      "approved",
+    );
+  });
+
+  it("prevents admins from promoting members", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const members = state.users.filter((user) => user.role === "member");
+    const adminState = promoteUser(state, members[0].id, deps);
+    const nonOwnerState: AppState = {
+      ...adminState,
+      currentUser: adminState.users.find((user) => user.id === members[0].id)!,
+    };
+
+    const attempted = promoteUser(nonOwnerState, members[1].id, deps);
+
+    expect(attempted.users.find((user) => user.id === members[1].id)?.role).toBe("member");
+  });
+
+  it("allows admins to block approved regular members", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const members = state.users.filter((user) => user.role === "member");
+    const adminState = promoteUser(state, members[0].id, deps);
+    const nonOwnerState: AppState = {
+      ...adminState,
+      currentUser: adminState.users.find((user) => user.id === members[0].id)!,
+    };
+
+    const blocked = blockUser(nonOwnerState, members[1].id, deps);
+
+    expect(blocked.users.find((user) => user.id === members[1].id)?.verificationStatus).toBe(
+      "blocked",
+    );
   });
 });

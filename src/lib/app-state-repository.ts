@@ -1,5 +1,6 @@
 import {
   approveJoinRequest,
+  blockUser,
   createJoinRequest,
   createPackage,
   getWaitingPackageCount,
@@ -85,4 +86,6 @@ export const localDemoRepository: AppStateRepository = {
   rejectJoinRequest,
 
   promoteUser,
+
+  blockUser,
 };

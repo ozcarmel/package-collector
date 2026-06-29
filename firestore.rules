@@ -53,6 +53,73 @@ service cloud.firestore {
           .hasOnly(["fullName", "phone", "homeLocation"]);
     }
 
+    function validAdminApproveUser() {
+      return owner() &&
+        resource.data.verificationStatus in ["phone_pending", "admin_pending"] &&
+        request.resource.data.role == "member" &&
+        request.resource.data.verificationStatus == "approved" &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            "fullName",
+            "phone",
+            "role",
+            "verificationStatus",
+            "createdAt",
+            "approvedAt",
+            "approvedByUserId"
+          ]);
+    }
+
+    function validOwnerCreateApprovedMember(userId) {
+      return owner() &&
+        request.auth.uid != userId &&
+        request.resource.data.id == userId &&
+        request.resource.data.role == "member" &&
+        request.resource.data.verificationStatus == "approved" &&
+        request.resource.data.keys()
+          .hasOnly([
+            "id",
+            "fullName",
+            "phone",
+            "role",
+            "verificationStatus",
+            "createdAt",
+            "approvedAt",
+            "approvedByUserId"
+          ]);
+    }
+
+    function validPromoteApprovedMember(userId) {
+      return owner() &&
+        request.auth.uid != userId &&
+        resource.data.role == "member" &&
+        resource.data.verificationStatus == "approved" &&
+        request.resource.data.role == "admin" &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["role"]);
+    }
+
+    function validBlockApprovedRegularUser(userId) {
+      return admin() &&
+        request.auth.uid != userId &&
+        resource.data.role == "member" &&
+        resource.data.verificationStatus == "approved" &&
+        request.resource.data.verificationStatus == "blocked" &&
+        request.resource.data.blockedByUserId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["verificationStatus", "blockedAt", "blockedByUserId"]);
+    }
+
+    function validOwnerBlockManager(userId) {
+      return owner() &&
+        request.auth.uid != userId &&
+        resource.data.role == "admin" &&
+        resource.data.verificationStatus == "approved" &&
+        request.resource.data.verificationStatus == "blocked" &&
+        request.resource.data.blockedByUserId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["verificationStatus", "blockedAt", "blockedByUserId"]);
+    }
+
     function validOzOwnerSelfWrite(userId) {
       return signedIn() &&
         request.auth.uid == userId &&
@@ -182,15 +249,28 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if signedIn() && (request.auth.uid == userId || admin());
-      allow create: if validNewSelfUser(userId) || validOzOwnerSelfWrite(userId) || admin();
-      allow update: if admin() || validSelfUserUpdate(userId) || validOzOwnerSelfWrite(userId);
+      allow create: if validNewSelfUser(userId) ||
+        validOzOwnerSelfWrite(userId) ||
+        validOwnerCreateApprovedMember(userId);
+      allow update: if validSelfUserUpdate(userId) ||
+        validOzOwnerSelfWrite(userId) ||
+        validAdminApproveUser() ||
+        validPromoteApprovedMember(userId) ||
+        validBlockApprovedRegularUser(userId) ||
+        validOwnerBlockManager(userId);
       allow delete: if owner();
     }
 
     match /joinRequests/{requestId} {
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
       allow read: if admin() || (signedIn() && resource.data.userId == request.auth.uid);
-      allow update: if admin();
+      allow update: if admin() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "reviewedAt", "reviewedByUserId"]) &&
+        (
+          request.resource.data.status == "rejected" ||
+          (owner() && request.resource.data.status == "approved")
+        );
       allow delete: if owner();
     }
 
