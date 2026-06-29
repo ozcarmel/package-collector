@@ -220,25 +220,19 @@ export function LahavPackagesApp() {
   const firebaseEnabled = hasFirebaseConfig();
   const currentUser = state.currentUser;
   const currentUserId = currentUser.id;
-  const currentUserFullName = currentUser.fullName;
-  const currentUserPhone = currentUser.phone;
   const currentUserRole = currentUser.role;
   const currentUserVerificationStatus = currentUser.verificationStatus;
-  const currentUserCreatedAt = currentUser.createdAt;
   const subscriptionUser = useMemo(
     () => ({
       id: currentUserId,
-      fullName: currentUserFullName,
-      phone: currentUserPhone,
+      fullName: "",
+      phone: "",
       role: currentUserRole,
       verificationStatus: currentUserVerificationStatus,
-      createdAt: currentUserCreatedAt,
+      createdAt: "",
     }),
     [
-      currentUserCreatedAt,
-      currentUserFullName,
       currentUserId,
-      currentUserPhone,
       currentUserRole,
       currentUserVerificationStatus,
     ],
