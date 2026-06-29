@@ -11,20 +11,18 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/client";
-import {
-  createPackageWithSensitiveDetails,
-  markPackageCollectedSecurely,
-  startSecurePickupRun,
-} from "@/lib/firebase/sensitive-package-functions";
 import { parseDeliveryMessage } from "@/lib/message-parser";
-import type { AppOperationsRepository } from "@/lib/app-repository-contract";
+import type {
+  AppOperationsRepository,
+  RevealedSensitivePackageDetails,
+} from "@/lib/app-repository-contract";
 import type {
   ActionDeps,
   CreateJoinRequestInput,
   CreatePackageInput,
   UpdateArrivalInput,
 } from "@/lib/app-state-actions";
-import type { AppState, JoinRequest } from "@/lib/types";
+import type { AppState, DeliveryPackage, JoinRequest, PickupRun, PickupRunItem } from "@/lib/types";
 
 function requireFirestore(): Firestore {
   const db = getFirebaseDb();
@@ -33,6 +31,12 @@ function requireFirestore(): Firestore {
   }
 
   return db;
+}
+
+function withoutUndefined<T extends object>(value: T) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined),
+  ) as T;
 }
 
 export const firestoreRepository: AppOperationsRepository = {
@@ -48,27 +52,42 @@ export const firestoreRepository: AppOperationsRepository = {
       createdAt: deps.now(),
     };
 
-    await setDoc(doc(db, "joinRequests", request.id), request);
+    await setDoc(doc(db, "joinRequests", request.id), withoutUndefined(request));
     return { requestId: request.id };
   },
 
   async createPackage(state: AppState, input: CreatePackageInput, deps: ActionDeps) {
+    const db = requireFirestore();
     const parsed = parseDeliveryMessage(input.sensitiveDeliveryMessage, state.pickupLocations);
     const packageId = deps.createId("pkg");
-    await createPackageWithSensitiveDetails({
-      packageId,
+    const updatedAt = deps.now();
+    const publicPackage: DeliveryPackage = {
+      id: packageId,
       ownerUserId: state.currentUser.id,
       ownerName: input.ownerName,
       pickupLocationId: input.pickupLocationId,
-      sensitiveDeliveryMessage: input.sensitiveDeliveryMessage,
-      sensitivePickupLink: parsed.pickupLink,
-      sensitivePackageCode: parsed.packageCode,
+      publicSummary: "ממתינה לאיסוף",
+      status: "waiting",
       parsedCourierCompany: parsed.courierCompany,
       parsedAddresseeName: parsed.addresseeName,
       parsedTrackingNumber: parsed.trackingNumber,
       parsedPickupDeadline: parsed.pickupDeadline,
-      updatedAt: deps.now(),
-    });
+      updatedAt,
+    };
+
+    const batch = writeBatch(db);
+    batch.set(doc(db, "packages", packageId), withoutUndefined(publicPackage));
+    batch.set(doc(db, "sensitivePackageDetails", packageId), withoutUndefined({
+      packageId,
+      ownerUserId: state.currentUser.id,
+      pickupLocationId: input.pickupLocationId,
+      sensitiveDeliveryMessage: input.sensitiveDeliveryMessage,
+      sensitivePickupLink: parsed.pickupLink,
+      sensitivePackageCode: parsed.packageCode,
+      createdAt: updatedAt,
+      updatedAt,
+    }));
+    await batch.commit();
     return { packageId };
   },
 
@@ -85,29 +104,99 @@ export const firestoreRepository: AppOperationsRepository = {
     return snapshot.size;
   },
 
-  async startPickupRun(state: AppState, pickupLocationId: string) {
-    const result = await startSecurePickupRun({ pickupLocationId });
-    if (!result.runId) {
+  async startPickupRun(state: AppState, pickupLocationId: string, deps: ActionDeps) {
+    const db = requireFirestore();
+    const packagesSnapshot = await getDocs(
+      query(
+        collection(db, "packages"),
+        where("pickupLocationId", "==", pickupLocationId),
+        where("status", "==", "waiting"),
+      ),
+    );
+    const packages = packagesSnapshot.docs.map((item) => item.data() as DeliveryPackage);
+
+    if (packages.length === 0) {
       return { runId: null, packageCount: 0 };
     }
 
+    const runId = deps.createId("run");
+    const createdAt = deps.now();
+    const run: PickupRun = {
+      id: runId,
+      collectorUserId: state.currentUser.id,
+      pickupLocationId,
+      status: "active",
+      sensitiveDetailsAccessConfirmedAt: createdAt,
+      createdAt,
+    };
+    const items: PickupRunItem[] = packages.map((pkg) => ({
+      id: `${runId}_${pkg.id}`,
+      pickupRunId: runId,
+      packageId: pkg.id,
+      itemStatus: "pending",
+      sensitiveMessageViewedAt: createdAt,
+    }));
+
+    const batch = writeBatch(db);
+    batch.set(doc(db, "pickupRuns", runId), run);
+    items.forEach((item) => {
+      const grantId = `${state.currentUser.id}_${item.packageId}`;
+      const accessId = deps.createId("access");
+      batch.set(doc(db, "pickupRunItems", item.id), item);
+      batch.set(doc(db, "sensitiveAccessGrants", grantId), {
+        id: grantId,
+        packageId: item.packageId,
+        pickupRunId: runId,
+        viewerUserId: state.currentUser.id,
+        pickupLocationId,
+        createdAt,
+      });
+      batch.set(doc(db, "sensitiveAccessLogs", accessId), withoutUndefined({
+        id: accessId,
+        packageId: item.packageId,
+        pickupRunId: runId,
+        viewerUserId: state.currentUser.id,
+        action: "view_message",
+        createdAt,
+        ownerUserId: packages.find((pkg) => pkg.id === item.packageId)?.ownerUserId,
+      }));
+    });
+    await batch.commit();
+
+    const sensitiveDetails: RevealedSensitivePackageDetails = {};
+    await Promise.all(
+      packages.map(async (pkg) => {
+        const detailsSnapshot = await getDoc(doc(db, "sensitivePackageDetails", pkg.id));
+        const details = detailsSnapshot.data() as
+          | {
+              sensitiveDeliveryMessage?: string;
+              sensitivePickupLink?: string;
+              sensitivePackageCode?: string;
+            }
+          | undefined;
+        if (details?.sensitiveDeliveryMessage) {
+          sensitiveDetails[pkg.id] = {
+            sensitiveDeliveryMessage: details.sensitiveDeliveryMessage,
+            sensitivePickupLink: details.sensitivePickupLink,
+            sensitivePackageCode: details.sensitivePackageCode,
+          };
+        }
+      }),
+    );
+
     return {
-      runId: result.runId,
-      packageCount: result.packageCount,
-      sensitiveDetails: result.sensitiveDetails,
+      runId,
+      packageCount: packages.length,
+      sensitiveDetails,
       state: {
         ...state,
-        pickupRuns: result.run
-          ? [result.run, ...state.pickupRuns.filter((run) => run.id !== result.run?.id)]
-          : state.pickupRuns,
-        pickupRunItems: result.items
-          ? [
-              ...result.items,
-              ...state.pickupRunItems.filter(
-                (item) => !result.items?.some((newItem) => newItem.id === item.id),
-              ),
-            ]
-          : state.pickupRunItems,
+        pickupRuns: [run, ...state.pickupRuns.filter((item) => item.id !== run.id)],
+        pickupRunItems: [
+          ...items,
+          ...state.pickupRunItems.filter(
+            (item) => !items.some((newItem) => newItem.id === item.id),
+          ),
+        ],
       },
     };
   },
@@ -124,15 +213,16 @@ export const firestoreRepository: AppOperationsRepository = {
     const db = requireFirestore();
     const packageSnapshot = await getDoc(doc(db, "packages", input.packageId));
     const accessId = deps.createId("access");
-    await setDoc(doc(db, "sensitiveAccessLogs", accessId), {
+    const now = deps.now();
+    await setDoc(doc(db, "sensitiveAccessLogs", accessId), withoutUndefined({
       id: accessId,
       packageId: input.packageId,
       pickupRunId: input.activeRunId,
       viewerUserId: state.currentUser.id,
       action: input.action,
-      createdAt: deps.now(),
+      createdAt: now,
       ownerUserId: packageSnapshot.data()?.ownerUserId,
-    });
+    }));
 
     const itemsSnapshot = await getDocs(
       query(
@@ -147,36 +237,50 @@ export const firestoreRepository: AppOperationsRepository = {
         : "sensitivePickupLinkOpenedAt";
     const batch = writeBatch(db);
     itemsSnapshot.docs.forEach((itemDoc) => {
-      batch.update(itemDoc.ref, { [field]: deps.now() });
+      batch.update(itemDoc.ref, { [field]: now });
     });
     await batch.commit();
   },
 
-  async markPackageCollected(state: AppState, input: { activeRunId: string | null; packageId: string }) {
+  async markPackageCollected(
+    state: AppState,
+    input: { activeRunId: string | null; packageId: string },
+    deps: ActionDeps,
+  ) {
     if (!input.activeRunId) {
       throw new Error("A pickup run is required to mark a package collected.");
     }
 
-    const result = await markPackageCollectedSecurely({
-      pickupRunId: input.activeRunId,
-      packageId: input.packageId,
+    const db = requireFirestore();
+    const collectedAt = deps.now();
+    const itemId = `${input.activeRunId}_${input.packageId}`;
+    const batch = writeBatch(db);
+    batch.update(doc(db, "packages", input.packageId), {
+      status: "collected",
+      collectorUserId: state.currentUser.id,
+      updatedAt: collectedAt,
     });
+    batch.update(doc(db, "pickupRunItems", itemId), {
+      itemStatus: "collected",
+      collectedAt,
+    });
+    await batch.commit();
 
     return {
       ...state,
       packages: state.packages.map((pkg) =>
-        pkg.id === result.packageId
+        pkg.id === input.packageId
           ? {
               ...pkg,
               status: "collected" as const,
               collectorUserId: state.currentUser.id,
-              updatedAt: result.collectedAt,
+              updatedAt: collectedAt,
             }
           : pkg,
       ),
       pickupRunItems: state.pickupRunItems.map((item) =>
-        item.pickupRunId === result.pickupRunId && item.packageId === result.packageId
-          ? { ...item, itemStatus: "collected" as const, collectedAt: result.collectedAt }
+        item.pickupRunId === input.activeRunId && item.packageId === input.packageId
+          ? { ...item, itemStatus: "collected" as const, collectedAt }
           : item,
       ),
     };

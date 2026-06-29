@@ -10,6 +10,22 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    function packageDoc(packageId) {
+      return get(/databases/$(database)/documents/packages/$(packageId));
+    }
+
+    function pickupRunAfter(runId) {
+      return getAfter(/databases/$(database)/documents/pickupRuns/$(runId));
+    }
+
+    function sensitiveGrantId(packageId) {
+      return request.auth.uid + "_" + packageId;
+    }
+
+    function hasSensitiveGrant(packageId) {
+      return exists(/databases/$(database)/documents/sensitiveAccessGrants/$(sensitiveGrantId(packageId)));
+    }
+
     function approved() {
       return signedIn() && userDoc().data.verificationStatus == "approved";
     }
@@ -54,6 +70,36 @@ service cloud.firestore {
           .hasOnly(["publicSummary", "updatedAt"]);
     }
 
+    function validPackageCreate(packageId) {
+      return approved() &&
+        request.resource.data.id == packageId &&
+        request.resource.data.ownerUserId == request.auth.uid &&
+        request.resource.data.status == "waiting" &&
+        request.resource.data.keys().hasOnly([
+          "id",
+          "ownerUserId",
+          "ownerName",
+          "pickupLocationId",
+          "publicSummary",
+          "status",
+          "parsedCourierCompany",
+          "parsedAddresseeName",
+          "parsedTrackingNumber",
+          "parsedPickupDeadline",
+          "updatedAt"
+        ]);
+    }
+
+    function validCollectorPackageCollectedUpdate(packageId) {
+      return approved() &&
+        resource.data.status == "waiting" &&
+        request.resource.data.status == "collected" &&
+        request.resource.data.collectorUserId == request.auth.uid &&
+        hasSensitiveGrant(packageId) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "collectorUserId", "updatedAt"]);
+    }
+
     function pickupRun(runId) {
       return get(/databases/$(database)/documents/pickupRuns/$(runId));
     }
@@ -67,6 +113,61 @@ service cloud.firestore {
         pickupRunCollector(resource.data.pickupRunId) &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["sensitiveMessageViewedAt", "sensitivePickupLinkOpenedAt"]);
+    }
+
+    function validPickupRunCreate(runId) {
+      return approved() &&
+        request.resource.data.id == runId &&
+        request.resource.data.collectorUserId == request.auth.uid &&
+        request.resource.data.status == "active";
+    }
+
+    function validPickupRunItemCreate(itemId) {
+      let run = pickupRunAfter(request.resource.data.pickupRunId);
+      let pkg = packageDoc(request.resource.data.packageId);
+      return approved() &&
+        request.resource.data.id == itemId &&
+        request.resource.data.itemStatus == "pending" &&
+        run.data.collectorUserId == request.auth.uid &&
+        run.data.pickupLocationId == pkg.data.pickupLocationId &&
+        pkg.data.status == "waiting";
+    }
+
+    function validPickupRunItemCollectedUpdate() {
+      return approved() &&
+        pickupRunCollector(resource.data.pickupRunId) &&
+        request.resource.data.itemStatus == "collected" &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["itemStatus", "collectedAt"]);
+    }
+
+    function validSensitiveGrantCreate(grantId) {
+      let pkg = packageDoc(request.resource.data.packageId);
+      let run = pickupRunAfter(request.resource.data.pickupRunId);
+      return approved() &&
+        request.resource.data.id == grantId &&
+        grantId == sensitiveGrantId(request.resource.data.packageId) &&
+        request.resource.data.viewerUserId == request.auth.uid &&
+        run.data.collectorUserId == request.auth.uid &&
+        run.data.pickupLocationId == pkg.data.pickupLocationId &&
+        request.resource.data.pickupLocationId == pkg.data.pickupLocationId &&
+        pkg.data.status == "waiting";
+    }
+
+    function validSensitiveDetailsCreate(packageId) {
+      return approved() &&
+        request.resource.data.packageId == packageId &&
+        request.resource.data.ownerUserId == request.auth.uid &&
+        request.resource.data.keys().hasOnly([
+          "packageId",
+          "ownerUserId",
+          "pickupLocationId",
+          "sensitiveDeliveryMessage",
+          "sensitivePickupLink",
+          "sensitivePackageCode",
+          "createdAt",
+          "updatedAt"
+        ]);
     }
 
     match /users/{userId} {
@@ -90,9 +191,10 @@ service cloud.firestore {
 
     match /packages/{packageId} {
       allow read: if approved();
-      allow create: if false;
+      allow create: if validPackageCreate(packageId);
       allow update: if approved() && (
         validCollectorArrivalUpdate() ||
+        validCollectorPackageCollectedUpdate(packageId) ||
         validOwnerPackageUpdate() ||
         admin()
       );
@@ -101,16 +203,22 @@ service cloud.firestore {
 
     match /pickupRuns/{runId} {
       allow read: if approved() && (resource.data.collectorUserId == request.auth.uid || admin());
-      allow create: if false;
+      allow create: if validPickupRunCreate(runId);
       allow update: if admin();
       allow delete: if admin();
     }
 
     match /pickupRunItems/{itemId} {
       allow read: if approved() && (pickupRunCollector(resource.data.pickupRunId) || admin());
-      allow create: if false;
-      allow update: if validPickupRunItemAccessUpdate() || admin();
+      allow create: if validPickupRunItemCreate(itemId);
+      allow update: if validPickupRunItemAccessUpdate() || validPickupRunItemCollectedUpdate() || admin();
       allow delete: if admin();
+    }
+
+    match /sensitiveAccessGrants/{grantId} {
+      allow read: if approved() && (resource.data.viewerUserId == request.auth.uid || admin());
+      allow create: if validSensitiveGrantCreate(grantId);
+      allow update, delete: if false;
     }
 
     match /sensitiveAccessLogs/{logId} {
@@ -120,8 +228,13 @@ service cloud.firestore {
     }
 
     match /sensitivePackageDetails/{packageId} {
-      allow read: if false;
-      allow write: if false;
+      allow read: if approved() && (
+        resource.data.ownerUserId == request.auth.uid ||
+        hasSensitiveGrant(packageId) ||
+        admin()
+      );
+      allow create: if validSensitiveDetailsCreate(packageId);
+      allow update, delete: if false;
     }
   }
 }

@@ -77,7 +77,7 @@ export interface DeliveryPackage {
   pickupLocationId: string;
   publicSummary: string;
   status: PackageStatus;
-  sensitiveDeliveryMessage: string;
+  sensitiveDeliveryMessage?: string;
   sensitivePickupLink?: string;
   sensitivePackageCode?: string;
   parsedCourierCompany?: string;
@@ -117,6 +117,16 @@ export interface SensitiveAccessLog {
   pickupRunId: string;
   viewerUserId: string;
   action: "view_message" | "open_pickup_link";
+  createdAt: string;
+  ownerUserId?: string;
+}
+
+export interface SensitiveAccessGrant {
+  id: string;
+  packageId: string;
+  pickupRunId: string;
+  viewerUserId: string;
+  pickupLocationId: string;
   createdAt: string;
 }
 

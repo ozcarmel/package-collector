@@ -1344,7 +1344,8 @@ export function LahavPackagesApp() {
   function OriginalMessageText({ pkg }: { pkg: DeliveryPackage }) {
     const urlPattern = /(https?:\/\/[^\s]+)/g;
     const fullUrlPattern = /^https?:\/\/[^\s]+$/;
-    const parts = pkg.sensitiveDeliveryMessage.split(urlPattern);
+    const message = pkg.sensitiveDeliveryMessage ?? "ההודעה המקורית עדיין לא נפתחה.";
+    const parts = message.split(urlPattern);
 
     return (
       <>
