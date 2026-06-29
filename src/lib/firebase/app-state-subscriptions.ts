@@ -98,7 +98,11 @@ export function subscribeFirestoreAppState(
     onSnapshot(
       collection(db, "pickupLocations"),
       (snapshot) => {
-        emit({ pickupLocations: snapshot.docs.map((item) => item.data() as PickupLocation) });
+        emit({
+          pickupLocations: snapshot.empty
+            ? initialAppState.pickupLocations
+            : snapshot.docs.map((item) => item.data() as PickupLocation),
+        });
       },
       handleError,
     ),
