@@ -104,6 +104,13 @@ const screenLabels: Array<[Screen, string]> = [
   ["admin", "ניהול"],
 ];
 
+function hasJoinPreviewParam() {
+  if (typeof window === "undefined") return false;
+
+  const params = new URLSearchParams(window.location.search);
+  return params.get("freshUser") === "1" || params.get("joinPreview") === "1";
+}
+
 function statusLabel(status: PackageStatus) {
   switch (status) {
     case "waiting":
@@ -193,7 +200,7 @@ export function LahavPackagesApp() {
   const [isStartingPickupRun, setIsStartingPickupRun] = useState(false);
   const [collectingPackageId, setCollectingPackageId] = useState<string | null>(null);
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<Screen>(() => (hasJoinPreviewParam() ? "join" : "home"));
   const [toast, setToast] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftPackage>(emptyDraft);
   const [joinDraft, setJoinDraft] = useState<JoinDraft>(initialJoinDraft);
@@ -205,6 +212,7 @@ export function LahavPackagesApp() {
   const [hoursLocationId, setHoursLocationId] = useState<string | null>(null);
   const [pendingUnlockAnchor, setPendingUnlockAnchor] = useState<UnlockAnchor | null>(null);
   const [homeLocationFilterId, setHomeLocationFilterId] = useState<string | null>(null);
+  const [joinPreviewMode, setJoinPreviewMode] = useState(() => hasJoinPreviewParam());
   const [dropLocation, setDropLocation] = useState<KibbutzDropLocation>("gate-crate");
   const [dropNote, setDropNote] = useState("שלוש החבילות בדולב, בצד ימין למעלה.");
   const pickupLocationStripRef = useRef<HTMLDivElement | null>(null);
@@ -235,6 +243,18 @@ export function LahavPackagesApp() {
       currentUserVerificationStatus,
     ],
   );
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const shouldPreviewJoin =
+      url.searchParams.get("freshUser") === "1" || url.searchParams.get("joinPreview") === "1";
+
+    if (!shouldPreviewJoin) return;
+
+    url.searchParams.delete("freshUser");
+    url.searchParams.delete("joinPreview");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
 
   useEffect(() => {
     if (firebaseEnabled) {
@@ -363,7 +383,8 @@ export function LahavPackagesApp() {
   const submittedJoinRequest =
     state.joinRequests.find((request) => request.id === submittedJoinRequestId) ??
     pendingJoinRequests[0];
-  const canManageCommunity = currentUser.role === "admin" || currentUser.role === "owner";
+  const canManageCommunity =
+    !joinPreviewMode && (currentUser.role === "admin" || currentUser.role === "owner");
   const effectiveScreen: Screen =
     screen === "pending" && submittedJoinRequest?.status === "approved"
       ? "home"
@@ -565,6 +586,9 @@ export function LahavPackagesApp() {
         setState(result.state);
       }
       setSubmittedJoinRequestId(result.requestId);
+      if (isOzAdmin) {
+        setJoinPreviewMode(false);
+      }
       setScreen(isOzAdmin ? "home" : "pending");
       notify(
         isOzAdmin

@@ -1,4 +1,10 @@
-import { onAuthStateChanged, signInAnonymously, type User } from "firebase/auth";
+import {
+  deleteUser,
+  onAuthStateChanged,
+  signInAnonymously,
+  signOut,
+  type User,
+} from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { initialAppState } from "@/lib/demo-data";
 import { getFirebaseAuth, getFirebaseDb, hasFirebaseConfig } from "@/lib/firebase/client";
@@ -45,11 +51,31 @@ export function subscribeFirebaseSession(
 ) {
   const auth = getFirebaseAuth();
   if (!hasFirebaseConfig() || !auth) return null;
+  let freshUserRequested = false;
+
+  if (typeof window !== "undefined") {
+    const url = new URL(window.location.href);
+    freshUserRequested = url.searchParams.get("freshUser") === "1";
+    if (freshUserRequested) {
+      url.searchParams.delete("freshUser");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  }
 
   const unsubscribe = onAuthStateChanged(
     auth,
     async (authUser) => {
       try {
+        if (freshUserRequested && authUser) {
+          freshUserRequested = false;
+          try {
+            await deleteUser(authUser);
+          } catch {
+            await signOut(auth);
+          }
+          return;
+        }
+
         const user = authUser ?? (await signInAnonymously(auth)).user;
         const appUser = await ensureUserDocument(user);
         onSession({ authUser: user, appUser });
