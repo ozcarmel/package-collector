@@ -3,6 +3,7 @@ import {
   blockUser,
   createJoinRequest,
   createPackage,
+  createPickupLocation,
   getWaitingPackageCount,
   logSensitiveAccess,
   markPackageCollected,
@@ -70,6 +71,8 @@ export const localDemoRepository: AppStateRepository = {
   createJoinRequest,
 
   createPackage,
+
+  createPickupLocation,
 
   getWaitingPackageCount,
 

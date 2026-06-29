@@ -4,6 +4,7 @@ import {
   blockUser,
   createJoinRequest,
   createPackage,
+  createPickupLocation,
   getWaitingPackageCount,
   logSensitiveAccess,
   markPackageCollected,
@@ -112,6 +113,40 @@ describe("app state actions", () => {
     expect(result.state.pickupLocations.find((location) => location.id === "pitzutz")?.activeRequests).toBe(
       pitzutzBefore?.activeRequests,
     );
+  });
+
+  it("creates a pickup location with weekly hours and a generated navigation URL", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+
+    const result = createPickupLocation(
+      state,
+      {
+        name: "דואר בדיקה",
+        address: "קיבוץ להב",
+        openingHours: "א-ה 08:00-13:00",
+        weeklyHours: {
+          0: [{ open: "08:00", close: "13:00" }],
+          1: [{ open: "08:00", close: "13:00" }],
+        },
+      },
+      deps,
+    );
+
+    const location = result.state.pickupLocations.find(
+      (item) => item.id === result.locationId,
+    );
+    expect(location).toMatchObject({
+      name: "דואר בדיקה",
+      address: "קיבוץ להב",
+      openingHours: "א-ה 08:00-13:00",
+      activeRequests: 0,
+      weeklyHours: {
+        0: [{ open: "08:00", close: "13:00" }],
+      },
+    });
+    expect(location?.navigationUrl).toContain("https://www.google.com/maps/search/");
+    expect(result.state.pickupLocations).toHaveLength(state.pickupLocations.length + 1);
   });
 
   it("starts pickup run only for waiting packages at the selected location", () => {

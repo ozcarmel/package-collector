@@ -32,6 +32,15 @@ function mergeState(current: AppState, patch: Partial<AppState>): AppState {
   return { ...current, ...patch };
 }
 
+function mergePickupLocations(remoteLocations: PickupLocation[]) {
+  const remoteIds = new Set(remoteLocations.map((location) => location.id));
+
+  return [
+    ...initialAppState.pickupLocations.filter((location) => !remoteIds.has(location.id)),
+    ...remoteLocations,
+  ];
+}
+
 export function subscribeFirestoreAppState(
   currentUser: AppUser,
   onState: AppStateListener,
@@ -98,10 +107,9 @@ export function subscribeFirestoreAppState(
     onSnapshot(
       collection(db, "pickupLocations"),
       (snapshot) => {
+        const remoteLocations = snapshot.docs.map((item) => item.data() as PickupLocation);
         emit({
-          pickupLocations: snapshot.empty
-            ? initialAppState.pickupLocations
-            : snapshot.docs.map((item) => item.data() as PickupLocation),
+          pickupLocations: mergePickupLocations(remoteLocations),
         });
       },
       handleError,

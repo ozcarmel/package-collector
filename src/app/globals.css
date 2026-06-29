@@ -573,6 +573,78 @@ form.stack,
   padding: 12px;
 }
 
+.add-location-card {
+  margin: 14px 0;
+}
+
+.location-admin-form {
+  margin-top: 12px;
+}
+
+.hours-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.hours-day-row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--field);
+  padding: 9px;
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.day-toggle,
+.second-range-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #2c342e;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.day-toggle {
+  min-height: 38px;
+}
+
+.day-toggle input,
+.second-range-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.time-pairs {
+  display: grid;
+  gap: 7px;
+}
+
+.time-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 7px;
+}
+
+.time-pair input {
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text);
+  padding: 7px;
+  direction: ltr;
+  text-align: center;
+}
+
+.time-pair input:disabled {
+  opacity: 0.55;
+}
+
 .empty-state {
   color: var(--muted);
   text-align: center;

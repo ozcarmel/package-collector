@@ -48,6 +48,8 @@ import type {
   KibbutzDropLocation,
   PackageStatus,
   PickupLocation,
+  Weekday,
+  WeeklyOpeningHours,
 } from "@/lib/types";
 
 type Screen =
@@ -74,6 +76,22 @@ interface JoinDraft {
   note: string;
 }
 
+interface LocationDayDraft {
+  enabled: boolean;
+  firstOpen: string;
+  firstClose: string;
+  secondEnabled: boolean;
+  secondOpen: string;
+  secondClose: string;
+}
+
+interface LocationDraft {
+  name: string;
+  address: string;
+  openingHours: string;
+  weeklyHours: Record<Weekday, LocationDayDraft>;
+}
+
 interface UnlockAnchor {
   top: number;
   left: number;
@@ -94,6 +112,40 @@ const initialJoinDraft: JoinDraft = {
   phone: "050-203-4475",
   note: "היי, אני חבר/ת להב. אפשר לאשר אותי?",
 };
+
+const weekdayLabels: Array<[Weekday, string]> = [
+  [0, "א׳"],
+  [1, "ב׳"],
+  [2, "ג׳"],
+  [3, "ד׳"],
+  [4, "ה׳"],
+  [5, "ו׳"],
+  [6, "שבת"],
+];
+
+const emptyLocationDayDraft: LocationDayDraft = {
+  enabled: false,
+  firstOpen: "08:00",
+  firstClose: "13:00",
+  secondEnabled: false,
+  secondOpen: "18:00",
+  secondClose: "21:00",
+};
+
+function createEmptyLocationDraft(): LocationDraft {
+  return {
+    name: "",
+    address: "",
+    openingHours: "",
+    weeklyHours: weekdayLabels.reduce(
+      (days, [day]) => ({
+        ...days,
+        [day]: { ...emptyLocationDayDraft },
+      }),
+      {} as Record<Weekday, LocationDayDraft>,
+    ),
+  };
+}
 
 const screenLabels: Array<[Screen, string]> = [
   ["join", "הצטרפות"],
@@ -199,6 +251,7 @@ export function LahavPackagesApp() {
   const [repositoryReady, setRepositoryReady] = useState(false);
   const [isSubmittingJoinRequest, setIsSubmittingJoinRequest] = useState(false);
   const [isSavingPackage, setIsSavingPackage] = useState(false);
+  const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [isStartingPickupRun, setIsStartingPickupRun] = useState(false);
   const [collectingPackageId, setCollectingPackageId] = useState<string | null>(null);
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
@@ -207,6 +260,9 @@ export function LahavPackagesApp() {
   const [toast, setToast] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftPackage>(emptyDraft);
   const [joinDraft, setJoinDraft] = useState<JoinDraft>(initialJoinDraft);
+  const [locationDraft, setLocationDraft] = useState<LocationDraft>(() =>
+    createEmptyLocationDraft(),
+  );
   const [submittedJoinRequestId, setSubmittedJoinRequestId] = useState<string | null>(null);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [revealedSensitiveDetails, setRevealedSensitiveDetails] =
@@ -728,6 +784,85 @@ export function LahavPackagesApp() {
 
   function applyRepositoryState(nextState: AppState | void) {
     if (nextState) setState(nextState);
+  }
+
+  function updateLocationDay(day: Weekday, patch: Partial<LocationDayDraft>) {
+    setLocationDraft((current) => ({
+      ...current,
+      weeklyHours: {
+        ...current.weeklyHours,
+        [day]: {
+          ...current.weeklyHours[day],
+          ...patch,
+        },
+      },
+    }));
+  }
+
+  function buildWeeklyHoursFromDraft() {
+    const weeklyHours: WeeklyOpeningHours = {};
+    let hasEnabledRange = false;
+
+    for (const [day] of weekdayLabels) {
+      const dayDraft = locationDraft.weeklyHours[day];
+      if (!dayDraft.enabled) continue;
+
+      const windows = [];
+      if (dayDraft.firstOpen && dayDraft.firstClose) {
+        windows.push({ open: dayDraft.firstOpen, close: dayDraft.firstClose });
+      }
+      if (dayDraft.secondEnabled && dayDraft.secondOpen && dayDraft.secondClose) {
+        windows.push({ open: dayDraft.secondOpen, close: dayDraft.secondClose });
+      }
+      if (windows.length === 0) {
+        return { weeklyHours, hasEnabledRange, isValid: false };
+      }
+
+      weeklyHours[day] = windows;
+      hasEnabledRange = true;
+    }
+
+    return { weeklyHours, hasEnabledRange, isValid: true };
+  }
+
+  async function savePickupLocation() {
+    if (isSavingLocation) return;
+
+    const name = locationDraft.name.trim();
+    const address = locationDraft.address.trim();
+    const openingHours = locationDraft.openingHours.trim();
+    const hours = buildWeeklyHoursFromDraft();
+
+    if (!name || !address || !openingHours) {
+      notify("צריך למלא שם, כתובת ושעות פתיחה.");
+      return;
+    }
+
+    if (!hours.isValid || !hours.hasEnabledRange) {
+      notify("צריך להגדיר לפחות יום פתוח אחד עם טווח שעות מלא.");
+      return;
+    }
+
+    setIsSavingLocation(true);
+    try {
+      const result = await operationsRepository.createPickupLocation(
+        state,
+        {
+          name,
+          address,
+          openingHours,
+          weeklyHours: hours.weeklyHours,
+        },
+        actionDeps,
+      );
+      applyRepositoryState(result.state);
+      setLocationDraft(createEmptyLocationDraft());
+      notify("נקודת האיסוף נוספה.");
+    } catch {
+      notify("לא הצלחנו להוסיף את נקודת האיסוף. נסה/י שוב בעוד רגע.");
+    } finally {
+      setIsSavingLocation(false);
+    }
   }
 
   async function markCollected(packageId: string) {
@@ -1397,6 +1532,138 @@ export function LahavPackagesApp() {
             <strong>{managerUsers.length}</strong>
             <span>מנהלים</span>
           </button>
+        </div>
+
+        <div className="admin-card add-location-card">
+          <div className="section-title-row">
+            <h2>הוסף נקודת איסוף</h2>
+            <span>{state.pickupLocations.length} נקודות פעילות</span>
+          </div>
+
+          <div className="stack location-admin-form">
+            <div className="field">
+              <label htmlFor="location-name">שם נקודת איסוף</label>
+              <input
+                id="location-name"
+                value={locationDraft.name}
+                onChange={(event) =>
+                  setLocationDraft((current) => ({ ...current, name: event.target.value }))
+                }
+                placeholder="לדוגמה: דואר קיבוץ שובל"
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="location-address">כתובת מלאה או תיאור מקום</label>
+              <input
+                id="location-address"
+                value={locationDraft.address}
+                onChange={(event) =>
+                  setLocationDraft((current) => ({ ...current, address: event.target.value }))
+                }
+                placeholder="לדוגמה: דואר שובל"
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="location-opening-summary">שעות פתיחה לתצוגה</label>
+              <input
+                id="location-opening-summary"
+                value={locationDraft.openingHours}
+                onChange={(event) =>
+                  setLocationDraft((current) => ({
+                    ...current,
+                    openingHours: event.target.value,
+                  }))
+                }
+                placeholder="לדוגמה: א-ה 08:00-13:00"
+              />
+            </div>
+
+            <div className="hours-editor" aria-label="שעות פתיחה לפי ימים">
+              {weekdayLabels.map(([day, label]) => {
+                const dayDraft = locationDraft.weeklyHours[day];
+
+                return (
+                  <div className="hours-day-row" key={day}>
+                    <label className="day-toggle">
+                      <input
+                        checked={dayDraft.enabled}
+                        onChange={(event) => updateLocationDay(day, { enabled: event.target.checked })}
+                        type="checkbox"
+                      />
+                      <span>{label}</span>
+                    </label>
+                    <div className="time-pairs">
+                      <div className="time-pair">
+                        <input
+                          aria-label={`פתיחה ${label}`}
+                          disabled={!dayDraft.enabled}
+                          onChange={(event) =>
+                            updateLocationDay(day, { firstOpen: event.target.value })
+                          }
+                          type="time"
+                          value={dayDraft.firstOpen}
+                        />
+                        <input
+                          aria-label={`סגירה ${label}`}
+                          disabled={!dayDraft.enabled}
+                          onChange={(event) =>
+                            updateLocationDay(day, { firstClose: event.target.value })
+                          }
+                          type="time"
+                          value={dayDraft.firstClose}
+                        />
+                      </div>
+                      <label className="second-range-toggle">
+                        <input
+                          checked={dayDraft.secondEnabled}
+                          disabled={!dayDraft.enabled}
+                          onChange={(event) =>
+                            updateLocationDay(day, { secondEnabled: event.target.checked })
+                          }
+                          type="checkbox"
+                        />
+                        <span>טווח נוסף</span>
+                      </label>
+                      {dayDraft.secondEnabled ? (
+                        <div className="time-pair">
+                          <input
+                            aria-label={`פתיחה נוספת ${label}`}
+                            disabled={!dayDraft.enabled}
+                            onChange={(event) =>
+                              updateLocationDay(day, { secondOpen: event.target.value })
+                            }
+                            type="time"
+                            value={dayDraft.secondOpen}
+                          />
+                          <input
+                            aria-label={`סגירה נוספת ${label}`}
+                            disabled={!dayDraft.enabled}
+                            onChange={(event) =>
+                              updateLocationDay(day, { secondClose: event.target.value })
+                            }
+                            type="time"
+                            value={dayDraft.secondClose}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              className="button primary full"
+              disabled={isSavingLocation}
+              onClick={savePickupLocation}
+              type="button"
+            >
+              <MapPin />
+              {isSavingLocation ? "מוסיף..." : "הוסף נקודת איסוף"}
+            </button>
+          </div>
         </div>
 
         <div className="stack">

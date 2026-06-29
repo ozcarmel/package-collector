@@ -4,9 +4,11 @@ import type {
   AppState,
   DeliveryPackage,
   KibbutzDropLocation,
+  PickupLocation,
   PickupRun,
   PickupRunItem,
   UserRole,
+  WeeklyOpeningHours,
 } from "@/lib/types";
 
 export type IdFactory = (prefix: string) => string;
@@ -27,6 +29,13 @@ export interface CreatePackageInput {
   ownerName: string;
   pickupLocationId: string;
   sensitiveDeliveryMessage: string;
+}
+
+export interface CreatePickupLocationInput {
+  name: string;
+  address: string;
+  openingHours: string;
+  weeklyHours?: WeeklyOpeningHours;
 }
 
 export interface UpdateArrivalInput {
@@ -124,6 +133,48 @@ export function createPackage(state: AppState, input: CreatePackageInput, deps: 
           ? { ...location, activeRequests: location.activeRequests + 1 }
           : location,
       ),
+    },
+  };
+}
+
+function createPickupLocationId(state: AppState, name: string, deps: ActionDeps) {
+  const baseId = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-|-$/g, "");
+  const fallbackId = deps.createId("location");
+  const preferredId = baseId || fallbackId;
+  const existingIds = new Set(state.pickupLocations.map((location) => location.id));
+
+  return existingIds.has(preferredId) ? fallbackId : preferredId;
+}
+
+export function createPickupLocation(
+  state: AppState,
+  input: CreatePickupLocationInput,
+  deps: ActionDeps,
+) {
+  const name = input.name.trim();
+  const address = input.address.trim();
+  const openingHours = input.openingHours.trim();
+  const location: PickupLocation = {
+    id: createPickupLocationId(state, name, deps),
+    name,
+    address,
+    openingHours,
+    navigationUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      `${name} ${address}`,
+    )}`,
+    activeRequests: 0,
+    ...(input.weeklyHours ? { weeklyHours: input.weeklyHours } : {}),
+  };
+
+  return {
+    locationId: location.id,
+    state: {
+      ...state,
+      pickupLocations: [...state.pickupLocations, location],
     },
   };
 }

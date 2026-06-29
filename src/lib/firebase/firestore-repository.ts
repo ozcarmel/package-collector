@@ -21,9 +21,18 @@ import type {
   ActionDeps,
   CreateJoinRequestInput,
   CreatePackageInput,
+  CreatePickupLocationInput,
   UpdateArrivalInput,
 } from "@/lib/app-state-actions";
-import type { AppState, DeliveryPackage, JoinRequest, PickupRun, PickupRunItem } from "@/lib/types";
+import { createPickupLocation as createPickupLocationAction } from "@/lib/app-state-actions";
+import type {
+  AppState,
+  DeliveryPackage,
+  JoinRequest,
+  PickupLocation,
+  PickupRun,
+  PickupRunItem,
+} from "@/lib/types";
 
 function requireFirestore(): Firestore {
   const db = getFirebaseDb();
@@ -118,6 +127,29 @@ export const firestoreRepository: AppOperationsRepository = {
     }));
     await batch.commit();
     return { packageId };
+  },
+
+  async createPickupLocation(
+    state: AppState,
+    input: CreatePickupLocationInput,
+    deps: ActionDeps,
+  ) {
+    if (state.currentUser.role !== "admin" && state.currentUser.role !== "owner") {
+      throw new Error("Only admins can create pickup locations.");
+    }
+
+    const db = requireFirestore();
+    const result = createPickupLocationAction(state, input, deps);
+    const location = result.state.pickupLocations.find(
+      (item) => item.id === result.locationId,
+    ) as PickupLocation | undefined;
+
+    if (!location) {
+      throw new Error("Pickup location was not created.");
+    }
+
+    await setDoc(doc(db, "pickupLocations", location.id), withoutUndefined(location));
+    return result;
   },
 
   async getWaitingPackageCount(_state: AppState, pickupLocationId: string) {

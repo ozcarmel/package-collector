@@ -2,6 +2,7 @@ import type {
   ActionDeps,
   CreateJoinRequestInput,
   CreatePackageInput,
+  CreatePickupLocationInput,
   UpdateArrivalInput,
 } from "@/lib/app-state-actions";
 import type { AppState } from "@/lib/types";
@@ -15,6 +16,11 @@ export interface JoinRequestResult {
 
 export interface PackageResult {
   packageId: string;
+  state?: AppState;
+}
+
+export interface PickupLocationResult {
+  locationId: string;
   state?: AppState;
 }
 
@@ -46,6 +52,12 @@ export interface AppOperationsRepository {
     input: CreatePackageInput,
     deps: ActionDeps,
   ): PackageResult | Promise<PackageResult>;
+
+  createPickupLocation(
+    state: AppState,
+    input: CreatePickupLocationInput,
+    deps: ActionDeps,
+  ): PickupLocationResult | Promise<PickupLocationResult>;
 
   getWaitingPackageCount(state: AppState, pickupLocationId: string): number | Promise<number>;
 
