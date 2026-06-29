@@ -41,6 +41,20 @@ function mergePickupLocations(remoteLocations: PickupLocation[]) {
   ];
 }
 
+export function mergePendingJoinRequests(
+  currentRequests: JoinRequest[],
+  pendingRequests: JoinRequest[],
+) {
+  const pendingIds = new Set(pendingRequests.map((request) => request.id));
+
+  return [
+    ...pendingRequests,
+    ...currentRequests.filter(
+      (request) => request.status !== "pending" && !pendingIds.has(request.id),
+    ),
+  ];
+}
+
 export function subscribeFirestoreAppState(
   currentUser: AppUser,
   onState: AppStateListener,
@@ -158,12 +172,8 @@ export function subscribeFirestoreAppState(
         query(collection(db, "joinRequests"), where("status", "==", "pending")),
         (snapshot) => {
           const pendingRequests = snapshot.docs.map((item) => item.data() as JoinRequest);
-          const pendingIds = new Set(pendingRequests.map((request) => request.id));
           emit({
-            joinRequests: [
-              ...pendingRequests,
-              ...state.joinRequests.filter((request) => !pendingIds.has(request.id)),
-            ],
+            joinRequests: mergePendingJoinRequests(state.joinRequests, pendingRequests),
           });
         },
         handleError,
