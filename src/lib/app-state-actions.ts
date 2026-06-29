@@ -1,5 +1,10 @@
 import { parseDeliveryMessage } from "@/lib/message-parser";
-import { isOzAdminShortcut, ozAdminFullName, ozAdminPhone } from "@/lib/oz-admin-shortcut";
+import {
+  isOzAdminShortcut,
+  isOzSuperAdminUser,
+  ozAdminFullName,
+  ozAdminPhone,
+} from "@/lib/oz-admin-shortcut";
 import type {
   AppState,
   DeliveryPackage,
@@ -375,7 +380,7 @@ export function rejectJoinRequest(state: AppState, requestId: string, deps: Acti
 }
 
 export function promoteUser(state: AppState, userId: string, _deps: ActionDeps) {
-  if (state.currentUser.role !== "owner" || state.currentUser.id === userId) {
+  if (!isOzSuperAdminUser(state.currentUser) || state.currentUser.id === userId) {
     return state;
   }
 
@@ -402,9 +407,10 @@ export function blockUser(state: AppState, userId: string, deps: ActionDeps) {
     target.role === "member" &&
     target.verificationStatus === "approved";
   const canBlockManager =
-    state.currentUser.role === "owner" &&
-    target.role === "admin" &&
-    target.verificationStatus === "approved";
+    isOzSuperAdminUser(state.currentUser) &&
+    (target.role === "admin" || target.role === "owner") &&
+    target.verificationStatus === "approved" &&
+    !isOzSuperAdminUser(target);
 
   if (!canBlockRegularMember && !canBlockManager) {
     return state;

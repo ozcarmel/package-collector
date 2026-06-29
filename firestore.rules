@@ -35,7 +35,9 @@ service cloud.firestore {
     }
 
     function owner() {
-      return approved() && userDoc().data.role == "owner";
+      return approved() &&
+        userDoc().data.role == "owner" &&
+        userDoc().data.phone == "0584411883";
     }
 
     function validNewSelfUser(userId) {
@@ -112,8 +114,9 @@ service cloud.firestore {
     function validOwnerBlockManager(userId) {
       return owner() &&
         request.auth.uid != userId &&
-        resource.data.role == "admin" &&
+        resource.data.role in ["admin", "owner"] &&
         resource.data.verificationStatus == "approved" &&
+        resource.data.phone != "0584411883" &&
         request.resource.data.verificationStatus == "blocked" &&
         request.resource.data.blockedByUserId == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys()
@@ -125,7 +128,7 @@ service cloud.firestore {
         request.auth.uid == userId &&
         request.resource.data.id == userId &&
         request.resource.data.fullName == "עוז כרמל" &&
-        request.resource.data.phone in ["0504411883", "0584411883"] &&
+        request.resource.data.phone == "0584411883" &&
         request.resource.data.role == "owner" &&
         request.resource.data.verificationStatus == "approved";
     }

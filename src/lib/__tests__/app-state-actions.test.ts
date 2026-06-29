@@ -330,6 +330,32 @@ describe("app state actions", () => {
     );
   });
 
+  it("allows Oz super admin to block legacy owner records", () => {
+    const deps = createTestDeps();
+    const state: AppState = {
+      ...cloneState(),
+      users: [
+        ...cloneState().users,
+        {
+          id: "legacy-owner",
+          fullName: "Legacy Owner",
+          phone: "050-999-9999",
+          role: "owner",
+          verificationStatus: "approved",
+          createdAt: "2026-06-28T10:00:00.000Z",
+          approvedAt: "2026-06-28T10:00:00.000Z",
+        },
+      ],
+    };
+
+    const blocked = blockUser(state, "legacy-owner", deps);
+
+    expect(blocked.users.find((user) => user.id === "legacy-owner")).toMatchObject({
+      verificationStatus: "blocked",
+      blockedByUserId: state.currentUser.id,
+    });
+  });
+
   it("prevents admins from promoting members", () => {
     const deps = createTestDeps();
     const state = cloneState();

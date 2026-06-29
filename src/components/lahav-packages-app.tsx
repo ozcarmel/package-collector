@@ -40,7 +40,7 @@ import { initialAppState } from "@/lib/demo-data";
 import { subscribeFirestoreAppState } from "@/lib/firebase/app-state-subscriptions";
 import { subscribeFirebaseSession } from "@/lib/firebase/auth-bootstrap";
 import { hasFirebaseConfig } from "@/lib/firebase/client";
-import { isOzAdminShortcut } from "@/lib/oz-admin-shortcut";
+import { isOzAdminShortcut, isOzSuperAdminUser } from "@/lib/oz-admin-shortcut";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import type {
   AppState,
@@ -1692,7 +1692,7 @@ export function LahavPackagesApp() {
   }
 
   function AdminScreen() {
-    const isOwner = currentUser.role === "owner";
+    const isSuperAdmin = isOzSuperAdminUser(currentUser);
     const approvedUsers = state.users.filter(
       (user) => user.role === "member" && user.verificationStatus === "approved",
     );
@@ -1808,7 +1808,7 @@ export function LahavPackagesApp() {
                     <span className="badge done">מאושרת</span>
                   </div>
                   <div className="card-actions">
-                    {isOwner ? (
+                    {isSuperAdmin ? (
                       <button
                         className="button"
                         disabled={adminActionId !== null}
@@ -1839,6 +1839,13 @@ export function LahavPackagesApp() {
             <div className="card empty-state">אין מנהלים להצגה.</div>
           ) : null}
 
+          {adminListView === "managers" && managerUsers.length > 0 && !isSuperAdmin ? (
+            <div className="info-note">
+              <Info />
+              מחיקת מנהלים זמינה רק לעוז כרמל עם מספר הטלפון 0584411883.
+            </div>
+          ) : null}
+
           {adminListView === "managers"
             ? managerUsers.map((user) => (
                 <div className="admin-card" key={user.id}>
@@ -1846,14 +1853,14 @@ export function LahavPackagesApp() {
                     <div>
                       <div className="package-name">{user.fullName}</div>
                       <div className="package-meta">
-                        {user.phone} · {user.role === "owner" ? "מנהל ראשי" : "מנהל"}
+                        {user.phone} · {isOzSuperAdminUser(user) ? "מנהל ראשי" : "מנהל"}
                       </div>
                     </div>
                     <span className="badge done">
-                      {user.role === "owner" ? "ראשי" : "מנהל"}
+                      {isOzSuperAdminUser(user) ? "ראשי" : "מנהל"}
                     </span>
                   </div>
-                  {isOwner && user.role === "admin" && user.id !== currentUserId ? (
+                  {isSuperAdmin && !isOzSuperAdminUser(user) && user.id !== currentUserId ? (
                     <button
                       className="button warn full"
                       disabled={adminActionId !== null}
@@ -1861,7 +1868,7 @@ export function LahavPackagesApp() {
                       type="button"
                     >
                       <UserX />
-                      {adminActionId === `block-${user.id}` ? "חוסם..." : "חסום מנהל"}
+                      {adminActionId === `block-${user.id}` ? "מוחק..." : "מחק מנהל"}
                     </button>
                   ) : null}
                 </div>

@@ -12,7 +12,12 @@ import {
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { parseDeliveryMessage } from "@/lib/message-parser";
-import { isOzAdminShortcut, ozAdminFullName, ozAdminPhone } from "@/lib/oz-admin-shortcut";
+import {
+  isOzAdminShortcut,
+  isOzSuperAdminUser,
+  ozAdminFullName,
+  ozAdminPhone,
+} from "@/lib/oz-admin-shortcut";
 import type {
   AppOperationsRepository,
   RevealedSensitivePackageDetails,
@@ -423,7 +428,7 @@ export const firestoreRepository: AppOperationsRepository = {
   },
 
   async promoteUser(state: AppState, userId: string) {
-    if (state.currentUser.role !== "owner" || state.currentUser.id === userId) {
+    if (!isOzSuperAdminUser(state.currentUser) || state.currentUser.id === userId) {
       return;
     }
 
@@ -446,9 +451,10 @@ export const firestoreRepository: AppOperationsRepository = {
       target.role === "member" &&
       target.verificationStatus === "approved";
     const canBlockManager =
-      state.currentUser.role === "owner" &&
-      target.role === "admin" &&
-      target.verificationStatus === "approved";
+      isOzSuperAdminUser(state.currentUser) &&
+      (target.role === "admin" || target.role === "owner") &&
+      target.verificationStatus === "approved" &&
+      !isOzSuperAdminUser(target);
     if (!canBlockRegularMember && !canBlockManager) return;
 
     await updateDoc(doc(db, "users", userId), {

@@ -5,8 +5,8 @@ const now = new Date("2026-06-24T13:00:00+03:00").toISOString();
 export const initialAppState: AppState = {
   currentUser: {
     id: "u-admin",
-    fullName: "עוז",
-    phone: "050-000-0000",
+    fullName: "עוז כרמל",
+    phone: "0584411883",
     role: "owner",
     verificationStatus: "approved",
     createdAt: now,
@@ -15,8 +15,8 @@ export const initialAppState: AppState = {
   users: [
     {
       id: "u-admin",
-      fullName: "עוז",
-      phone: "050-000-0000",
+      fullName: "עוז כרמל",
+      phone: "0584411883",
       role: "owner",
       verificationStatus: "approved",
       createdAt: now,
