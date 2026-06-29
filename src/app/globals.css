@@ -577,6 +577,11 @@ form.stack,
   margin: 14px 0;
 }
 
+.admin-location-count {
+  margin-top: 8px;
+  text-align: center;
+}
+
 .location-admin-form {
   margin-top: 12px;
 }
@@ -1386,6 +1391,12 @@ form.stack,
   display: grid;
   gap: 12px;
   max-width: 340px;
+}
+
+.admin-location-modal {
+  width: min(370px, calc(100vw - 32px));
+  max-height: min(720px, calc(100dvh - 44px));
+  overflow-y: auto;
 }
 
 .hours-location-name {

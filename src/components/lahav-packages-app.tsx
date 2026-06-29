@@ -256,6 +256,7 @@ export function LahavPackagesApp() {
   const [collectingPackageId, setCollectingPackageId] = useState<string | null>(null);
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
   const [adminListView, setAdminListView] = useState<AdminListView>("pending");
+  const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
   const [screen, setScreen] = useState<Screen>(() => (hasJoinPreviewParam() ? "join" : "home"));
   const [toast, setToast] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftPackage>(emptyDraft);
@@ -857,6 +858,7 @@ export function LahavPackagesApp() {
       );
       applyRepositoryState(result.state);
       setLocationDraft(createEmptyLocationDraft());
+      setIsAddLocationModalOpen(false);
       notify("נקודת האיסוף נוספה.");
     } catch {
       notify("לא הצלחנו להוסיף את נקודת האיסוף. נסה/י שוב בעוד רגע.");
@@ -1142,6 +1144,159 @@ export function LahavPackagesApp() {
               >
                 סגור
               </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {isAddLocationModalOpen ? (
+        <div className="modal-backdrop admin-location-backdrop" role="presentation">
+          <section
+            aria-labelledby="add-location-title"
+            aria-modal="true"
+            className="confirm-modal admin-location-modal"
+            role="dialog"
+          >
+            <h2 id="add-location-title">הוסף נקודת איסוף</h2>
+            <p>נקודת איסוף חדשה תופיע בבית, בהוספת חבילה ובמסך האיסוף.</p>
+
+            <div className="stack location-admin-form">
+              <div className="field">
+                <label htmlFor="location-name">שם נקודת איסוף</label>
+                <input
+                  id="location-name"
+                  value={locationDraft.name}
+                  onChange={(event) =>
+                    setLocationDraft((current) => ({ ...current, name: event.target.value }))
+                  }
+                  placeholder="לדוגמה: דואר קיבוץ שובל"
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="location-address">כתובת מלאה או תיאור מקום</label>
+                <input
+                  id="location-address"
+                  value={locationDraft.address}
+                  onChange={(event) =>
+                    setLocationDraft((current) => ({ ...current, address: event.target.value }))
+                  }
+                  placeholder="לדוגמה: דואר שובל"
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="location-opening-summary">שעות פתיחה לתצוגה</label>
+                <input
+                  id="location-opening-summary"
+                  value={locationDraft.openingHours}
+                  onChange={(event) =>
+                    setLocationDraft((current) => ({
+                      ...current,
+                      openingHours: event.target.value,
+                    }))
+                  }
+                  placeholder="לדוגמה: א-ה 08:00-13:00"
+                />
+              </div>
+
+              <div className="hours-editor" aria-label="שעות פתיחה לפי ימים">
+                {weekdayLabels.map(([day, label]) => {
+                  const dayDraft = locationDraft.weeklyHours[day];
+
+                  return (
+                    <div className="hours-day-row" key={day}>
+                      <label className="day-toggle">
+                        <input
+                          checked={dayDraft.enabled}
+                          onChange={(event) =>
+                            updateLocationDay(day, { enabled: event.target.checked })
+                          }
+                          type="checkbox"
+                        />
+                        <span>{label}</span>
+                      </label>
+                      <div className="time-pairs">
+                        <div className="time-pair">
+                          <input
+                            aria-label={`פתיחה ${label}`}
+                            disabled={!dayDraft.enabled}
+                            onChange={(event) =>
+                              updateLocationDay(day, { firstOpen: event.target.value })
+                            }
+                            type="time"
+                            value={dayDraft.firstOpen}
+                          />
+                          <input
+                            aria-label={`סגירה ${label}`}
+                            disabled={!dayDraft.enabled}
+                            onChange={(event) =>
+                              updateLocationDay(day, { firstClose: event.target.value })
+                            }
+                            type="time"
+                            value={dayDraft.firstClose}
+                          />
+                        </div>
+                        <label className="second-range-toggle">
+                          <input
+                            checked={dayDraft.secondEnabled}
+                            disabled={!dayDraft.enabled}
+                            onChange={(event) =>
+                              updateLocationDay(day, { secondEnabled: event.target.checked })
+                            }
+                            type="checkbox"
+                          />
+                          <span>טווח נוסף</span>
+                        </label>
+                        {dayDraft.secondEnabled ? (
+                          <div className="time-pair">
+                            <input
+                              aria-label={`פתיחה נוספת ${label}`}
+                              disabled={!dayDraft.enabled}
+                              onChange={(event) =>
+                                updateLocationDay(day, { secondOpen: event.target.value })
+                              }
+                              type="time"
+                              value={dayDraft.secondOpen}
+                            />
+                            <input
+                              aria-label={`סגירה נוספת ${label}`}
+                              disabled={!dayDraft.enabled}
+                              onChange={(event) =>
+                                updateLocationDay(day, { secondClose: event.target.value })
+                              }
+                              type="time"
+                              value={dayDraft.secondClose}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="card-actions">
+                <button
+                  className="button"
+                  disabled={isSavingLocation}
+                  onClick={() => {
+                    setLocationDraft(createEmptyLocationDraft());
+                    setIsAddLocationModalOpen(false);
+                  }}
+                  type="button"
+                >
+                  ביטול
+                </button>
+                <button
+                  className="button primary"
+                  disabled={isSavingLocation}
+                  onClick={savePickupLocation}
+                  type="button"
+                >
+                  <MapPin />
+                  {isSavingLocation ? "מוסיף..." : "הוסף"}
+                </button>
+              </div>
             </div>
           </section>
         </div>
@@ -1504,6 +1659,20 @@ export function LahavPackagesApp() {
         <h1 className="screen-title">ניהול קהילה</h1>
         <p className="screen-kicker">בקשות הצטרפות, הרשאות מנהל ונקודות איסוף.</p>
 
+        <div className="admin-card add-location-card">
+          <button
+            className="button primary full"
+            onClick={() => setIsAddLocationModalOpen(true)}
+            type="button"
+          >
+            <MapPin />
+            הוסף נקודת איסוף
+          </button>
+          <div className="package-meta admin-location-count">
+            {state.pickupLocations.length} נקודות איסוף פעילות
+          </div>
+        </div>
+
         <div className="summary-grid" aria-label="סיכום מנהל">
           <button
             aria-pressed={adminListView === "pending"}
@@ -1532,138 +1701,6 @@ export function LahavPackagesApp() {
             <strong>{managerUsers.length}</strong>
             <span>מנהלים</span>
           </button>
-        </div>
-
-        <div className="admin-card add-location-card">
-          <div className="section-title-row">
-            <h2>הוסף נקודת איסוף</h2>
-            <span>{state.pickupLocations.length} נקודות פעילות</span>
-          </div>
-
-          <div className="stack location-admin-form">
-            <div className="field">
-              <label htmlFor="location-name">שם נקודת איסוף</label>
-              <input
-                id="location-name"
-                value={locationDraft.name}
-                onChange={(event) =>
-                  setLocationDraft((current) => ({ ...current, name: event.target.value }))
-                }
-                placeholder="לדוגמה: דואר קיבוץ שובל"
-              />
-            </div>
-
-            <div className="field">
-              <label htmlFor="location-address">כתובת מלאה או תיאור מקום</label>
-              <input
-                id="location-address"
-                value={locationDraft.address}
-                onChange={(event) =>
-                  setLocationDraft((current) => ({ ...current, address: event.target.value }))
-                }
-                placeholder="לדוגמה: דואר שובל"
-              />
-            </div>
-
-            <div className="field">
-              <label htmlFor="location-opening-summary">שעות פתיחה לתצוגה</label>
-              <input
-                id="location-opening-summary"
-                value={locationDraft.openingHours}
-                onChange={(event) =>
-                  setLocationDraft((current) => ({
-                    ...current,
-                    openingHours: event.target.value,
-                  }))
-                }
-                placeholder="לדוגמה: א-ה 08:00-13:00"
-              />
-            </div>
-
-            <div className="hours-editor" aria-label="שעות פתיחה לפי ימים">
-              {weekdayLabels.map(([day, label]) => {
-                const dayDraft = locationDraft.weeklyHours[day];
-
-                return (
-                  <div className="hours-day-row" key={day}>
-                    <label className="day-toggle">
-                      <input
-                        checked={dayDraft.enabled}
-                        onChange={(event) => updateLocationDay(day, { enabled: event.target.checked })}
-                        type="checkbox"
-                      />
-                      <span>{label}</span>
-                    </label>
-                    <div className="time-pairs">
-                      <div className="time-pair">
-                        <input
-                          aria-label={`פתיחה ${label}`}
-                          disabled={!dayDraft.enabled}
-                          onChange={(event) =>
-                            updateLocationDay(day, { firstOpen: event.target.value })
-                          }
-                          type="time"
-                          value={dayDraft.firstOpen}
-                        />
-                        <input
-                          aria-label={`סגירה ${label}`}
-                          disabled={!dayDraft.enabled}
-                          onChange={(event) =>
-                            updateLocationDay(day, { firstClose: event.target.value })
-                          }
-                          type="time"
-                          value={dayDraft.firstClose}
-                        />
-                      </div>
-                      <label className="second-range-toggle">
-                        <input
-                          checked={dayDraft.secondEnabled}
-                          disabled={!dayDraft.enabled}
-                          onChange={(event) =>
-                            updateLocationDay(day, { secondEnabled: event.target.checked })
-                          }
-                          type="checkbox"
-                        />
-                        <span>טווח נוסף</span>
-                      </label>
-                      {dayDraft.secondEnabled ? (
-                        <div className="time-pair">
-                          <input
-                            aria-label={`פתיחה נוספת ${label}`}
-                            disabled={!dayDraft.enabled}
-                            onChange={(event) =>
-                              updateLocationDay(day, { secondOpen: event.target.value })
-                            }
-                            type="time"
-                            value={dayDraft.secondOpen}
-                          />
-                          <input
-                            aria-label={`סגירה נוספת ${label}`}
-                            disabled={!dayDraft.enabled}
-                            onChange={(event) =>
-                              updateLocationDay(day, { secondClose: event.target.value })
-                            }
-                            type="time"
-                            value={dayDraft.secondClose}
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <button
-              className="button primary full"
-              disabled={isSavingLocation}
-              onClick={savePickupLocation}
-              type="button"
-            >
-              <MapPin />
-              {isSavingLocation ? "מוסיף..." : "הוסף נקודת איסוף"}
-            </button>
-          </div>
         </div>
 
         <div className="stack">
