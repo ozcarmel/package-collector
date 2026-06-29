@@ -115,6 +115,29 @@ describe("app state actions", () => {
     );
   });
 
+  it("blocks unapproved users from creating packages", () => {
+    const deps = createTestDeps();
+    const state: AppState = {
+      ...cloneState(),
+      currentUser: {
+        ...cloneState().currentUser,
+        verificationStatus: "admin_pending",
+      },
+    };
+
+    expect(() =>
+      createPackage(
+        state,
+        {
+          ownerName: "Pending User",
+          pickupLocationId: "post-office",
+          sensitiveDeliveryMessage: "Package waiting for pickup",
+        },
+        deps,
+      ),
+    ).toThrow("User must be approved to create packages.");
+  });
+
   it("creates a pickup location with weekly hours and a generated navigation URL", () => {
     const deps = createTestDeps();
     const state = cloneState();
@@ -179,6 +202,21 @@ describe("app state actions", () => {
     expect(result.runId).toBeNull();
     expect(result.packageCount).toBe(0);
     expect(result.state).toEqual(state);
+  });
+
+  it("blocks unapproved users from starting pickup runs", () => {
+    const deps = createTestDeps();
+    const state: AppState = {
+      ...cloneState(),
+      currentUser: {
+        ...cloneState().currentUser,
+        verificationStatus: "admin_pending",
+      },
+    };
+
+    expect(() => startPickupRun(state, "pitzutz", deps)).toThrow(
+      "User must be approved to start pickup runs.",
+    );
   });
 
   it("logs sensitive link access and updates the active run item", () => {

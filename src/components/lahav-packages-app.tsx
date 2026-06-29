@@ -236,6 +236,18 @@ function getUserName(users: AppState["users"], id?: string) {
   return id ? users.find((user) => user.id === id)?.fullName : undefined;
 }
 
+function unapprovedAccessMessage(screen: Screen) {
+  if (screen === "add") {
+    return "לא ניתן להוסיף חבילה לפני אישור משתמש חדש";
+  }
+
+  if (screen === "pickup" || screen === "catalog" || screen === "arrival") {
+    return "לא ניתן לאסוף חבילה לפני אישור משתמש חדש";
+  }
+
+  return null;
+}
+
 function formatHebrewDate(isoDate?: string) {
   if (!isoDate) return "";
 
@@ -444,13 +456,20 @@ export function LahavPackagesApp() {
   const submittedJoinRequest =
     state.joinRequests.find((request) => request.id === submittedJoinRequestId) ??
     pendingJoinRequests[0];
+  const isApprovedUser =
+    !joinPreviewMode && currentUser.verificationStatus === "approved";
   const canManageCommunity =
-    !joinPreviewMode && (currentUser.role === "admin" || currentUser.role === "owner");
+    isApprovedUser && (currentUser.role === "admin" || currentUser.role === "owner");
+  const requestedScreenAccessMessage = isApprovedUser ? null : unapprovedAccessMessage(screen);
   const effectiveScreen: Screen =
     screen === "pending" && submittedJoinRequest?.status === "approved"
       ? "home"
       : screen === "admin" && !canManageCommunity
         ? "home"
+        : requestedScreenAccessMessage
+          ? submittedJoinRequest
+            ? "pending"
+            : "join"
         : screen;
 
   const navItems: Array<[Screen, string, ReactNode]> = [
@@ -525,6 +544,17 @@ export function LahavPackagesApp() {
 
   function notify(message: string) {
     setToast(message);
+  }
+
+  function navigateToScreen(nextScreen: Screen) {
+    const accessMessage = isApprovedUser ? null : unapprovedAccessMessage(nextScreen);
+    if (accessMessage) {
+      notify(accessMessage);
+      setScreen(submittedJoinRequest ? "pending" : "join");
+      return;
+    }
+
+    setScreen(nextScreen);
   }
 
   function getUnlockAnchor(target: HTMLElement): UnlockAnchor {
@@ -637,6 +667,12 @@ export function LahavPackagesApp() {
   }
 
   async function requestPickupUnlock(locationId: string, target?: HTMLElement) {
+    if (!isApprovedUser) {
+      notify("לא ניתן לאסוף חבילה לפני אישור משתמש חדש");
+      setScreen(submittedJoinRequest ? "pending" : "join");
+      return;
+    }
+
     try {
       const waitingCount = await operationsRepository.getWaitingPackageCount(state, locationId);
 
@@ -710,6 +746,12 @@ export function LahavPackagesApp() {
   async function saveDraftPackage() {
     if (isSavingPackage) return;
 
+    if (!isApprovedUser) {
+      notify("לא ניתן להוסיף חבילה לפני אישור משתמש חדש");
+      setScreen(submittedJoinRequest ? "pending" : "join");
+      return;
+    }
+
     setIsSavingPackage(true);
     try {
       const result = await operationsRepository.createPackage(
@@ -734,6 +776,12 @@ export function LahavPackagesApp() {
 
   async function startPickupRun(locationId: string) {
     if (isStartingPickupRun) return;
+
+    if (!isApprovedUser) {
+      notify("לא ניתן לאסוף חבילה לפני אישור משתמש חדש");
+      setScreen(submittedJoinRequest ? "pending" : "join");
+      return;
+    }
 
     setIsStartingPickupRun(true);
     try {
@@ -990,7 +1038,7 @@ export function LahavPackagesApp() {
                   {headerConfig.backTarget ? (
                     <button
                       className="icon-button"
-                      onClick={() => setScreen(headerConfig.backTarget as Screen)}
+                      onClick={() => navigateToScreen(headerConfig.backTarget as Screen)}
                       type="button"
                       aria-label="חזרה"
                     >
@@ -1024,7 +1072,7 @@ export function LahavPackagesApp() {
               <button
                 className={`nav-item nav-${itemScreen} ${effectiveScreen === itemScreen ? "active" : ""}`}
                 key={itemScreen}
-                onClick={() => setScreen(itemScreen)}
+                onClick={() => navigateToScreen(itemScreen)}
                 type="button"
               >
                 <span className="nav-icon">{icon}</span>
@@ -1049,7 +1097,7 @@ export function LahavPackagesApp() {
             <button
               className={`tab-button ${effectiveScreen === itemScreen ? "active" : ""}`}
               key={itemScreen}
-              onClick={() => setScreen(itemScreen)}
+              onClick={() => navigateToScreen(itemScreen)}
               type="button"
             >
               {label}

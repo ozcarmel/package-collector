@@ -47,6 +47,12 @@ export function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function assertApprovedUser(state: AppState, action: string) {
+  if (state.currentUser.verificationStatus !== "approved") {
+    throw new Error(`User must be approved to ${action}.`);
+  }
+}
+
 export function createJoinRequest(
   state: AppState,
   input: CreateJoinRequestInput,
@@ -105,6 +111,8 @@ export function createJoinRequest(
 }
 
 export function createPackage(state: AppState, input: CreatePackageInput, deps: ActionDeps) {
+  assertApprovedUser(state, "create packages");
+
   const parsed = parseDeliveryMessage(input.sensitiveDeliveryMessage, state.pickupLocations);
   const newPackage: DeliveryPackage = {
     id: deps.createId("pkg"),
@@ -186,6 +194,8 @@ export function getWaitingPackageCount(state: AppState, pickupLocationId: string
 }
 
 export function startPickupRun(state: AppState, pickupLocationId: string, deps: ActionDeps) {
+  assertApprovedUser(state, "start pickup runs");
+
   const packagesForLocation = state.packages.filter(
     (pkg) => pkg.pickupLocationId === pickupLocationId && pkg.status === "waiting",
   );

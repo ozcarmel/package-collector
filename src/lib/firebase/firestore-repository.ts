@@ -95,6 +95,10 @@ export const firestoreRepository: AppOperationsRepository = {
   },
 
   async createPackage(state: AppState, input: CreatePackageInput, deps: ActionDeps) {
+    if (state.currentUser.verificationStatus !== "approved") {
+      throw new Error("User must be approved to create packages.");
+    }
+
     const db = requireFirestore();
     const parsed = parseDeliveryMessage(input.sensitiveDeliveryMessage, state.pickupLocations);
     const packageId = deps.createId("pkg");
@@ -166,6 +170,10 @@ export const firestoreRepository: AppOperationsRepository = {
   },
 
   async startPickupRun(state: AppState, pickupLocationId: string, deps: ActionDeps) {
+    if (state.currentUser.verificationStatus !== "approved") {
+      throw new Error("User must be approved to start pickup runs.");
+    }
+
     const db = requireFirestore();
     const packagesSnapshot = await getDocs(
       query(
