@@ -58,7 +58,7 @@ service cloud.firestore {
         request.auth.uid == userId &&
         request.resource.data.id == userId &&
         request.resource.data.fullName == "עוז כרמל" &&
-        request.resource.data.phone == "0584411883" &&
+        request.resource.data.phone in ["0504411883", "0584411883"] &&
         request.resource.data.role == "owner" &&
         request.resource.data.verificationStatus == "approved";
     }

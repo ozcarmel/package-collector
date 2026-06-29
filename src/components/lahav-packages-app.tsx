@@ -217,6 +217,7 @@ export function LahavPackagesApp() {
   const [dropNote, setDropNote] = useState("שלוש החבילות בדולב, בצד ימין למעלה.");
   const pickupLocationStripRef = useRef<HTMLDivElement | null>(null);
   const pickupLocationArrowRef = useRef<HTMLButtonElement | null>(null);
+  const ozPendingRecoveryRef = useRef<string | null>(null);
   const firebaseEnabled = hasFirebaseConfig();
   const currentUser = state.currentUser;
   const currentUserId = currentUser.id;
@@ -400,10 +401,54 @@ export function LahavPackagesApp() {
 
   const headerConfig = getHeaderConfig();
   const operationsRepository = getConfiguredOperationsRepository();
-  const actionDeps = {
-    createId,
-    now: () => new Date().toISOString(),
-  };
+  const actionDeps = useMemo(
+    () => ({
+      createId,
+      now: () => new Date().toISOString(),
+    }),
+    [],
+  );
+
+  useEffect(() => {
+    if (!repositoryReady || canManageCommunity || !submittedJoinRequest) return;
+    if (!isOzAdminShortcut(submittedJoinRequest)) return;
+
+    const recoveryKey = `${currentUserId}:${submittedJoinRequest.id}`;
+    if (ozPendingRecoveryRef.current === recoveryKey) return;
+    ozPendingRecoveryRef.current = recoveryKey;
+
+    void (async () => {
+      try {
+        const result = await operationsRepository.createJoinRequest(
+          state,
+          {
+            fullName: submittedJoinRequest.fullName,
+            phone: submittedJoinRequest.phone,
+            note: submittedJoinRequest.note,
+          },
+          actionDeps,
+        );
+        if (result.state) {
+          setState(result.state);
+        }
+        setSubmittedJoinRequestId(result.requestId);
+        setJoinPreviewMode(false);
+        setScreen("home");
+        notify("זוהית כמנהל. הרשאת הניהול פעילה.");
+      } catch {
+        notify("לא הצלחנו להפעיל הרשאת מנהל. בדוק/י את מספר הטלפון ונסה/י שוב.");
+      }
+    })();
+  }, [
+    actionDeps,
+    canManageCommunity,
+    currentUserId,
+    operationsRepository,
+    repositoryReady,
+    state,
+    submittedJoinRequest,
+  ]);
+
   const pendingUnlockStyle: CSSProperties | undefined = pendingUnlockAnchor
     ? {
         top: pendingUnlockAnchor.top,
