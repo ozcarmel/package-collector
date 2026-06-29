@@ -1722,17 +1722,15 @@ export function LahavPackagesApp() {
                   </div>
                   {request.note ? <div className="message-preview">{request.note}</div> : null}
                   <div className="card-actions">
-                    {isOwner ? (
-                      <button
-                        className="button primary"
-                        disabled={adminActionId !== null}
-                        onClick={() => approveJoinRequest(request.id)}
-                        type="button"
-                      >
-                        <UserCheck />
-                        {adminActionId === `approve-${request.id}` ? "מאשר..." : "אשר"}
-                      </button>
-                    ) : null}
+                    <button
+                      className="button primary"
+                      disabled={adminActionId !== null}
+                      onClick={() => approveJoinRequest(request.id)}
+                      type="button"
+                    >
+                      <UserCheck />
+                      {adminActionId === `approve-${request.id}` ? "מאשר..." : "אשר"}
+                    </button>
                     <button
                       className="button warn"
                       disabled={adminActionId !== null}

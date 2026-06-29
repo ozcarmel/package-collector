@@ -54,7 +54,7 @@ service cloud.firestore {
     }
 
     function validAdminApproveUser() {
-      return owner() &&
+      return admin() &&
         resource.data.verificationStatus in ["phone_pending", "admin_pending"] &&
         request.resource.data.role == "member" &&
         request.resource.data.verificationStatus == "approved" &&
@@ -70,8 +70,8 @@ service cloud.firestore {
           ]);
     }
 
-    function validOwnerCreateApprovedMember(userId) {
-      return owner() &&
+    function validAdminCreateApprovedMember(userId) {
+      return admin() &&
         request.auth.uid != userId &&
         request.resource.data.id == userId &&
         request.resource.data.role == "member" &&
@@ -251,7 +251,7 @@ service cloud.firestore {
       allow read: if signedIn() && (request.auth.uid == userId || admin());
       allow create: if validNewSelfUser(userId) ||
         validOzOwnerSelfWrite(userId) ||
-        validOwnerCreateApprovedMember(userId);
+        validAdminCreateApprovedMember(userId);
       allow update: if validSelfUserUpdate(userId) ||
         validOzOwnerSelfWrite(userId) ||
         validAdminApproveUser() ||
@@ -269,7 +269,7 @@ service cloud.firestore {
           .hasOnly(["status", "reviewedAt", "reviewedByUserId"]) &&
         (
           request.resource.data.status == "rejected" ||
-          (owner() && request.resource.data.status == "approved")
+          request.resource.data.status == "approved"
         );
       allow delete: if owner();
     }
