@@ -1,0 +1,28 @@
+﻿Add-Type -AssemblyName System.Drawing
+$base = 'C:\Users\OZ\Documents\חבילות להב'
+$fontFamily = 'Segoe UI'
+function PathRound($x,$y,$w,$h,$r){$p=New-Object System.Drawing.Drawing2D.GraphicsPath;$d=$r*2;$p.AddArc($x,$y,$d,$d,180,90);$p.AddArc($x+$w-$d,$y,$d,$d,270,90);$p.AddArc($x+$w-$d,$y+$h-$d,$d,$d,0,90);$p.AddArc($x,$y+$h-$d,$d,$d,90,90);$p.CloseFigure();$p}
+function FillRound($g,$color,$x,$y,$w,$h,$r){$b=New-Object System.Drawing.SolidBrush([System.Drawing.ColorTranslator]::FromHtml($color));$p=PathRound $x $y $w $h $r;$g.FillPath($b,$p);$p.Dispose();$b.Dispose()}
+function StrokeRound($g,$color,$x,$y,$w,$h,$r){$pen=New-Object System.Drawing.Pen([System.Drawing.ColorTranslator]::FromHtml($color),1);$p=PathRound $x $y $w $h $r;$g.DrawPath($pen,$p);$p.Dispose();$pen.Dispose()}
+function Txt($g,$text,$size,$bold,$color,$x,$y,$w,$h,$align){$style=if($bold){[System.Drawing.FontStyle]::Bold}else{[System.Drawing.FontStyle]::Regular};$f=New-Object System.Drawing.Font($fontFamily,$size,$style);$b=New-Object System.Drawing.SolidBrush([System.Drawing.ColorTranslator]::FromHtml($color));$fmt=New-Object System.Drawing.StringFormat;$fmt.FormatFlags=[System.Drawing.StringFormatFlags]::DirectionRightToLeft;$fmt.Alignment=[System.Drawing.StringAlignment]::$align;$rect=New-Object System.Drawing.RectangleF($x,$y,$w,$h);$g.DrawString($text,$f,$b,$rect,$fmt);$fmt.Dispose();$f.Dispose();$b.Dispose()}
+function Card($g,$x,$y,$w,$name,$meta,$badge,$sub){FillRound $g '#fcf4e7' $x $y $w 94 8;StrokeRound $g '#e1d4c0' $x $y $w 94 8;Txt $g $name 13 $true '#17211b' ($x+102) ($y+13) ($w-116) 22 Near;Txt $g $meta 10 $false '#746f65' ($x+102) ($y+38) ($w-116) 18 Near;FillRound $g '#ffe70b' ($x+12) ($y+14) 86 28 8;Txt $g $badge 9 $true '#17211b' ($x+18) ($y+20) 74 16 Center;FillRound $g '#dcefeb' ($x+$w-142) ($y+58) 126 24 8;Txt $g $sub 9 $true '#267365' ($x+$w-136) ($y+63) 114 14 Center}
+function Mock($opt){
+  $bmp=New-Object System.Drawing.Bitmap(390,820);$g=[System.Drawing.Graphics]::FromImage($bmp);$g.SmoothingMode='AntiAlias';$g.TextRenderingHint='ClearTypeGridFit';$g.Clear([System.Drawing.ColorTranslator]::FromHtml('#ddd8ce'))
+  $clip=PathRound 8 8 374 804 30;$g.SetClip($clip)
+  if($opt -eq 1){$top1='#1f9361';$top2='#0d3f2d';$body='#0d3f2d';$panel='#fbf2e2';$topText='#ffffff';$title='אפשרות 1';$sub='ירוק מלא, כרטיסים חמים';$sectionY=286}
+  elseif($opt -eq 2){$top1='#f4ecdd';$top2='#f4ecdd';$body='#f4ecdd';$panel='#fbf6eb';$topText='#17211b';$title='אפשרות 2';$sub='רקע בז׳ מלא, ירוק להדגשות';$sectionY=280}
+  else{$top1='#1f9361';$top2='#0f4d34';$body='#f4ecdd';$panel='#fbf6eb';$topText='#ffffff';$title='אפשרות 3';$sub='Header ירוק קצר + גוף בז׳ אחיד';$sectionY=280}
+  $rect=New-Object System.Drawing.Rectangle(8,8,374,804);$grad=New-Object System.Drawing.Drawing2D.LinearGradientBrush($rect,[System.Drawing.ColorTranslator]::FromHtml($top1),[System.Drawing.ColorTranslator]::FromHtml($top2),90);$g.FillRectangle($grad,8,8,374,160);$grad.Dispose();$brush=New-Object System.Drawing.SolidBrush([System.Drawing.ColorTranslator]::FromHtml($body));$g.FillRectangle($brush,8,160,374,652);$brush.Dispose()
+  if($opt -eq 3){$b=New-Object System.Drawing.SolidBrush([System.Drawing.ColorTranslator]::FromHtml('#f4ecdd'));$g.FillRectangle($b,8,132,374,680);$b.Dispose()}
+  Txt $g 'להב' 9 $false $topText 22 26 80 18 Near;Txt $g '14:28' 9 $false $topText 300 26 64 18 Near;Txt $g 'חבילות להב' 16 $true $topText 130 68 132 28 Center;FillRound $g '#ffffff33' 28 58 42 42 16;FillRound $g '#ffffff33' 320 58 42 42 16
+  if($opt -eq 1){FillRound $g '#fff1a5' 28 126 334 52 10;Txt $g 'מי נוסע לאסוף היום?' 11 $true '#17211b' 82 144 220 20 Near}
+  if($opt -eq 1){FillRound $g $panel 18 248 354 564 18}else{FillRound $g $panel 8 122 374 690 22}
+  if($opt -eq 1){$mY=202}else{$mY=144}
+  for($i=0;$i -lt 3;$i++){ $x=28+$i*112; if($opt -eq 1){$mBg='#ffffff26';$tc='#ffffff';$mc='#dcefe5'}else{$mBg='#fff7eb';$tc='#17211b';$mc='#746f65'}; FillRound $g $mBg $x $mY 102 66 8; $num=@('3','0','1')[$i];$lab=@('ממתינות לאיסוף','בדרך לקיבוץ','ממתינות למסירה')[$i];Txt $g $num 18 $true $tc ($x+34) ($mY+8) 34 24 Center;Txt $g $lab 9 $false $mc ($x+8) ($mY+39) 86 16 Center}
+  $chipY=$mY+82;$chips=@('הכל','הום פעמי 1','פיצוץ 3','דואר 0');$widths=@(52,96,72,62);$cx=28;for($i=0;$i -lt 4;$i++){if($i -eq 0){if($opt -eq 2){$cb='#1f7a52';$cc='#ffffff'}else{$cb='#dff0b3';$cc='#17211b'}}else{if($opt -eq 1){$cb='#123b2d';$cc='#ffffff'}else{$cb='#efe2cf';$cc='#17211b'}};FillRound $g $cb $cx $chipY $widths[$i] 38 10;Txt $g $chips[$i] 9 $true $cc ($cx+5) ($chipY+11) ($widths[$i]-10) 16 Center;$cx+=$widths[$i]+8}
+  $heading="${title}: ${sub}";Txt $g $heading 11 $true '#17211b' 60 $sectionY 242 22 Near;Txt $g '4 פריטים' 9 $false '#746f65' 28 $sectionY 70 18 Near
+  $names=@('דניאלה קטלן','הילה נבו','איילת מדר','נעה אמבולוס');for($i=0;$i -lt 4;$i++){if($i -eq 3){$meta='הום פעמי להבים';$badge='בקיבוץ';$subBadge='בדולב בש.ג'}else{$meta='פיצוץ להבים';$badge='ממתין לאיסוף';$subBadge='פרטי איסוף מוגנים'};Card $g 28 ($sectionY+36+$i*104) 334 $names[$i] $meta $badge $subBadge}
+  if($opt -eq 1){$nav='#f6ead7'}else{$nav='#fbf6eb'};FillRound $g $nav 8 744 374 68 0;Txt $g 'ניהול        איסוף        הוספה        בית' 9 $false '#746f65' 46 772 298 22 Center
+  $g.ResetClip();$p=New-Object System.Drawing.Pen([System.Drawing.ColorTranslator]::FromHtml('#0d0b13'),10);$border=PathRound 8 8 374 804 30;$g.DrawPath($p,$border);$out=Join-Path $base "design-option-$opt.png";$bmp.Save($out,[System.Drawing.Imaging.ImageFormat]::Png);$g.Dispose();$bmp.Dispose();$clip.Dispose();$border.Dispose();$p.Dispose();Write-Output $out
+}
+1..3 | ForEach-Object { Mock $_ }

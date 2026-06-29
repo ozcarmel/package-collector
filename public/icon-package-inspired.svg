@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="חבילות להב">
+  <defs>
+    <linearGradient id="bladeIconBg" x1="58" y1="42" x2="452" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#334156"/>
+      <stop offset=".58" stop-color="#263244"/>
+      <stop offset="1" stop-color="#151C28"/>
+    </linearGradient>
+    <linearGradient id="bladeIconTop" x1="120" y1="110" x2="370" y2="224" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE2C2"/>
+      <stop offset="1" stop-color="#F7A768"/>
+    </linearGradient>
+    <linearGradient id="bladeIconLeft" x1="104" y1="183" x2="246" y2="383" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFC28B"/>
+      <stop offset="1" stop-color="#EA7E43"/>
+    </linearGradient>
+    <linearGradient id="bladeIconRight" x1="239" y1="177" x2="392" y2="383" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F7AB6C"/>
+      <stop offset="1" stop-color="#D96F3E"/>
+    </linearGradient>
+    <linearGradient id="bladeIconTape" x1="203" y1="92" x2="313" y2="348" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFBB83"/>
+      <stop offset=".44" stop-color="#E36F4E"/>
+      <stop offset="1" stop-color="#A93C32"/>
+    </linearGradient>
+    <filter id="bladeIconShadow" x="68" y="76" width="380" height="378" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="24" stdDeviation="20" flood-color="#101722" flood-opacity=".38"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bladeIconBg)"/>
+  <path d="M92 387c61 42 226 67 312-8 38-33 39-100 5-156-45-77-117-128-213-122-88 6-156 63-175 140-17 69 15 113 71 146Z" fill="#FFF2DE" opacity=".09"/>
+  <path d="M408 101 444 86 423 122 453 139 414 150 399 187 385 149 346 137 381 119 382 80 408 101Z" fill="#FFB071" opacity=".38"/>
+
+  <g filter="url(#bladeIconShadow)">
+    <path d="M103 185 242 132l146 55-146 60-139-62Z" fill="url(#bladeIconTop)"/>
+    <path d="M103 185 242 247v165L103 345V185Z" fill="url(#bladeIconLeft)"/>
+    <path d="M242 247 388 187v158l-146 67V247Z" fill="url(#bladeIconRight)"/>
+    <path d="M242 247v164" fill="none" stroke="#B95331" stroke-width="6" stroke-linecap="round" opacity=".35"/>
+    <path d="M201 149 269 126l52 22-37 39 59 38-87 113 10-86-70-37 52-28-47-38Z" fill="url(#bladeIconTape)"/>
+    <path d="M201 149 269 126l52 22-37 39 59 38-87 113 10-86-70-37 52-28-47-38Z" fill="none" stroke="#FFDFBF" stroke-width="5" stroke-linejoin="round" opacity=".28"/>
+  </g>
+
+  <g fill="none" stroke="#253244" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="136" y="270" width="74" height="74" rx="17" fill="#FFF1DE" stroke="none"/>
+    <path d="M155 312h37"/>
+    <path d="M173 292v40"/>
+    <path d="M156 300l17-17 17 17"/>
+  </g>
+</svg>

@@ -1,0 +1,201 @@
+import type { AppState } from "@/lib/types";
+
+const now = new Date("2026-06-24T13:00:00+03:00").toISOString();
+
+export const initialAppState: AppState = {
+  currentUser: {
+    id: "u-admin",
+    fullName: "עוז",
+    phone: "050-000-0000",
+    role: "owner",
+    verificationStatus: "approved",
+    createdAt: now,
+    approvedAt: now,
+  },
+  users: [
+    {
+      id: "u-admin",
+      fullName: "עוז",
+      phone: "050-000-0000",
+      role: "owner",
+      verificationStatus: "approved",
+      createdAt: now,
+      approvedAt: now,
+    },
+    {
+      id: "u-daniela",
+      fullName: "דניאלה קטלן",
+      phone: "050-111-1111",
+      role: "member",
+      verificationStatus: "approved",
+      createdAt: now,
+      approvedAt: now,
+    },
+    {
+      id: "u-hila",
+      fullName: "הילה נבו",
+      phone: "050-222-2222",
+      role: "member",
+      verificationStatus: "approved",
+      createdAt: now,
+      approvedAt: now,
+    },
+  ],
+  joinRequests: [
+    {
+      id: "jr-tal",
+      userId: "u-tal",
+      fullName: "טל יוד",
+      phone: "050-203-4475",
+      note: "היי, אני חבר להב. אפשר לאשר אותי?",
+      status: "pending",
+      createdAt: now,
+    },
+  ],
+  pickupLocations: [
+    {
+      id: "home-paami",
+      name: "הום פעמי להבים",
+      address: "שדרות שעורה 1, להבים",
+      openingHours: "א'-ה' 09:00-20:00, ו' 08:30-14:30",
+      navigationUrl:
+        "https://www.google.com/maps/search/?api=1&query=%D7%94%D7%95%D7%9D%20%D7%A4%D7%A2%D7%9E%D7%99%20%D7%A9%D7%93%D7%A8%D7%95%D7%AA%20%D7%A9%D7%A2%D7%95%D7%A8%D7%94%201%20%D7%9C%D7%94%D7%91%D7%99%D7%9D",
+      activeRequests: 2,
+    },
+    {
+      id: "post-office",
+      name: "דואר להבים",
+      address: "רימון 1, מרכז מסחרי חדש, להבים",
+      openingHours: "א' 13:00-18:00, ב'-ד' 11:00-15:00",
+      navigationUrl:
+        "https://www.google.com/maps/search/?api=1&query=%D7%93%D7%95%D7%90%D7%A8%20%D7%9C%D7%94%D7%91%D7%99%D7%9D%20%D7%A8%D7%99%D7%9E%D7%95%D7%9F%201",
+      activeRequests: 1,
+    },
+    {
+      id: "pitzutz",
+      name: "פיצוץ להבים",
+      address: "מתחם מבנה להבים, שדרות הרימון 1",
+      openingHours: "א'-ה' 10:00-14:00, 18:00-21:00",
+      weeklyHours: {
+        0: [
+          { open: "10:00", close: "14:00" },
+          { open: "18:00", close: "21:00" },
+        ],
+        1: [
+          { open: "10:00", close: "14:00" },
+          { open: "18:00", close: "21:00" },
+        ],
+        2: [
+          { open: "10:00", close: "14:00" },
+          { open: "18:00", close: "21:00" },
+        ],
+        3: [
+          { open: "10:00", close: "14:00" },
+          { open: "18:00", close: "21:00" },
+        ],
+        4: [
+          { open: "10:00", close: "14:00" },
+          { open: "18:00", close: "21:00" },
+        ],
+      },
+      navigationUrl:
+        "https://www.google.com/maps/search/?api=1&query=%D7%A4%D7%99%D7%A6%D7%95%D7%A5%20%D7%9E%D7%91%D7%A0%D7%94%20%D7%9C%D7%94%D7%91%D7%99%D7%9D",
+      activeRequests: 3,
+    },
+    {
+      id: "eshkolot",
+      name: "אשכולות",
+      address: "\u05de\u05d6\u05db\u05d9\u05e8\u05d5\u05ea \u05d0\u05e9\u05db\u05d5\u05dc\u05d5\u05ea",
+      openingHours: "\u05d0'-\u05d4' 08:00-13:00",
+      weeklyHours: {
+        0: [{ open: "08:00", close: "13:00" }],
+        1: [{ open: "08:00", close: "13:00" }],
+        2: [{ open: "08:00", close: "13:00" }],
+        3: [{ open: "08:00", close: "13:00" }],
+        4: [{ open: "08:00", close: "13:00" }],
+      },
+      navigationUrl:
+        "https://www.google.com/maps/search/?api=1&query=%D7%9E%D7%96%D7%9B%D7%99%D7%A8%D7%95%D7%AA%20%D7%90%D7%A9%D7%9B%D7%95%D7%9C%D7%95%D7%AA",
+      activeRequests: 0,
+    },
+    {
+      id: "deli-place",
+      name: "דלי פלייס להבים",
+      address: "שדרות שעורה 1, מרכז עזריאלי פאלאס, להבים",
+      openingHours: "א'-ה' 08:30-14:00 ו-16:00-20:00, ו' 07:30-15:00",
+      navigationUrl:
+        "https://www.google.com/maps/search/?api=1&query=%D7%93%D7%9C%D7%99%20%D7%A4%D7%9C%D7%99%D7%99%D7%A1%20%D7%A9%D7%93%D7%A8%D7%95%D7%AA%20%D7%A9%D7%A2%D7%95%D7%A8%D7%94%201%20%D7%9C%D7%94%D7%91%D7%99%D7%9D",
+      activeRequests: 0,
+    },
+    {
+      id: "shoval",
+      name: "שובל",
+      address: "\u05d3\u05d5\u05d0\u05e8 \u05e9\u05d5\u05d1\u05dc",
+      openingHours: "\u05e6\u05e8\u05d9\u05da \u05dc\u05d0\u05de\u05ea \u05e9\u05e2\u05d5\u05ea \u05e4\u05ea\u05d9\u05d7\u05d4",
+      navigationUrl:
+        "https://www.google.com/maps/search/?api=1&query=%D7%93%D7%95%D7%90%D7%A8%20%D7%A9%D7%95%D7%91%D7%9C",
+      activeRequests: 0,
+    },
+  ],
+  packages: [
+    {
+      id: "pkg-daniela",
+      ownerUserId: "u-daniela",
+      ownerName: "דניאלה קטלן",
+      pickupLocationId: "pitzutz",
+      publicSummary: "ממתינה לאיסוף",
+      status: "waiting",
+      sensitiveDeliveryMessage:
+        "שלום Daniela, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0",
+      sensitivePickupLink: "https://u.cheetahint.com/vknpgt0",
+      parsedCourierCompany: "Cheetah",
+      parsedAddresseeName: "Daniela",
+      parsedTrackingNumber: "AE04062389",
+      updatedAt: now,
+    },
+    {
+      id: "pkg-hila",
+      ownerUserId: "u-hila",
+      ownerName: "הילה נבו",
+      pickupLocationId: "pitzutz",
+      publicSummary: "ממתינה לאיסוף",
+      status: "waiting",
+      sensitiveDeliveryMessage:
+        "חבילת דואר ישראל RS1318583106Y ממתינה לאיסוף. יש להציג הודעה מקורית וקוד 1187.",
+      sensitivePackageCode: "1187",
+      parsedCourierCompany: "דואר ישראל",
+      parsedAddresseeName: "Hila",
+      parsedTrackingNumber: "RS1318583106Y",
+      updatedAt: now,
+    },
+    {
+      id: "pkg-ayelet",
+      ownerUserId: "u-ayelet",
+      ownerName: "איילת מדר",
+      pickupLocationId: "pitzutz",
+      publicSummary: "ממתינה לאיסוף",
+      status: "waiting",
+      sensitiveDeliveryMessage:
+        "HFD: חבילה עבור Ayelet מחכה בפיצוץ להבים. קוד איסוף 4421.",
+      sensitivePackageCode: "4421",
+      parsedCourierCompany: "HFD",
+      parsedAddresseeName: "Ayelet",
+      updatedAt: now,
+    },
+    {
+      id: "pkg-noa",
+      ownerUserId: "u-noa",
+      ownerName: "נעה אמבולוס",
+      pickupLocationId: "home-paami",
+      publicSummary: "כבר הגיעה לקיבוץ",
+      status: "arrived",
+      sensitiveDeliveryMessage: "הודעה מקורית שמורה.",
+      currentKibbutzLocation: "gate-crate",
+      currentKibbutzLocationText: "בדולב בש.ג",
+      updatedAt: now,
+    },
+  ],
+  pickupRuns: [],
+  pickupRunItems: [],
+  accessLogs: [],
+};

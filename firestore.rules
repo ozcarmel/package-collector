@@ -1,0 +1,127 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function approved() {
+      return signedIn() && userDoc().data.verificationStatus == "approved";
+    }
+
+    function admin() {
+      return approved() && userDoc().data.role in ["admin", "owner"];
+    }
+
+    function owner() {
+      return approved() && userDoc().data.role == "owner";
+    }
+
+    function validNewSelfUser(userId) {
+      return signedIn() &&
+        request.auth.uid == userId &&
+        request.resource.data.id == userId &&
+        request.resource.data.role == "member" &&
+        request.resource.data.verificationStatus in ["phone_pending", "admin_pending"];
+    }
+
+    function validSelfUserUpdate(userId) {
+      return signedIn() &&
+        request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["fullName", "phone", "homeLocation"]);
+    }
+
+    function validCollectorArrivalUpdate() {
+      return approved() &&
+        resource.data.status == "collected" &&
+        resource.data.collectorUserId == request.auth.uid &&
+        request.resource.data.status == "arrived" &&
+        request.resource.data.collectorUserId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "currentKibbutzLocation", "currentKibbutzLocationText", "updatedAt"]);
+    }
+
+    function validOwnerPackageUpdate() {
+      return approved() &&
+        resource.data.ownerUserId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["publicSummary", "updatedAt"]);
+    }
+
+    function pickupRun(runId) {
+      return get(/databases/$(database)/documents/pickupRuns/$(runId));
+    }
+
+    function pickupRunCollector(runId) {
+      return pickupRun(runId).data.collectorUserId == request.auth.uid;
+    }
+
+    function validPickupRunItemAccessUpdate() {
+      return approved() &&
+        pickupRunCollector(resource.data.pickupRunId) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["sensitiveMessageViewedAt", "sensitivePickupLinkOpenedAt"]);
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || admin());
+      allow create: if validNewSelfUser(userId) || admin();
+      allow update: if admin() || validSelfUserUpdate(userId);
+      allow delete: if owner();
+    }
+
+    match /joinRequests/{requestId} {
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if admin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update: if admin();
+      allow delete: if owner();
+    }
+
+    match /pickupLocations/{locationId} {
+      allow read: if approved();
+      allow write: if admin();
+    }
+
+    match /packages/{packageId} {
+      allow read: if approved();
+      allow create: if false;
+      allow update: if approved() && (
+        validCollectorArrivalUpdate() ||
+        validOwnerPackageUpdate() ||
+        admin()
+      );
+      allow delete: if admin();
+    }
+
+    match /pickupRuns/{runId} {
+      allow read: if approved() && (resource.data.collectorUserId == request.auth.uid || admin());
+      allow create: if false;
+      allow update: if admin();
+      allow delete: if admin();
+    }
+
+    match /pickupRunItems/{itemId} {
+      allow read: if approved() && (pickupRunCollector(resource.data.pickupRunId) || admin());
+      allow create: if false;
+      allow update: if validPickupRunItemAccessUpdate() || admin();
+      allow delete: if admin();
+    }
+
+    match /sensitiveAccessLogs/{logId} {
+      allow create: if approved() && request.resource.data.viewerUserId == request.auth.uid;
+      allow read: if admin() || resource.data.ownerUserId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /sensitivePackageDetails/{packageId} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}

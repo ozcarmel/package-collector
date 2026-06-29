@@ -1,0 +1,21 @@
+{
+  "name": "lahav-packages-functions",
+  "version": "0.1.0",
+  "private": true,
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "seed:pickup-locations": "node scripts/seed-pickup-locations.mjs"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

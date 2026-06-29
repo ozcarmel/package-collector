@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>חבילות להב - Wireframe</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23276749'/%3E%3Cpath d='M4 5h8v7H4zM5.5 5V3.8h5V5' fill='none' stroke='white' stroke-width='1.2'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --bg: #f4f6f3;
+      --surface: #ffffff;
+      --surface-soft: #f8faf7;
+      --text: #17211b;
+      --muted: #617067;
+      --line: #dfe6dc;
+      --primary: #276749;
+      --primary-strong: #19523a;
+      --primary-soft: #e7f3ec;
+      --blue: #2463a6;
+      --blue-soft: #e8f1fb;
+      --amber: #9a5b00;
+      --amber-soft: #fff3d8;
+      --danger: #a13a3a;
+      --danger-soft: #fdeaea;
+      --shadow: 0 18px 48px rgba(23, 33, 27, 0.12);
+      --radius: 8px;
+      font-family: Arial, "Noto Sans Hebrew", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .page {
+      min-height: 100dvh;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(320px, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .phone {
+      width: min(100%, 390px);
+      height: min(820px, calc(100dvh - 48px));
+      margin-inline: auto;
+      border: 1px solid #cfd9d2;
+      border-radius: 28px;
+      background: #111;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 24px;
+    }
+
+    .app {
+      height: 100%;
+      overflow: hidden;
+      border-radius: 20px;
+      background: var(--surface);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .statusbar {
+      height: 28px;
+      padding: 6px 16px 0;
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 12px;
+      background: var(--surface);
+    }
+
+    .app-header {
+      padding: 12px 18px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--primary);
+      flex: 0 0 auto;
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .brand-subtitle {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .icon-button {
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 8px;
+      display: inline-grid;
+      place-items: center;
+      color: var(--text);
+    }
+
+    .content {
+      overflow: auto;
+      background: var(--surface-soft);
+      padding: 14px;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .screen-title {
+      font-size: 22px;
+      line-height: 1.2;
+      margin: 0 0 6px;
+      font-weight: 800;
+    }
+
+    .screen-kicker {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 0 0 14px;
+    }
+
+    .metric {
+      min-height: 72px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .metric span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+    }
+
+    .chip {
+      flex: 0 0 auto;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chip.selected {
+      background: var(--primary-soft);
+      border-color: #a6d3b6;
+      color: var(--primary-strong);
+      font-weight: 700;
+    }
+
+    .package-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .package-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+
+    .package-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 8px;
+    }
+
+    .package-name {
+      font-weight: 800;
+      font-size: 16px;
+    }
+
+    .package-meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 28px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      border: 1px solid transparent;
+    }
+
+    .badge.waiting {
+      color: var(--amber);
+      background: var(--amber-soft);
+      border-color: #f0cf8b;
+    }
+
+    .badge.locked {
+      color: var(--blue);
+      background: var(--blue-soft);
+      border-color: #b9d4f2;
+    }
+
+    .badge.done {
+      color: var(--primary-strong);
+      background: var(--primary-soft);
+      border-color: #a6d3b6;
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .button {
+      min-height: 48px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      padding: 10px 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .button.primary {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .button.blue {
+      color: #fff;
+      background: var(--blue);
+      border-color: var(--blue);
+    }
+
+    .button.warn {
+      color: var(--danger);
+      background: var(--danger-soft);
+      border-color: #e5b8b8;
+    }
+
+    .button.full {
+      width: 100%;
+    }
+
+    .form-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 11px 12px;
+      color: var(--text);
+    }
+
+    .field textarea {
+      min-height: 128px;
+      resize: vertical;
+    }
+
+    .help {
+      color: var(--muted);
+      font-size: 12px;
+      margin: 0;
+    }
+
+    .callout {
+      border: 1px solid #b9d4f2;
+      background: var(--blue-soft);
+      color: #143e6d;
+      border-radius: var(--radius);
+      padding: 12px;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    .callout strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .review-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .review-row {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+      min-height: 48px;
+      align-items: center;
+    }
+
+    .review-row span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .location-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .location-button {
+      min-height: 66px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 12px;
+      text-align: start;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .location-button strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .location-button small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .catalog-header {
+      border: 1px solid #a6d3b6;
+      background: var(--primary-soft);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .catalog-header strong {
+      display: block;
+      font-size: 16px;
+    }
+
+    .catalog-header span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .message-preview {
+      background: #f1f3f0;
+      border: 1px dashed #bfc8c0;
+      border-radius: var(--radius);
+      padding: 10px;
+      color: #3d473f;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    .admin-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .admin-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+
+    .admin-card h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .admin-card p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .bottom-nav {
+      min-height: 72px;
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      padding: 6px 8px 10px;
+    }
+
+    .nav-item {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      gap: 2px;
+      min-height: 52px;
+      border-radius: var(--radius);
+      font-size: 11px;
+    }
+
+    .nav-item.active {
+      color: var(--primary-strong);
+      background: var(--primary-soft);
+      font-weight: 800;
+    }
+
+    .board {
+      display: grid;
+      gap: 18px;
+    }
+
+    .board-header {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .board-header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.15;
+    }
+
+    .board-header p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 760px;
+    }
+
+    .prototype-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+
+    .tab-button {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      padding: 8px 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .tab-button.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .flow-step {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      min-height: 142px;
+    }
+
+    .flow-step h2 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .flow-step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .wire-note {
+      background: #fff8e8;
+      border: 1px solid #eed29a;
+      border-radius: var(--radius);
+      padding: 14px;
+      color: #573700;
+      font-size: 14px;
+    }
+
+    .lucide {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2;
+      flex: 0 0 auto;
+    }
+
+    @media (max-width: 860px) {
+      .page {
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+
+      .phone {
+        position: relative;
+        top: 0;
+        height: 780px;
+      }
+
+      .flow-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .page {
+        padding: 0;
+      }
+
+      .phone {
+        width: 100%;
+        height: 100dvh;
+        border-radius: 0;
+        border: 0;
+        padding: 0;
+        box-shadow: none;
+      }
+
+      .app {
+        border-radius: 0;
+      }
+
+      .board {
+        padding: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="phone" aria-label="תצוגת אפליקציה">
+      <div class="app">
+        <div>
+          <div class="statusbar">
+            <span>14:28</span>
+            <span>להב</span>
+          </div>
+          <header class="app-header">
+            <div class="header-row">
+              <div class="brand">
+                <div class="brand-mark" aria-hidden="true"><i data-lucide="package"></i></div>
+                <div>
+                  <div class="brand-title">חבילות להב</div>
+                  <div class="brand-subtitle">משתמש מאומת</div>
+                </div>
+              </div>
+              <button class="icon-button" aria-label="התראות"><i data-lucide="bell"></i></button>
+            </div>
+          </header>
+        </div>
+
+        <section class="content">
+          <article class="screen" data-screen="join">
+            <h1 class="screen-title">הצטרפות לחבילות להב</h1>
+            <p class="screen-kicker">אימות טלפון ואז בקשת אישור ממנהל הקהילה.</p>
+
+            <div class="form-stack">
+              <div class="field">
+                <label for="join-phone">טלפון</label>
+                <input id="join-phone" value="050-203-4475" inputmode="tel">
+              </div>
+              <div class="field">
+                <label for="join-name">שם מלא</label>
+                <input id="join-name" value="טל יוד">
+              </div>
+              <div class="field">
+                <label for="join-note">הערה למנהל</label>
+                <textarea id="join-note">היי, אני חבר/ת להב. אפשר לאשר אותי?</textarea>
+              </div>
+              <button class="button primary full" type="button" data-jump="pending">
+                <i data-lucide="send"></i>
+                שלח בקשת הצטרפות
+              </button>
+            </div>
+          </article>
+
+          <article class="screen" data-screen="pending">
+            <h1 class="screen-title">ממתין לאישור</h1>
+            <p class="screen-kicker">הבקשה נשלחה למנהל. אחרי אישור תיפתח האפליקציה.</p>
+
+            <div class="callout">
+              <strong>למה צריך אישור?</strong>
+              הודעות משלוח וקישורי איסוף יכולים לשחרר חבילות, ולכן רק חברי להב מאושרים נכנסים.
+            </div>
+
+            <div class="review-grid">
+              <div class="review-row"><span>שם</span><strong>טל יוד</strong></div>
+              <div class="review-row"><span>טלפון</span><strong>050-203-4475</strong></div>
+              <div class="review-row"><span>סטטוס</span><strong>ממתין לאישור מנהל</strong></div>
+            </div>
+          </article>
+
+          <article class="screen active" data-screen="home">
+            <h1 class="screen-title">מה מצב החבילות?</h1>
+            <p class="screen-kicker">תמונה מהירה של בקשות איסוף ומסירה בקיבוץ.</p>
+
+            <div class="summary-grid" aria-label="סיכום">
+              <div class="metric"><strong>7</strong><span>ממתינות לאיסוף</span></div>
+              <div class="metric"><strong>3</strong><span>בדרך לקיבוץ</span></div>
+              <div class="metric"><strong>5</strong><span>ממתינות למסירה</span></div>
+            </div>
+
+            <div class="toolbar" aria-label="סינון">
+              <button class="chip selected">הכל</button>
+              <button class="chip">פיצוץ</button>
+              <button class="chip">הום פעמי</button>
+              <button class="chip">דואר</button>
+            </div>
+
+            <div class="package-list">
+              <div class="package-card">
+                <div class="package-top">
+                  <div>
+                    <div class="package-name">דניאלה קטלן</div>
+                    <div class="package-meta">פיצוץ להבים · הודעה מקורית שמורה</div>
+                  </div>
+                  <span class="badge waiting">ממתינה</span>
+                </div>
+                <span class="badge locked"><i data-lucide="lock"></i> פרטי איסוף מוגנים</span>
+              </div>
+
+              <div class="package-card">
+                <div class="package-top">
+                  <div>
+                    <div class="package-name">הילה נבו</div>
+                    <div class="package-meta">פיצוץ להבים · קישור אישור קיים</div>
+                  </div>
+                  <span class="badge waiting">ממתינה</span>
+                </div>
+                <span class="badge locked"><i data-lucide="link"></i> קישור נפתח רק לאוסף</span>
+              </div>
+
+              <div class="package-card">
+                <div class="package-top">
+                  <div>
+                    <div class="package-name">נעה אמבולוס</div>
+                    <div class="package-meta">דולב בש.ג · הגיעה לקיבוץ</div>
+                  </div>
+                  <span class="badge done">בקיבוץ</span>
+                </div>
+                <div class="card-actions">
+                  <button class="button">פרטים</button>
+                  <button class="button primary">סמן נמסרה</button>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="screen" data-screen="add">
+            <h1 class="screen-title">הוספת חבילה</h1>
+            <p class="screen-kicker">מדביקים את ההודעה המקורית. היא תישמר מוגנת.</p>
+
+            <div class="callout">
+              <strong>פרטי האיסוף לא גלויים לכולם</strong>
+              רק אוסף מאומת שבחר את נקודת האיסוף יוכל לפתוח את ההודעה והקישור.
+            </div>
+
+            <form class="form-stack">
+              <div class="field">
+                <label for="owner">למי החבילה?</label>
+                <input id="owner" value="דניאלה קטלן">
+              </div>
+              <div class="field">
+                <label for="location">נקודת איסוף</label>
+                <select id="location">
+                  <option>פיצוץ להבים</option>
+                  <option>הום פעמי, שדרות שעורה 1</option>
+                  <option>דואר להבים</option>
+                  <option>אחר</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="message">הודעת חברת משלוחים מקורית</label>
+                <textarea id="message">שלום Daniela, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0</textarea>
+                <p class="help">האפליקציה תנסה לחלץ קישור אישור, קוד, נמען ונקודת איסוף.</p>
+              </div>
+              <button class="button primary full" type="button" data-jump="review">
+                <i data-lucide="scan-text"></i>
+                נתח הודעה והמשך
+              </button>
+            </form>
+          </article>
+
+          <article class="screen" data-screen="review">
+            <h1 class="screen-title">בדיקת פרטים</h1>
+            <p class="screen-kicker">המקור נשמר כמו שהוא. הפרטים האלה רק עוזרים לסדר ולזהות.</p>
+
+            <div class="review-grid">
+              <div class="review-row"><span>נקודת איסוף</span><strong>פיצוץ להבים</strong></div>
+              <div class="review-row"><span>נמען בהודעה</span><strong>Daniela</strong></div>
+              <div class="review-row"><span>חברת שילוח</span><strong>Cheetah</strong></div>
+              <div class="review-row"><span>מספר משלוח</span><strong>AE04062389</strong></div>
+              <div class="review-row"><span>קישור אישור</span><strong>נמצא ונשמר מוגן</strong></div>
+              <div class="review-row"><span>ביטחון ניתוח</span><strong>גבוה</strong></div>
+            </div>
+
+            <div class="card-actions">
+              <button class="button">ערוך ידנית</button>
+              <button class="button primary" data-jump="home">שמור חבילה</button>
+            </div>
+          </article>
+
+          <article class="screen" data-screen="pickup">
+            <h1 class="screen-title">אני נוסע לאסוף</h1>
+            <p class="screen-kicker">בחר נקודת איסוף. אחרי אישור, ייפתח קטלוג החבילות הרלוונטיות.</p>
+
+            <div class="location-list">
+              <button class="location-button" data-jump="catalog">
+                <span><strong>פיצוץ להבים</strong><small>3 חבילות ממתינות · מתחם מבנה</small></span>
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <button class="location-button">
+                <span><strong>הום פעמי</strong><small>2 חבילות ממתינות · שדרות שעורה 1</small></span>
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <button class="location-button">
+                <span><strong>דואר להבים</strong><small>1 חבילה ממתינה · רימון 1</small></span>
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <button class="location-button">
+                <span><strong>אחר</strong><small>הזן כתובת או קישור ניווט</small></span>
+                <i data-lucide="chevron-left"></i>
+              </button>
+            </div>
+          </article>
+
+          <article class="screen" data-screen="catalog">
+            <h1 class="screen-title">איסוף בחנות</h1>
+            <p class="screen-kicker">פיצוץ להבים · 3 בקשות פעילות</p>
+
+            <div class="catalog-header">
+              <strong>פרטים מוגנים נפתחו עבורך</strong>
+              <span>הצפייה בהודעות ובקישורים תירשם בלוג לטובת שקיפות.</span>
+            </div>
+
+            <div class="package-list">
+              <div class="package-card">
+                <div class="package-top">
+                  <div>
+                    <div class="package-name">דניאלה קטלן</div>
+                    <div class="package-meta">Cheetah · AE04062389 · נמען: Daniela</div>
+                  </div>
+                  <span class="badge waiting">1 מתוך 3</span>
+                </div>
+                <div class="message-preview">בעל החנות יכול לבקש לראות את ההודעה המקורית או לפתוח את קישור האישור.</div>
+                <div class="card-actions">
+                  <button class="button blue"><i data-lucide="external-link"></i> פתח קישור אישור</button>
+                  <button class="button"><i data-lucide="message-square-text"></i> הודעה מקורית</button>
+                  <button class="button primary"><i data-lucide="check"></i> נאספה</button>
+                  <button class="button warn"><i data-lucide="triangle-alert"></i> בעיה</button>
+                </div>
+              </div>
+
+              <div class="package-card">
+                <div class="package-top">
+                  <div>
+                    <div class="package-name">הילה נבו</div>
+                    <div class="package-meta">דואר ישראל · RS1318583106Y · נמען: Hila</div>
+                  </div>
+                  <span class="badge waiting">2 מתוך 3</span>
+                </div>
+                <div class="card-actions">
+                  <button class="button blue">פתח קישור אישור</button>
+                  <button class="button">הודעה מקורית</button>
+                  <button class="button primary">נאספה</button>
+                  <button class="button warn">בעיה</button>
+                </div>
+              </div>
+
+              <div class="package-card">
+                <div class="package-top">
+                  <div>
+                    <div class="package-name">איילת מדר</div>
+                    <div class="package-meta">HFD · קוד שמור · נמען: Ayelet</div>
+                  </div>
+                  <span class="badge waiting">3 מתוך 3</span>
+                </div>
+                <div class="card-actions">
+                  <button class="button blue">פתח קישור אישור</button>
+                  <button class="button">הודעה מקורית</button>
+                  <button class="button primary">נאספה</button>
+                  <button class="button warn">בעיה</button>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="screen" data-screen="arrival">
+            <h1 class="screen-title">החבילות הגיעו</h1>
+            <p class="screen-kicker">עדכון מיקום בקיבוץ אחרי האיסוף.</p>
+
+            <div class="form-stack">
+              <div class="field">
+                <label for="drop">איפה השארת את החבילות?</label>
+                <select id="drop">
+                  <option>בדולב בש.ג</option>
+                  <option>בכלבו</option>
+                  <option>אצלי בבית</option>
+                  <option>נמסרה ישירות לבית המקבל</option>
+                  <option>אחר</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="drop-note">הערה למסירה</label>
+                <textarea id="drop-note">שלוש החבילות בדולב, בצד ימין למעלה.</textarea>
+              </div>
+              <button class="button primary full" type="button">
+                <i data-lucide="map-pin-check"></i>
+                עדכן מיקום ושלח התראות
+              </button>
+            </div>
+          </article>
+
+          <article class="screen" data-screen="admin">
+            <h1 class="screen-title">ניהול קהילה</h1>
+            <p class="screen-kicker">בקשות הצטרפות, הרשאות מנהל ונקודות איסוף.</p>
+
+            <div class="summary-grid" aria-label="סיכום מנהל">
+              <div class="metric"><strong>4</strong><span>ממתינים</span></div>
+              <div class="metric"><strong>138</strong><span>מאושרים</span></div>
+              <div class="metric"><strong>2</strong><span>מנהלים</span></div>
+            </div>
+
+            <div class="admin-list">
+              <div class="admin-card">
+                <div class="package-top">
+                  <div>
+                    <h2>טל יוד</h2>
+                    <p>050-203-4475 · ביקש/ה להצטרף לפני 8 דקות</p>
+                  </div>
+                  <span class="badge waiting">ממתין</span>
+                </div>
+                <div class="card-actions">
+                  <button class="button primary"><i data-lucide="user-check"></i> אשר</button>
+                  <button class="button warn"><i data-lucide="user-x"></i> דחה</button>
+                </div>
+              </div>
+
+              <div class="admin-card">
+                <div class="package-top">
+                  <div>
+                    <h2>דניאלה קטלן</h2>
+                    <p>מאושרת · חברה רגילה</p>
+                  </div>
+                  <span class="badge done">מאושרת</span>
+                </div>
+                <button class="button full"><i data-lucide="shield-plus"></i> הענק הרשאת מנהל</button>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <nav class="bottom-nav" aria-label="ניווט ראשי">
+          <button class="nav-item active" data-jump="home"><i data-lucide="home"></i><span>בית</span></button>
+          <button class="nav-item" data-jump="add"><i data-lucide="plus-circle"></i><span>הוספה</span></button>
+          <button class="nav-item" data-jump="pickup"><i data-lucide="route"></i><span>איסוף</span></button>
+          <button class="nav-item" data-jump="admin"><i data-lucide="shield"></i><span>ניהול</span></button>
+        </nav>
+      </div>
+    </section>
+
+    <aside class="board" aria-label="הסבר Wireframe">
+      <section class="board-header">
+        <h1>Wireframe ראשון: חבילות להב</h1>
+        <p>
+          אבטיפוס זרימה למובייל: הוספת חבילה עם הודעת משלוח מקורית, בחירת יעד איסוף,
+          ואיסוף בחנות שמציג לכל אוסף רק את הבקשות הרלוונטיות לנקודה שבחר.
+        </p>
+      </section>
+
+      <section class="prototype-tabs" aria-label="מעבר בין מסכים">
+        <button class="tab-button" data-jump="join">הצטרפות</button>
+        <button class="tab-button" data-jump="pending">ממתין לאישור</button>
+        <button class="tab-button active" data-jump="home">בית</button>
+        <button class="tab-button" data-jump="add">הוספת חבילה</button>
+        <button class="tab-button" data-jump="review">בדיקת הודעה</button>
+        <button class="tab-button" data-jump="pickup">אני נוסע לאסוף</button>
+        <button class="tab-button" data-jump="catalog">איסוף בחנות</button>
+        <button class="tab-button" data-jump="arrival">מסירה בקיבוץ</button>
+        <button class="tab-button" data-jump="admin">ניהול</button>
+      </section>
+
+      <section class="flow-grid">
+        <div class="flow-step">
+          <h2>1. בעל חבילה</h2>
+          <p>מדביק את ההודעה המקורית. האפליקציה מזהה קישור אישור, אבל שומרת את המקור כפריט המוגן החשוב.</p>
+        </div>
+        <div class="flow-step">
+          <h2>2. אוסף</h2>
+          <p>לוחץ "אני נוסע לפיצוץ להבים" ומקבל קטלוג עם כל בקשות האיסוף הפעילות משם.</p>
+        </div>
+        <div class="flow-step">
+          <h2>3. בנקודת האיסוף</h2>
+          <p>פותח קישור אישור או הודעה מקורית לכל חבילה. כל צפייה נרשמת לטובת אמון ושקיפות.</p>
+        </div>
+        <div class="flow-step">
+          <h2>4. אחרי איסוף</h2>
+          <p>מסמן חבילות שנאספו או בעיה. אפשר לאסוף חלק מהקטלוג ולהשאיר אחרות ממתינות.</p>
+        </div>
+        <div class="flow-step">
+          <h2>5. בקיבוץ</h2>
+          <p>מעדכן דולב, כלבו, אצלי בבית, נמסרה ישירות, או אחר. בעלי החבילות מקבלים עדכון.</p>
+        </div>
+        <div class="flow-step">
+          <h2>6. פרטיות</h2>
+          <p>כולם רואים שיש חבילה, אבל רק אוסף מאומת שפתח נסיעה לנקודה רואה הודעה מקורית וקישור.</p>
+        </div>
+        <div class="flow-step">
+          <h2>7. אישור הצטרפות</h2>
+          <p>משתמש חדש ממתין לאישור. מנהל מזהה לפי שם וטלפון, מאשר, ויכול להעניק הרשאת מנהל נוספת.</p>
+        </div>
+      </section>
+
+      <section class="wire-note">
+        זה wireframe: המטרה היא לבדוק את הלוגיקה, הטקסטים וסדר הפעולות לפני שנבחר stack ונבנה אפליקציה אמיתית.
+      </section>
+    </aside>
+  </main>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>
+    const screens = Array.from(document.querySelectorAll(".screen"));
+    const jumpers = Array.from(document.querySelectorAll("[data-jump]"));
+    const navItems = Array.from(document.querySelectorAll(".nav-item"));
+    const tabs = Array.from(document.querySelectorAll(".tab-button"));
+
+    function showScreen(name) {
+      screens.forEach((screen) => {
+        screen.classList.toggle("active", screen.dataset.screen === name);
+      });
+      navItems.forEach((item) => {
+        item.classList.toggle("active", item.dataset.jump === name);
+      });
+      tabs.forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.jump === name);
+      });
+    }
+
+    jumpers.forEach((button) => {
+      button.addEventListener("click", () => showScreen(button.dataset.jump));
+    });
+
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,219 @@
+import { describe, expect, it } from "vitest";
+import {
+  approveJoinRequest,
+  createJoinRequest,
+  createPackage,
+  getWaitingPackageCount,
+  logSensitiveAccess,
+  markPackageCollected,
+  promoteUser,
+  rejectJoinRequest,
+  startPickupRun,
+  updateCollectedPackagesArrival,
+  type ActionDeps,
+} from "@/lib/app-state-actions";
+import { initialAppState } from "@/lib/demo-data";
+import type { AppState } from "@/lib/types";
+
+function cloneState(): AppState {
+  return structuredClone(initialAppState) as AppState;
+}
+
+function createTestDeps(): ActionDeps {
+  let counter = 0;
+  return {
+    createId(prefix) {
+      counter += 1;
+      return `${prefix}-${counter}`;
+    },
+    now() {
+      return "2026-06-28T10:00:00.000Z";
+    },
+  };
+}
+
+describe("app state actions", () => {
+  it("creates and approves a join request", () => {
+    const deps = createTestDeps();
+    const created = createJoinRequest(
+      cloneState(),
+      {
+        fullName: "Test Member",
+        phone: "050-555-0000",
+        note: "Please approve me",
+      },
+      deps,
+    );
+
+    expect(created.requestId).toBe("join-1");
+    expect(created.state.joinRequests[0]).toMatchObject({
+      id: "join-1",
+      userId: "guest-2",
+      fullName: "Test Member",
+      phone: "050-555-0000",
+      status: "pending",
+    });
+
+    const approved = approveJoinRequest(created.state, created.requestId, deps);
+    expect(approved.joinRequests[0]).toMatchObject({
+      id: "join-1",
+      status: "approved",
+      reviewedByUserId: approved.currentUser.id,
+    });
+    expect(approved.users.some((user) => user.id === "guest-2")).toBe(true);
+  });
+
+  it("rejects a join request without creating a user", () => {
+    const deps = createTestDeps();
+    const created = createJoinRequest(
+      cloneState(),
+      { fullName: "Rejected Member", phone: "050-555-1111" },
+      deps,
+    );
+
+    const rejected = rejectJoinRequest(created.state, created.requestId, deps);
+    expect(rejected.joinRequests[0]).toMatchObject({
+      id: created.requestId,
+      status: "rejected",
+      reviewedByUserId: rejected.currentUser.id,
+    });
+    expect(rejected.users.some((user) => user.id === "guest-2")).toBe(false);
+  });
+
+  it("creates a package in the selected pickup location even when message text mentions another location", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const postOfficeBefore = state.pickupLocations.find((location) => location.id === "post-office");
+    const pitzutzBefore = state.pickupLocations.find((location) => location.id === "pitzutz");
+
+    const result = createPackage(
+      state,
+      {
+        ownerName: "Manual Selection",
+        pickupLocationId: "post-office",
+        sensitiveDeliveryMessage:
+          "Shipment is waiting at Pitzutz Lahav. Approval link: https://example.com/pickup",
+      },
+      deps,
+    );
+
+    expect(result.packageId).toBe("pkg-1");
+    expect(result.state.packages[0]).toMatchObject({
+      ownerName: "Manual Selection",
+      pickupLocationId: "post-office",
+      status: "waiting",
+      sensitivePickupLink: "https://example.com/pickup",
+    });
+    expect(
+      result.state.pickupLocations.find((location) => location.id === "post-office")
+        ?.activeRequests,
+    ).toBe((postOfficeBefore?.activeRequests ?? 0) + 1);
+    expect(result.state.pickupLocations.find((location) => location.id === "pitzutz")?.activeRequests).toBe(
+      pitzutzBefore?.activeRequests,
+    );
+  });
+
+  it("starts pickup run only for waiting packages at the selected location", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const waitingCount = getWaitingPackageCount(state, "pitzutz");
+    const result = startPickupRun(state, "pitzutz", deps);
+
+    expect(result.runId).toBe("run-1");
+    expect(result.packageCount).toBe(waitingCount);
+    expect(result.state.pickupRuns[0]).toMatchObject({
+      id: "run-1",
+      collectorUserId: state.currentUser.id,
+      pickupLocationId: "pitzutz",
+      status: "active",
+    });
+    expect(
+      result.state.pickupRunItems.filter((item) => item.pickupRunId === result.runId),
+    ).toHaveLength(waitingCount);
+    expect(
+      result.state.accessLogs.filter((log) => log.pickupRunId === result.runId),
+    ).toHaveLength(waitingCount);
+  });
+
+  it("does not start pickup run when no packages are waiting at the selected location", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const result = startPickupRun(state, "home-paami", deps);
+
+    expect(result.runId).toBeNull();
+    expect(result.packageCount).toBe(0);
+    expect(result.state).toEqual(state);
+  });
+
+  it("logs sensitive link access and updates the active run item", () => {
+    const deps = createTestDeps();
+    const runResult = startPickupRun(cloneState(), "pitzutz", deps);
+    const packageId = runResult.state.pickupRunItems[0].packageId;
+
+    const updated = logSensitiveAccess(
+      runResult.state,
+      {
+        activeRunId: runResult.runId ?? "",
+        packageId,
+        action: "open_pickup_link",
+      },
+      deps,
+    );
+
+    expect(updated.accessLogs[0]).toMatchObject({
+      packageId,
+      pickupRunId: runResult.runId,
+      viewerUserId: updated.currentUser.id,
+      action: "open_pickup_link",
+    });
+    expect(
+      updated.pickupRunItems.find((item) => item.packageId === packageId)
+        ?.sensitivePickupLinkOpenedAt,
+    ).toBe("2026-06-28T10:00:00.000Z");
+  });
+
+  it("marks a package collected and then updates arrival location", () => {
+    const deps = createTestDeps();
+    const runResult = startPickupRun(cloneState(), "pitzutz", deps);
+    const packageId = runResult.state.pickupRunItems[0].packageId;
+
+    const collected = markPackageCollected(
+      runResult.state,
+      { activeRunId: runResult.runId, packageId },
+      deps,
+    );
+
+    expect(collected.packages.find((pkg) => pkg.id === packageId)).toMatchObject({
+      status: "collected",
+      collectorUserId: collected.currentUser.id,
+    });
+    expect(collected.pickupRunItems.find((item) => item.packageId === packageId)).toMatchObject({
+      itemStatus: "collected",
+      collectedAt: "2026-06-28T10:00:00.000Z",
+    });
+
+    const arrived = updateCollectedPackagesArrival(
+      collected,
+      {
+        dropLocation: "gate-crate",
+        dropNote: "In the gate crate",
+      },
+      deps,
+    );
+
+    expect(arrived.packages.find((pkg) => pkg.id === packageId)).toMatchObject({
+      status: "arrived",
+      currentKibbutzLocation: "gate-crate",
+      currentKibbutzLocationText: "In the gate crate",
+    });
+  });
+
+  it("promotes an approved member to admin", () => {
+    const state = cloneState();
+    const memberId = state.users.find((user) => user.role === "member")?.id;
+    expect(memberId).toBeTruthy();
+
+    const promoted = promoteUser(state, memberId ?? "");
+    expect(promoted.users.find((user) => user.id === memberId)?.role).toBe("admin");
+  });
+});
