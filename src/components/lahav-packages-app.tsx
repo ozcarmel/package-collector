@@ -28,7 +28,7 @@ import {
   UserX,
 } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { getConfiguredOperationsRepository } from "@/lib/app-repository";
 import type { RevealedSensitivePackageDetails } from "@/lib/app-repository-contract";
 import {
@@ -210,16 +210,59 @@ export function LahavPackagesApp() {
   const pickupLocationArrowRef = useRef<HTMLButtonElement | null>(null);
   const firebaseEnabled = hasFirebaseConfig();
   const currentUser = state.currentUser;
+  const currentUserId = currentUser.id;
+  const currentUserFullName = currentUser.fullName;
+  const currentUserPhone = currentUser.phone;
+  const currentUserRole = currentUser.role;
+  const currentUserVerificationStatus = currentUser.verificationStatus;
+  const currentUserCreatedAt = currentUser.createdAt;
+  const subscriptionUser = useMemo(
+    () => ({
+      id: currentUserId,
+      fullName: currentUserFullName,
+      phone: currentUserPhone,
+      role: currentUserRole,
+      verificationStatus: currentUserVerificationStatus,
+      createdAt: currentUserCreatedAt,
+    }),
+    [
+      currentUserCreatedAt,
+      currentUserFullName,
+      currentUserId,
+      currentUserPhone,
+      currentUserRole,
+      currentUserVerificationStatus,
+    ],
+  );
 
   useEffect(() => {
     if (firebaseEnabled) {
       const unsubscribe = subscribeFirebaseSession(
         ({ appUser }) => {
-          setState((current) => ({
-            ...current,
-            currentUser: appUser,
-            users: [appUser, ...current.users.filter((user) => user.id !== appUser.id)],
-          }));
+          setState((current) => {
+            const existingUser = current.users.find((user) => user.id === appUser.id);
+            const currentUserUnchanged =
+              current.currentUser.id === appUser.id &&
+              current.currentUser.fullName === appUser.fullName &&
+              current.currentUser.phone === appUser.phone &&
+              current.currentUser.role === appUser.role &&
+              current.currentUser.verificationStatus === appUser.verificationStatus;
+            const existingUserUnchanged =
+              existingUser?.fullName === appUser.fullName &&
+              existingUser.phone === appUser.phone &&
+              existingUser.role === appUser.role &&
+              existingUser.verificationStatus === appUser.verificationStatus;
+
+            if (currentUserUnchanged && existingUserUnchanged) {
+              return current;
+            }
+
+            return {
+              ...current,
+              currentUser: appUser,
+              users: [appUser, ...current.users.filter((user) => user.id !== appUser.id)],
+            };
+          });
           setRepositoryReady(true);
         },
         () => setToast("לא הצלחנו להתחבר ל-Firebase. בדוק/י את ההגדרות ונסה/י שוב."),
@@ -245,7 +288,7 @@ export function LahavPackagesApp() {
     if (!firebaseEnabled || !repositoryReady) return;
 
     const unsubscribe = subscribeFirestoreAppState(
-      currentUser,
+      subscriptionUser,
       setState,
       () => setToast("לא הצלחנו לקבל עדכונים חיים מ-Firebase."),
     );
@@ -254,7 +297,7 @@ export function LahavPackagesApp() {
   }, [
     firebaseEnabled,
     repositoryReady,
-    currentUser,
+    subscriptionUser,
   ]);
 
   useEffect(() => {
