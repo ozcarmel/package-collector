@@ -12,7 +12,6 @@ import type {
   PickupLocation,
   PickupRun,
   PickupRunItem,
-  UserRole,
   WeeklyOpeningHours,
 } from "@/lib/types";
 
@@ -329,15 +328,11 @@ export function approveJoinRequest(state: AppState, requestId: string, deps: Act
   const request = state.joinRequests.find((item) => item.id === requestId);
   if (!request) return state;
   const existingUser = state.users.find((user) => user.id === request.userId);
-  const approvedRole: UserRole =
-    existingUser?.role === "admin" || existingUser?.role === "owner"
-      ? existingUser.role
-      : "member";
   const approvedUser = {
     id: request.userId,
     fullName: request.fullName,
     phone: request.phone,
-    role: approvedRole,
+    role: "member" as const,
     verificationStatus: "approved" as const,
     createdAt: existingUser?.createdAt ?? request.createdAt,
     approvedAt: deps.now(),

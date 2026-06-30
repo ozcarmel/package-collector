@@ -65,6 +65,39 @@ describe("app state actions", () => {
     expect(approved.users.some((user) => user.id === "guest-2")).toBe(true);
   });
 
+  it("approves a join request as a regular member even when a stale user role exists", () => {
+    const deps = createTestDeps();
+    const created = createJoinRequest(
+      cloneState(),
+      {
+        fullName: "Stale Owner",
+        phone: "050-555-2222",
+      },
+      deps,
+    );
+    const staleState: AppState = {
+      ...created.state,
+      users: [
+        {
+          id: created.state.joinRequests[0].userId,
+          fullName: "Stale Owner",
+          phone: "050-555-2222",
+          role: "owner",
+          verificationStatus: "phone_pending",
+          createdAt: "2026-06-28T10:00:00.000Z",
+        },
+        ...created.state.users,
+      ],
+    };
+
+    const approved = approveJoinRequest(staleState, created.requestId, deps);
+
+    expect(approved.users.find((user) => user.id === "guest-2")).toMatchObject({
+      role: "member",
+      verificationStatus: "approved",
+    });
+  });
+
   it("rejects a join request without creating a user", () => {
     const deps = createTestDeps();
     const created = createJoinRequest(

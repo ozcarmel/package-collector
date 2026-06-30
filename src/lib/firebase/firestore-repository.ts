@@ -393,10 +393,6 @@ export const firestoreRepository: AppOperationsRepository = {
     if (!request) return;
     const userSnapshot = await getDoc(doc(db, "users", request.userId));
     const existingUser = userSnapshot.data() as AppState["users"][number] | undefined;
-    const approvedRole =
-      existingUser?.role === "admin" || existingUser?.role === "owner"
-        ? existingUser.role
-        : "member";
 
     const batch = writeBatch(db);
     batch.update(requestSnapshot.ref, {
@@ -408,7 +404,7 @@ export const firestoreRepository: AppOperationsRepository = {
       id: request.userId,
       fullName: request.fullName,
       phone: request.phone,
-      role: approvedRole,
+      role: "member",
       verificationStatus: "approved",
       createdAt: existingUser?.createdAt ?? request.createdAt,
       approvedAt: deps.now(),
