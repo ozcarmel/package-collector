@@ -11,6 +11,7 @@ firestore-debug.log
 ui-debug.log
 *.log
 .playwright-cli/
+.firebase/
 test-results/
 output/
 tmp/

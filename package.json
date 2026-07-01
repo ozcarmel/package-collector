@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "firebase:deploy": "npx firebase-tools deploy --project package-collector-25202",
+    "firebase:deploy": "npm run build && npx firebase-tools deploy --only hosting,firestore --project package-collector-25202",
+    "firebase:deploy:hosting": "npm run build && npx firebase-tools deploy --only hosting --project package-collector-25202",
     "firebase:login": "npx firebase-tools login",
     "firebase:seed": "npm --prefix functions run seed:pickup-locations -- --project package-collector-25202",
     "start": "next start",
