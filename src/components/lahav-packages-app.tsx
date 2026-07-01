@@ -182,17 +182,6 @@ function createLocationDraftFromLocation(location: PickupLocation): LocationDraf
   };
 }
 
-const screenLabels: Array<[Screen, string]> = [
-  ["join", "הצטרפות"],
-  ["pending", "ממתין לאישור"],
-  ["home", "בית"],
-  ["add", "הוספת חבילה"],
-  ["pickup", "אני נוסע לאסוף"],
-  ["catalog", "איסוף בחנות"],
-  ["arrival", "מסירה בקיבוץ"],
-  ["admin", "ניהול"],
-];
-
 function hasJoinPreviewParam() {
   if (typeof window === "undefined") return false;
 
@@ -591,10 +580,6 @@ export function LahavPackagesApp() {
       ),
     },
   ];
-  const visibleScreenLabels = canManageCommunity
-    ? screenLabels
-    : screenLabels.filter(([itemScreen]) => itemScreen !== "admin");
-
   const headerConfig = getHeaderConfig();
   const operationsRepository = getConfiguredOperationsRepository();
   const actionDeps = useMemo(
@@ -1317,50 +1302,6 @@ export function LahavPackagesApp() {
           </nav>
         </div>
       </section>
-
-      <aside className="desktop-panel" aria-label="פאנל בדיקה">
-        <section className="panel-block">
-          <h1>{appName}</h1>
-          <p>
-            יישום ראשון של המוצר: הצטרפות באישור מנהל, הוספת חבילה עם הודעת
-            משלוח מקורית, איסוף בחנות לפי נקודה, ולוג גישה לפרטים מוגנים.
-          </p>
-        </section>
-
-        <section className="panel-block tab-grid" aria-label="מעבר בין מסכים">
-          {visibleScreenLabels.map(([itemScreen, label]) => (
-            <button
-              className={`tab-button ${effectiveScreen === itemScreen ? "active" : ""}`}
-              key={itemScreen}
-              onClick={() => navigateToScreen(itemScreen)}
-              type="button"
-            >
-              {label}
-            </button>
-          ))}
-        </section>
-
-        <section className="flow-grid">
-          <FlowStep title="אימות">
-            משתמש חדש מאמת טלפון ונכנס להמתנה עד שמנהל מאשר אותו.
-          </FlowStep>
-          <FlowStep title="הוספת חבילה">
-            בעל חבילה מדביק את ההודעה המקורית. הקישור והקוד נשמרים מוגנים.
-          </FlowStep>
-          <FlowStep title="איסוף">
-            אוסף בוחר נקודת איסוף ומקבל קטלוג חבילות רלוונטי בלבד.
-          </FlowStep>
-          <FlowStep title="אבטחה">
-            פתיחת הודעה מקורית או קישור אישור נרשמת בלוג גישה.
-          </FlowStep>
-          <FlowStep title="מסירה">
-            אחרי האיסוף מעדכנים איפה החבילות הונחו בקיבוץ.
-          </FlowStep>
-          <FlowStep title="Firebase">
-            כרגע רץ במצב demo מקומי; קבצי Firebase מוכנים לחיבור פרויקט אמיתי.
-          </FlowStep>
-        </section>
-      </aside>
 
       {toast ? (
         <div className="toast" dir="rtl" role="status" aria-live="polite">
@@ -2508,15 +2449,6 @@ function ReviewRow({
       {icon ? <span className="review-icon">{icon}</span> : null}
       <span>{label}</span>
       <strong>{value}</strong>
-    </div>
-  );
-}
-
-function FlowStep({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="flow-step">
-      <h2>{title}</h2>
-      <p>{children}</p>
     </div>
   );
 }

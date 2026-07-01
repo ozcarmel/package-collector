@@ -68,8 +68,7 @@ select:focus-visible {
 .app-shell {
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(320px, 430px) minmax(320px, 1fr);
-  gap: 24px;
+  place-items: center;
   padding: 24px;
 }
 
@@ -83,8 +82,8 @@ select:focus-visible {
   background: #101512;
   padding: 10px;
   box-shadow: var(--shadow);
-  position: sticky;
-  top: 24px;
+  position: relative;
+  top: 0;
 }
 
 .phone-frame,
