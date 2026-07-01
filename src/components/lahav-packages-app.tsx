@@ -391,12 +391,10 @@ export function LahavPackagesApp() {
 
   useEffect(() => {
     const url = new URL(window.location.href);
-    const shouldPreviewJoin =
-      url.searchParams.get("freshUser") === "1" || url.searchParams.get("joinPreview") === "1";
+    const shouldPreviewJoin = url.searchParams.get("joinPreview") === "1";
 
     if (!shouldPreviewJoin) return;
 
-    url.searchParams.delete("freshUser");
     url.searchParams.delete("joinPreview");
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }, []);
