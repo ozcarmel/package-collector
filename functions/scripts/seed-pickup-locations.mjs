@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 const pickupLocations = [
   {
     id: "home-paami",
-    name: "\u05d4\u05d5\u05dd \u05e4\u05e2\u05de\u05d9 \u05dc\u05d4\u05d1\u05d9\u05dd",
+    name: "\u05d4\u05d5\u05dd \u05e4\u05e2\u05de\u05d9",
     address:
       "\u05e9\u05d3\u05e8\u05d5\u05ea \u05e9\u05e2\u05d5\u05e8\u05d4 1, \u05dc\u05d4\u05d1\u05d9\u05dd",
     openingHours:
@@ -80,7 +80,7 @@ const pickupLocations = [
   {
     id: "deli-place",
     name:
-      "\u05d3\u05dc\u05d9 \u05e4\u05dc\u05d9\u05d9\u05e1 \u05dc\u05d4\u05d1\u05d9\u05dd",
+      "\u05d3\u05dc\u05d9 \u05e4\u05dc\u05d9\u05d9\u05e1",
     address:
       "\u05e9\u05d3\u05e8\u05d5\u05ea \u05e9\u05e2\u05d5\u05e8\u05d4 1, \u05dc\u05d4\u05d1\u05d9\u05dd",
     openingHours:
