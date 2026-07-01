@@ -15,6 +15,7 @@ import { parseDeliveryMessage } from "@/lib/message-parser";
 import {
   isOzAdminShortcut,
   isOzSuperAdminUser,
+  normalizePhone,
   ozAdminFullName,
   ozAdminPhone,
 } from "@/lib/oz-admin-shortcut";
@@ -60,6 +61,53 @@ function withoutUndefined<T extends object>(value: T) {
   ) as T;
 }
 
+async function blockDuplicateOzManagers(db: Firestore, currentUserId: string, now: string) {
+  const usersSnapshot = await getDocs(
+    query(collection(db, "users"), where("phone", "==", ozAdminPhone)),
+  );
+  const batch = writeBatch(db);
+  let hasDuplicate = false;
+
+  usersSnapshot.forEach((snapshot) => {
+    const user = snapshot.data() as AppState["users"][number];
+    if (
+      user.id !== currentUserId &&
+      user.verificationStatus === "approved" &&
+      (user.role === "admin" || user.role === "owner")
+    ) {
+      hasDuplicate = true;
+      batch.update(snapshot.ref, {
+        verificationStatus: "blocked",
+        blockedAt: now,
+        blockedByUserId: currentUserId,
+      });
+    }
+  });
+
+  if (hasDuplicate) {
+    await batch.commit();
+  }
+}
+
+async function findApprovedUserWithPhone(
+  db: Firestore,
+  phone: string,
+  excludedUserId: string,
+) {
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) return null;
+
+  const usersSnapshot = await getDocs(collection(db, "users"));
+  return usersSnapshot.docs
+    .map((snapshot) => snapshot.data() as AppState["users"][number])
+    .find(
+      (user) =>
+        user.id !== excludedUserId &&
+        user.verificationStatus === "approved" &&
+        normalizePhone(user.phone) === normalizedPhone,
+    );
+}
+
 export const firestoreRepository: AppOperationsRepository = {
   async createJoinRequest(state: AppState, input: CreateJoinRequestInput, deps: ActionDeps) {
     const db = requireFirestore();
@@ -78,6 +126,21 @@ export const firestoreRepository: AppOperationsRepository = {
     };
 
     if (!isOzAdmin) {
+      const ownJoinRequests = await getDocs(
+        query(collection(db, "joinRequests"), where("userId", "==", state.currentUser.id)),
+      );
+      const hasDuplicateOwnPendingRequest = ownJoinRequests.docs
+        .map((snapshot) => snapshot.data() as JoinRequest)
+        .some(
+          (existingRequest) =>
+            existingRequest.status === "pending" &&
+            normalizePhone(existingRequest.phone) === normalizePhone(request.phone),
+        );
+
+      if (hasDuplicateOwnPendingRequest) {
+        throw new Error("duplicate-user-phone");
+      }
+
       await setDoc(doc(db, "joinRequests", request.id), withoutUndefined(request));
       return { requestId: request.id };
     }
@@ -94,6 +157,7 @@ export const firestoreRepository: AppOperationsRepository = {
     batch.set(doc(db, "joinRequests", request.id), withoutUndefined(request));
     batch.set(doc(db, "users", state.currentUser.id), withoutUndefined(adminUser), { merge: true });
     await batch.commit();
+    await blockDuplicateOzManagers(db, state.currentUser.id, now);
     return {
       requestId: request.id,
       state: {
@@ -533,6 +597,11 @@ export const firestoreRepository: AppOperationsRepository = {
     const requestSnapshot = await getDoc(doc(db, "joinRequests", requestId));
     const request = requestSnapshot.data() as JoinRequest | undefined;
     if (!request) return;
+    const duplicateUser = await findApprovedUserWithPhone(db, request.phone, request.userId);
+    if (duplicateUser) {
+      throw new Error("duplicate-user-phone");
+    }
+
     const userSnapshot = await getDoc(doc(db, "users", request.userId));
     const existingUser = userSnapshot.data() as AppState["users"][number] | undefined;
     const isAlreadyApproved = existingUser?.verificationStatus === "approved";
@@ -545,16 +614,20 @@ export const firestoreRepository: AppOperationsRepository = {
     });
 
     if (!isAlreadyApproved) {
-      batch.set(doc(db, "users", request.userId), {
-        id: request.userId,
-        fullName: request.fullName,
-        phone: request.phone,
-        role: "member",
-        verificationStatus: "approved",
-        createdAt: existingUser?.createdAt ?? request.createdAt,
-        approvedAt: deps.now(),
-        approvedByUserId: state.currentUser.id,
-      });
+      batch.set(
+        doc(db, "users", request.userId),
+        {
+          id: request.userId,
+          fullName: request.fullName,
+          phone: request.phone,
+          role: "member",
+          verificationStatus: "approved",
+          createdAt: existingUser?.createdAt ?? request.createdAt,
+          approvedAt: deps.now(),
+          approvedByUserId: state.currentUser.id,
+        },
+        { merge: true },
+      );
     }
 
     await batch.commit();
@@ -622,8 +695,7 @@ export const firestoreRepository: AppOperationsRepository = {
     const canBlockManager =
       isOzSuperAdminUser(state.currentUser) &&
       (target.role === "admin" || target.role === "owner") &&
-      target.verificationStatus === "approved" &&
-      !isOzSuperAdminUser(target);
+      target.verificationStatus === "approved";
     if (!canBlockRegularMember && !canBlockManager) return;
 
     await updateDoc(doc(db, "users", userId), {

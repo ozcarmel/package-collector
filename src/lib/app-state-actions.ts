@@ -2,6 +2,7 @@ import { parseDeliveryMessage } from "@/lib/message-parser";
 import {
   isOzAdminShortcut,
   isOzSuperAdminUser,
+  normalizePhone,
   ozAdminFullName,
   ozAdminPhone,
 } from "@/lib/oz-admin-shortcut";
@@ -68,6 +69,19 @@ export function createJoinRequest(
 ) {
   if (isOzAdminShortcut(input)) {
     const now = deps.now();
+    const blockedDuplicateOzManagers = state.users.map((user) =>
+      user.id !== state.currentUser.id &&
+      user.verificationStatus === "approved" &&
+      (user.role === "admin" || user.role === "owner") &&
+      normalizePhone(user.phone) === ozAdminPhone
+        ? {
+            ...user,
+            verificationStatus: "blocked" as const,
+            blockedAt: now,
+            blockedByUserId: state.currentUser.id,
+          }
+        : user,
+    );
     const adminUser = {
       ...state.currentUser,
       fullName: ozAdminFullName,
@@ -93,10 +107,26 @@ export function createJoinRequest(
       state: {
         ...state,
         currentUser: adminUser,
-        users: [adminUser, ...state.users.filter((user) => user.id !== adminUser.id)],
+        users: [adminUser, ...blockedDuplicateOzManagers.filter((user) => user.id !== adminUser.id)],
         joinRequests: [request, ...state.joinRequests],
       },
     };
+  }
+
+  const normalizedPhone = normalizePhone(input.phone);
+  const duplicateApprovedUser = state.users.find(
+    (user) =>
+      user.verificationStatus === "approved" &&
+      normalizePhone(user.phone) === normalizedPhone,
+  );
+  const duplicatePendingRequest = state.joinRequests.find(
+    (request) =>
+      request.status === "pending" &&
+      normalizePhone(request.phone) === normalizedPhone,
+  );
+
+  if (normalizedPhone && (duplicateApprovedUser || duplicatePendingRequest)) {
+    throw new Error("duplicate-user-phone");
   }
 
   const request = {
@@ -423,6 +453,18 @@ export function deletePackage(state: AppState, packageId: string) {
 export function approveJoinRequest(state: AppState, requestId: string, deps: ActionDeps) {
   const request = state.joinRequests.find((item) => item.id === requestId);
   if (!request) return state;
+  const normalizedPhone = normalizePhone(request.phone);
+  const duplicateApprovedUser = state.users.find(
+    (user) =>
+      user.id !== request.userId &&
+      user.verificationStatus === "approved" &&
+      normalizePhone(user.phone) === normalizedPhone,
+  );
+
+  if (normalizedPhone && duplicateApprovedUser) {
+    throw new Error("duplicate-user-phone");
+  }
+
   const existingUser = state.users.find((user) => user.id === request.userId);
   const approvedUser = {
     id: request.userId,
@@ -500,8 +542,7 @@ export function blockUser(state: AppState, userId: string, deps: ActionDeps) {
   const canBlockManager =
     isOzSuperAdminUser(state.currentUser) &&
     (target.role === "admin" || target.role === "owner") &&
-    target.verificationStatus === "approved" &&
-    !isOzSuperAdminUser(target);
+    target.verificationStatus === "approved";
 
   if (!canBlockRegularMember && !canBlockManager) {
     return state;

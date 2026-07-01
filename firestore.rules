@@ -116,7 +116,6 @@ service cloud.firestore {
         request.auth.uid != userId &&
         resource.data.role in ["admin", "owner"] &&
         resource.data.verificationStatus == "approved" &&
-        resource.data.phone != "0584411883" &&
         request.resource.data.verificationStatus == "blocked" &&
         request.resource.data.blockedByUserId == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys()

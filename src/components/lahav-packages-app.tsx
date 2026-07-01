@@ -41,7 +41,12 @@ import { initialAppState } from "@/lib/demo-data";
 import { subscribeFirestoreAppState } from "@/lib/firebase/app-state-subscriptions";
 import { subscribeFirebaseSession } from "@/lib/firebase/auth-bootstrap";
 import { hasFirebaseConfig } from "@/lib/firebase/client";
-import { isOzAdminShortcut, isOzSuperAdminUser } from "@/lib/oz-admin-shortcut";
+import {
+  isOzAdminShortcut,
+  isOzSuperAdminUser,
+  normalizePhone,
+  ozAdminPhone,
+} from "@/lib/oz-admin-shortcut";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import type {
   AppState,
@@ -351,6 +356,7 @@ export function LahavPackagesApp() {
   const pickupLocationStripRef = useRef<HTMLDivElement | null>(null);
   const pickupLocationArrowRef = useRef<HTMLButtonElement | null>(null);
   const ozPendingRecoveryRef = useRef<string | null>(null);
+  const ozDuplicateCleanupRef = useRef<string | null>(null);
   const firebaseEnabled = hasFirebaseConfig();
   const currentUser = state.currentUser;
   const currentUserId = currentUser.id;
@@ -630,6 +636,53 @@ export function LahavPackagesApp() {
     submittedJoinRequest,
   ]);
 
+  useEffect(() => {
+    if (!repositoryReady || !canManageCommunity || !isOzSuperAdminUser(currentUser)) return;
+
+    const duplicateOzManagerIds = state.users
+      .filter(
+        (user) =>
+          user.id !== currentUserId &&
+          user.verificationStatus === "approved" &&
+          (user.role === "admin" || user.role === "owner") &&
+          normalizePhone(user.phone) === ozAdminPhone,
+      )
+      .map((user) => user.id)
+      .sort();
+
+    if (duplicateOzManagerIds.length === 0) return;
+
+    const cleanupKey = duplicateOzManagerIds.join("|");
+    if (ozDuplicateCleanupRef.current === cleanupKey) return;
+    ozDuplicateCleanupRef.current = cleanupKey;
+
+    void (async () => {
+      let nextState = state;
+      try {
+        for (const userId of duplicateOzManagerIds) {
+          const result = await operationsRepository.blockUser(nextState, userId, actionDeps);
+          if (result) {
+            nextState = result;
+          }
+        }
+        if (nextState !== state) {
+          applyRepositoryState(nextState);
+        }
+        notify("נמחקו הרשאות מנהל כפולות של עוז כרמל.");
+      } catch {
+        notify("לא הצלחנו לנקות הרשאות מנהל כפולות.");
+      }
+    })();
+  }, [
+    actionDeps,
+    canManageCommunity,
+    currentUser,
+    currentUserId,
+    operationsRepository,
+    repositoryReady,
+    state,
+  ]);
+
   const pendingUnlockStyle: CSSProperties | undefined = pendingUnlockAnchor
     ? {
         top: pendingUnlockAnchor.top,
@@ -844,8 +897,12 @@ export function LahavPackagesApp() {
           ? "זוהית כמנהל. הרשאת הניהול פעילה."
           : "בקשת ההצטרפות נשלחה לאישור מנהל.",
       );
-    } catch {
-      notify("לא הצלחנו לשלוח את בקשת ההצטרפות. נסה/י שוב בעוד רגע.");
+    } catch (error) {
+      notify(
+        error instanceof Error && error.message === "duplicate-user-phone"
+          ? "כבר קיימת בקשת הצטרפות או משתמש עם מספר הטלפון הזה."
+          : "לא הצלחנו לשלוח את בקשת ההצטרפות. נסה/י שוב בעוד רגע.",
+      );
     } finally {
       setIsSubmittingJoinRequest(false);
     }
@@ -1176,8 +1233,12 @@ export function LahavPackagesApp() {
       }
 
       notify("המשתמש אושר.");
-    } catch {
-      notify("לא הצלחנו לאשר את המשתמש. נסה/י שוב בעוד רגע.");
+    } catch (error) {
+      notify(
+        error instanceof Error && error.message === "duplicate-user-phone"
+          ? "לא ניתן לאשר: משתמש עם מספר הטלפון הזה כבר קיים."
+          : "לא הצלחנו לאשר את המשתמש. נסה/י שוב בעוד רגע.",
+      );
     } finally {
       setAdminActionId(null);
     }

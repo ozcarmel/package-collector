@@ -261,11 +261,23 @@ describe("firestore security rules", () => {
     }));
     await seedDoc("users/u-member", userDoc("u-member"));
     await seedDoc("users/u-manager", userDoc("u-manager", { role: "admin" }));
+    await seedDoc("users/u-duplicate-oz", userDoc("u-duplicate-oz", {
+      fullName: "עוז כרמל",
+      phone: "0584411883",
+      role: "owner",
+    }));
     const ownerDb = dbFor("u-oz");
 
     await assertSucceeds(ownerDb.doc("users/u-member").update({ role: "admin" }));
     await assertSucceeds(
       ownerDb.doc("users/u-manager").update({
+        verificationStatus: "blocked",
+        blockedAt: now,
+        blockedByUserId: "u-oz",
+      }),
+    );
+    await assertSucceeds(
+      ownerDb.doc("users/u-duplicate-oz").update({
         verificationStatus: "blocked",
         blockedAt: now,
         blockedByUserId: "u-oz",

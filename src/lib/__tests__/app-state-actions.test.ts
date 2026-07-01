@@ -69,6 +69,37 @@ describe("app state actions", () => {
     expect(approved.users.some((user) => user.id === "guest-2")).toBe(true);
   });
 
+  it("prevents creating a request when an approved user with the same phone exists", () => {
+    const deps = createTestDeps();
+    expect(() =>
+      createJoinRequest(cloneState(), {
+        fullName: "Duplicate Member",
+        phone: "0501111111",
+      }, deps),
+    ).toThrow("duplicate-user-phone");
+  });
+
+  it("prevents approving a request when an approved user with the same phone exists", () => {
+    const deps = createTestDeps();
+    const state: AppState = {
+      ...cloneState(),
+      joinRequests: [
+        {
+          id: "join-duplicate",
+          userId: "guest-duplicate",
+          fullName: "Duplicate Member",
+          phone: "0501111111",
+          status: "pending",
+          createdAt: "2026-06-28T10:00:00.000Z",
+        },
+      ],
+    };
+
+    expect(() => approveJoinRequest(state, "join-duplicate", deps)).toThrow(
+      "duplicate-user-phone",
+    );
+  });
+
   it("approves a join request as a regular member even when a stale user role exists", () => {
     const deps = createTestDeps();
     const created = createJoinRequest(
@@ -479,6 +510,32 @@ describe("app state actions", () => {
     const blocked = blockUser(state, "legacy-owner", deps);
 
     expect(blocked.users.find((user) => user.id === "legacy-owner")).toMatchObject({
+      verificationStatus: "blocked",
+      blockedByUserId: state.currentUser.id,
+    });
+  });
+
+  it("allows Oz super admin to block duplicate Oz owner records", () => {
+    const deps = createTestDeps();
+    const state: AppState = {
+      ...cloneState(),
+      users: [
+        ...cloneState().users,
+        {
+          id: "duplicate-oz-owner",
+          fullName: "עוז כרמל",
+          phone: "0584411883",
+          role: "owner",
+          verificationStatus: "approved",
+          createdAt: "2026-06-28T10:00:00.000Z",
+          approvedAt: "2026-06-28T10:00:00.000Z",
+        },
+      ],
+    };
+
+    const blocked = blockUser(state, "duplicate-oz-owner", deps);
+
+    expect(blocked.users.find((user) => user.id === "duplicate-oz-owner")).toMatchObject({
       verificationStatus: "blocked",
       blockedByUserId: state.currentUser.id,
     });
