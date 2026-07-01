@@ -27,9 +27,15 @@ import type {
   CreateJoinRequestInput,
   CreatePackageInput,
   CreatePickupLocationInput,
+  UpdatePickupLocationInput,
   UpdateArrivalInput,
 } from "@/lib/app-state-actions";
-import { createPickupLocation as createPickupLocationAction } from "@/lib/app-state-actions";
+import {
+  approveJoinRequest as approveJoinRequestAction,
+  createPickupLocation as createPickupLocationAction,
+  deletePickupLocation as deletePickupLocationAction,
+  updatePickupLocation as updatePickupLocationAction,
+} from "@/lib/app-state-actions";
 import type {
   AppState,
   DeliveryPackage,
@@ -161,6 +167,60 @@ export const firestoreRepository: AppOperationsRepository = {
     return result;
   },
 
+  async updatePickupLocation(
+    state: AppState,
+    input: UpdatePickupLocationInput,
+  ) {
+    if (state.currentUser.role !== "admin" && state.currentUser.role !== "owner") {
+      throw new Error("Only admins can update pickup locations.");
+    }
+
+    const db = requireFirestore();
+    const result = updatePickupLocationAction(state, input);
+    const location = result.state.pickupLocations.find(
+      (item) => item.id === result.locationId,
+    ) as PickupLocation | undefined;
+
+    if (!location) {
+      throw new Error("Pickup location was not found.");
+    }
+
+    await setDoc(doc(db, "pickupLocations", location.id), withoutUndefined(location));
+    return result;
+  },
+
+  async deletePickupLocation(
+    state: AppState,
+    locationId: string,
+    deps: ActionDeps,
+  ) {
+    if (state.currentUser.role !== "admin" && state.currentUser.role !== "owner") {
+      throw new Error("Only admins can delete pickup locations.");
+    }
+
+    const db = requireFirestore();
+    const existingLocation = state.pickupLocations.find((location) => location.id === locationId);
+    const result = deletePickupLocationAction(state, locationId);
+    const deletedAt = deps.now();
+    const tombstone: PickupLocation = {
+      id: locationId,
+      name: existingLocation?.name ?? locationId,
+      address: existingLocation?.address ?? "",
+      openingHours: existingLocation?.openingHours ?? "",
+      weeklyHours: existingLocation?.weeklyHours,
+      navigationUrl: existingLocation?.navigationUrl ?? "",
+      activeRequests: existingLocation?.activeRequests ?? 0,
+      isDeleted: true,
+      deletedAt,
+      deletedByUserId: state.currentUser.id,
+    };
+
+    await setDoc(doc(db, "pickupLocations", locationId), withoutUndefined(tombstone), {
+      merge: true,
+    });
+    return result;
+  },
+
   async getWaitingPackageCount(_state: AppState, pickupLocationId: string) {
     const db = requireFirestore();
     const snapshot = await getDocs(
@@ -211,20 +271,36 @@ export const firestoreRepository: AppOperationsRepository = {
       sensitiveMessageViewedAt: createdAt,
     }));
 
+    const packageIdsForLocation = new Set(packages.map((pkg) => pkg.id));
+    const existingGrantsSnapshot = await getDocs(
+      query(
+        collection(db, "sensitiveAccessGrants"),
+        where("viewerUserId", "==", state.currentUser.id),
+      ),
+    );
+    const existingGrantIds = new Set(
+      existingGrantsSnapshot.docs
+        .map((grantDoc) => grantDoc.data() as { id?: string; packageId?: string })
+        .filter((grant) => grant.id && grant.packageId && packageIdsForLocation.has(grant.packageId))
+        .map((grant) => grant.id as string),
+    );
+
     const batch = writeBatch(db);
     batch.set(doc(db, "pickupRuns", runId), run);
     items.forEach((item) => {
       const grantId = `${state.currentUser.id}_${item.packageId}`;
       const accessId = deps.createId("access");
       batch.set(doc(db, "pickupRunItems", item.id), item);
-      batch.set(doc(db, "sensitiveAccessGrants", grantId), {
-        id: grantId,
-        packageId: item.packageId,
-        pickupRunId: runId,
-        viewerUserId: state.currentUser.id,
-        pickupLocationId,
-        createdAt,
-      });
+      if (!existingGrantIds.has(grantId)) {
+        batch.set(doc(db, "sensitiveAccessGrants", grantId), {
+          id: grantId,
+          packageId: item.packageId,
+          pickupRunId: runId,
+          viewerUserId: state.currentUser.id,
+          pickupLocationId,
+          createdAt,
+        });
+      }
       batch.set(doc(db, "sensitiveAccessLogs", accessId), withoutUndefined({
         id: accessId,
         packageId: item.packageId,
@@ -360,6 +436,72 @@ export const firestoreRepository: AppOperationsRepository = {
     };
   },
 
+  async markPackageReceived(state: AppState, packageId: string, deps: ActionDeps) {
+    const db = requireFirestore();
+    const packageRef = doc(db, "packages", packageId);
+    const packageSnapshot = await getDoc(packageRef);
+    const pkg = packageSnapshot.data() as DeliveryPackage | undefined;
+
+    if (!pkg) {
+      throw new Error("Package was not found.");
+    }
+
+    if (pkg.ownerUserId !== state.currentUser.id) {
+      throw new Error("Only the package owner can mark it received.");
+    }
+
+    if (pkg.status !== "arrived" && pkg.status !== "ready_for_handoff") {
+      throw new Error("Only arrived packages can be marked received.");
+    }
+
+    const deliveredAt = deps.now();
+    await updateDoc(packageRef, {
+      status: "delivered",
+      deliveredAt,
+      updatedAt: deliveredAt,
+    });
+
+    return {
+      ...state,
+      packages: state.packages.map((item) =>
+        item.id === packageId
+          ? {
+              ...item,
+              status: "delivered" as const,
+              deliveredAt,
+              updatedAt: deliveredAt,
+            }
+          : item,
+      ),
+    };
+  },
+
+  async deletePackage(state: AppState, packageId: string) {
+    if (state.currentUser.role !== "admin" && state.currentUser.role !== "owner") {
+      throw new Error("Only admins can delete packages.");
+    }
+
+    const db = requireFirestore();
+    const runItemsSnapshot = await getDocs(
+      query(collection(db, "pickupRunItems"), where("packageId", "==", packageId)),
+    );
+    const batch = writeBatch(db);
+
+    batch.delete(doc(db, "packages", packageId));
+    runItemsSnapshot.docs.forEach((itemDoc) => {
+      batch.delete(itemDoc.ref);
+    });
+
+    await batch.commit();
+
+    return {
+      ...state,
+      packages: state.packages.filter((pkg) => pkg.id !== packageId),
+      pickupRunItems: state.pickupRunItems.filter((item) => item.packageId !== packageId),
+      accessLogs: state.accessLogs.filter((log) => log.packageId !== packageId),
+    };
+  },
+
   async updateCollectedPackagesArrival(
     state: AppState,
     input: UpdateArrivalInput,
@@ -393,6 +535,7 @@ export const firestoreRepository: AppOperationsRepository = {
     if (!request) return;
     const userSnapshot = await getDoc(doc(db, "users", request.userId));
     const existingUser = userSnapshot.data() as AppState["users"][number] | undefined;
+    const isAlreadyApproved = existingUser?.verificationStatus === "approved";
 
     const batch = writeBatch(db);
     batch.update(requestSnapshot.ref, {
@@ -400,18 +543,48 @@ export const firestoreRepository: AppOperationsRepository = {
       reviewedAt: deps.now(),
       reviewedByUserId: state.currentUser.id,
     });
-    batch.set(doc(db, "users", request.userId), {
-      id: request.userId,
-      fullName: request.fullName,
-      phone: request.phone,
-      role: "member",
-      verificationStatus: "approved",
-      createdAt: existingUser?.createdAt ?? request.createdAt,
-      approvedAt: deps.now(),
-      approvedByUserId: state.currentUser.id,
-    });
+
+    if (!isAlreadyApproved) {
+      batch.set(doc(db, "users", request.userId), {
+        id: request.userId,
+        fullName: request.fullName,
+        phone: request.phone,
+        role: "member",
+        verificationStatus: "approved",
+        createdAt: existingUser?.createdAt ?? request.createdAt,
+        approvedAt: deps.now(),
+        approvedByUserId: state.currentUser.id,
+      });
+    }
 
     await batch.commit();
+
+    if (isAlreadyApproved) {
+      return {
+        ...state,
+        joinRequests: state.joinRequests.map((item) =>
+          item.id === requestId
+            ? {
+                ...item,
+                status: "approved" as const,
+                reviewedAt: deps.now(),
+                reviewedByUserId: state.currentUser.id,
+              }
+            : item,
+        ),
+      };
+    }
+
+    return approveJoinRequestAction(
+      {
+        ...state,
+        joinRequests: state.joinRequests.some((item) => item.id === requestId)
+          ? state.joinRequests
+          : [request, ...state.joinRequests],
+      },
+      requestId,
+      deps,
+    );
   },
 
   async rejectJoinRequest(state: AppState, requestId: string, deps: ActionDeps) {

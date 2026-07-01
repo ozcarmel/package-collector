@@ -10,6 +10,15 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "emulators": {
+    "firestore": {
+      "port": 8088
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
+  },
   "hosting": {
     "public": "out",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]

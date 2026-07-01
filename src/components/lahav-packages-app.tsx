@@ -7,6 +7,7 @@ import {
   Check,
   ChevronLeft,
   Clock,
+  ClipboardList,
   Copy,
   Home,
   Info,
@@ -15,6 +16,7 @@ import {
   MapPin,
   MapPinCheck,
   Package,
+  Pencil,
   Phone,
   PlusCircle,
   Route,
@@ -23,6 +25,8 @@ import {
   Settings,
   ShieldCheck,
   ShieldPlus,
+  Trash2,
+  Truck,
   User,
   UserCheck,
   UserX,
@@ -31,10 +35,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { getConfiguredOperationsRepository } from "@/lib/app-repository";
 import type { RevealedSensitivePackageDetails } from "@/lib/app-repository-contract";
-import {
-  createId,
-  updateCollectedPackagesArrival,
-} from "@/lib/app-state-actions";
+import { createId } from "@/lib/app-state-actions";
 import { localDemoRepository } from "@/lib/app-state-repository";
 import { initialAppState } from "@/lib/demo-data";
 import { subscribeFirestoreAppState } from "@/lib/firebase/app-state-subscriptions";
@@ -62,7 +63,7 @@ type Screen =
   | "arrival"
   | "admin";
 
-type AdminListView = "pending" | "approved" | "managers";
+type AdminListView = "pending" | "approved" | "managers" | "packages";
 
 interface DraftPackage {
   ownerName: string;
@@ -98,7 +99,15 @@ interface UnlockAnchor {
   width: number;
 }
 
+interface NavItem {
+  disabled?: boolean;
+  icon: ReactNode;
+  label: string;
+  screen: Screen;
+}
+
 const appName = "חבילות להב";
+const deliveredHomeGracePeriodMs = 5 * 60 * 1000;
 
 const emptyDraft: DraftPackage = {
   ownerName: "דניאלה קטלן",
@@ -147,6 +156,32 @@ function createEmptyLocationDraft(): LocationDraft {
   };
 }
 
+function createLocationDraftFromLocation(location: PickupLocation): LocationDraft {
+  const draft = createEmptyLocationDraft();
+
+  for (const [day] of weekdayLabels) {
+    const windows = location.weeklyHours?.[day] ?? [];
+    const firstWindow = windows[0];
+    const secondWindow = windows[1];
+
+    draft.weeklyHours[day] = {
+      enabled: windows.length > 0,
+      firstOpen: firstWindow?.open ?? emptyLocationDayDraft.firstOpen,
+      firstClose: firstWindow?.close ?? emptyLocationDayDraft.firstClose,
+      secondEnabled: Boolean(secondWindow),
+      secondOpen: secondWindow?.open ?? emptyLocationDayDraft.secondOpen,
+      secondClose: secondWindow?.close ?? emptyLocationDayDraft.secondClose,
+    };
+  }
+
+  return {
+    ...draft,
+    name: location.name,
+    address: location.address,
+    openingHours: location.openingHours,
+  };
+}
+
 const screenLabels: Array<[Screen, string]> = [
   ["join", "הצטרפות"],
   ["pending", "ממתין לאישור"],
@@ -182,6 +217,18 @@ function statusLabel(status: PackageStatus) {
     case "cancelled":
       return "בוטלה";
   }
+}
+
+function pickupLocationDisplayName(location: PickupLocation) {
+  if (location.id === "home-paami" || location.name === "הום פעמי להבים") {
+    return "הום פעמי";
+  }
+
+  if (location.id === "deli-place" || location.name === "דלי פלייס להבים") {
+    return "דלי פלייס";
+  }
+
+  return location.name;
 }
 
 function statusBadgeClass(status: PackageStatus) {
@@ -258,17 +305,42 @@ function formatHebrewDate(isoDate?: string) {
   }).format(new Date(isoDate));
 }
 
+function formatHebrewDateTime(isoDate?: string) {
+  if (!isoDate) return "";
+
+  return new Intl.DateTimeFormat("he-IL", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(isoDate));
+}
+
+function shouldShowPackageOnHome(pkg: DeliveryPackage, currentTimeMs: number | null) {
+  if (pkg.status !== "delivered") return true;
+  if (!pkg.deliveredAt || currentTimeMs === null) return true;
+
+  const deliveredAtMs = Date.parse(pkg.deliveredAt);
+  if (Number.isNaN(deliveredAtMs)) return true;
+
+  return currentTimeMs - deliveredAtMs < deliveredHomeGracePeriodMs;
+}
+
 export function LahavPackagesApp() {
   const [state, setState] = useState<AppState>(initialAppState);
+  const [currentTimeMs, setCurrentTimeMs] = useState<number | null>(null);
   const [repositoryReady, setRepositoryReady] = useState(false);
   const [isSubmittingJoinRequest, setIsSubmittingJoinRequest] = useState(false);
   const [isSavingPackage, setIsSavingPackage] = useState(false);
   const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [isStartingPickupRun, setIsStartingPickupRun] = useState(false);
   const [collectingPackageId, setCollectingPackageId] = useState<string | null>(null);
+  const [receivingPackageId, setReceivingPackageId] = useState<string | null>(null);
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
   const [adminListView, setAdminListView] = useState<AdminListView>("pending");
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [screen, setScreen] = useState<Screen>(() => (hasJoinPreviewParam() ? "join" : "home"));
   const [toast, setToast] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftPackage>(emptyDraft);
@@ -310,6 +382,17 @@ export function LahavPackagesApp() {
       currentUserVerificationStatus,
     ],
   );
+
+  useEffect(() => {
+    function refreshCurrentTime() {
+      setCurrentTimeMs(Date.now());
+    }
+
+    refreshCurrentTime();
+    const intervalId = window.setInterval(refreshCurrentTime, 30 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -416,13 +499,24 @@ export function LahavPackagesApp() {
 
   const waitingPackages = state.packages.filter((pkg) => pkg.status === "waiting");
   const collectedPackages = state.packages.filter((pkg) => pkg.status === "collected");
+  const currentUserCollectedPackages = collectedPackages.filter(
+    (pkg) => pkg.collectorUserId === currentUserId,
+  );
   const arrivedPackages = state.packages.filter(
     (pkg) => pkg.status === "arrived" || pkg.status === "ready_for_handoff",
   );
   const deliveredPackages = state.packages.filter((pkg) => pkg.status === "delivered");
-  const visibleHomePackages = homeLocationFilterId
+  const homePackages = homeLocationFilterId
     ? state.packages.filter((pkg) => pkg.pickupLocationId === homeLocationFilterId)
     : state.packages;
+  const visibleHomePackages = homePackages.filter((pkg) =>
+    shouldShowPackageOnHome(pkg, currentTimeMs),
+  );
+  const effectiveDraftPickupLocationId = state.pickupLocations.some(
+    (location) => location.id === draft.pickupLocationId,
+  )
+    ? draft.pickupLocationId
+    : state.pickupLocations[0]?.id ?? "";
   const activeRun = state.pickupRuns.find((run) => run.id === activeRunId);
   const activeRunItems = state.pickupRunItems.filter(
     (item) => item.pickupRunId === activeRunId,
@@ -443,6 +537,9 @@ export function LahavPackagesApp() {
   const hoursLocation = hoursLocationId
     ? state.pickupLocations.find((location) => location.id === hoursLocationId)
     : null;
+  const editingLocation = editingLocationId
+    ? state.pickupLocations.find((location) => location.id === editingLocationId)
+    : null;
 
   const pendingJoinRequests = state.joinRequests.filter(
     (request) =>
@@ -460,6 +557,8 @@ export function LahavPackagesApp() {
     !joinPreviewMode && currentUser.verificationStatus === "approved";
   const canManageCommunity =
     isApprovedUser && (currentUser.role === "admin" || currentUser.role === "owner");
+  const hasPackagesForDelivery = currentUserCollectedPackages.length > 0;
+  const canOpenArrivalScreen = isApprovedUser;
   const requestedScreenAccessMessage = isApprovedUser ? null : unapprovedAccessMessage(screen);
   const effectiveScreen: Screen =
     screen === "pending" && submittedJoinRequest?.status === "approved"
@@ -470,15 +569,27 @@ export function LahavPackagesApp() {
           ? submittedJoinRequest
             ? "pending"
             : "join"
-        : screen;
+        : screen === "arrival" && !isApprovedUser
+          ? "home"
+          : screen;
 
-  const navItems: Array<[Screen, string, ReactNode]> = [
-    ["home", "בית", <Home key="home" />],
-    ["add", "הוספה", <PlusCircle key="add" />],
-    ["pickup", "איסוף", <Route key="pickup" />],
-    ...(canManageCommunity
-      ? ([["admin", "ניהול", <Settings key="admin" />]] as Array<[Screen, string, ReactNode]>)
-      : []),
+  const navItems: NavItem[] = [
+    { screen: "home", label: "בית", icon: <Home /> },
+    { screen: "add", label: "הוספה", icon: <PlusCircle /> },
+    { screen: "pickup", label: "איסוף", icon: <Route /> },
+    {
+      screen: "arrival",
+      label: "מסירה",
+      disabled: !canOpenArrivalScreen,
+      icon: (
+        <span className="nav-icon-with-badge">
+          <MapPinCheck />
+          {currentUserCollectedPackages.length ? (
+            <span className="nav-badge">{currentUserCollectedPackages.length}</span>
+          ) : null}
+        </span>
+      ),
+    },
   ];
   const visibleScreenLabels = canManageCommunity
     ? screenLabels
@@ -551,6 +662,12 @@ export function LahavPackagesApp() {
     if (accessMessage) {
       notify(accessMessage);
       setScreen(submittedJoinRequest ? "pending" : "join");
+      return;
+    }
+
+    if (nextScreen === "arrival" && !hasPackagesForDelivery) {
+      notify("אין חבילות למסירה כרגע");
+      setScreen("home");
       return;
     }
 
@@ -636,11 +753,17 @@ export function LahavPackagesApp() {
     subtitle?: ReactNode;
     backTarget?: Screen;
     showBell?: boolean;
+    showAdmin?: boolean;
     showMark?: boolean;
   } {
     switch (effectiveScreen) {
       case "home":
-        return { title: appName, showBell: true, showMark: true };
+        return {
+          title: appName,
+          showAdmin: canManageCommunity,
+          showBell: !canManageCommunity,
+          showMark: true,
+        };
       case "add":
         return { title: "הוספת חבילה", backTarget: "home" };
       case "pickup":
@@ -758,7 +881,7 @@ export function LahavPackagesApp() {
         state,
         {
           ownerName: draft.ownerName,
-          pickupLocationId: draft.pickupLocationId,
+          pickupLocationId: effectiveDraftPickupLocationId,
           sensitiveDeliveryMessage: draft.sensitiveDeliveryMessage,
         },
         actionDeps,
@@ -874,6 +997,24 @@ export function LahavPackagesApp() {
     return { weeklyHours, hasEnabledRange, isValid: true };
   }
 
+  function openAddLocationModal() {
+    setEditingLocationId(null);
+    setLocationDraft(createEmptyLocationDraft());
+    setIsAddLocationModalOpen(true);
+  }
+
+  function openEditLocationModal(location: PickupLocation) {
+    setEditingLocationId(location.id);
+    setLocationDraft(createLocationDraftFromLocation(location));
+    setIsAddLocationModalOpen(true);
+  }
+
+  function closeLocationModal() {
+    setEditingLocationId(null);
+    setLocationDraft(createEmptyLocationDraft());
+    setIsAddLocationModalOpen(false);
+  }
+
   async function savePickupLocation() {
     if (isSavingLocation) return;
 
@@ -894,22 +1035,61 @@ export function LahavPackagesApp() {
 
     setIsSavingLocation(true);
     try {
-      const result = await operationsRepository.createPickupLocation(
+      const locationInput = {
+        name,
+        address,
+        openingHours,
+        weeklyHours: hours.weeklyHours,
+      };
+      const result = editingLocationId
+        ? await operationsRepository.updatePickupLocation(
+            state,
+            {
+              locationId: editingLocationId,
+              ...locationInput,
+            },
+            actionDeps,
+          )
+        : await operationsRepository.createPickupLocation(state, locationInput, actionDeps);
+      applyRepositoryState(result.state);
+      closeLocationModal();
+      notify(editingLocationId ? "נקודת האיסוף עודכנה." : "נקודת האיסוף נוספה.");
+    } catch {
+      notify(
+        editingLocationId
+          ? "לא הצלחנו לעדכן את נקודת האיסוף. נסה/י שוב בעוד רגע."
+          : "לא הצלחנו להוסיף את נקודת האיסוף. נסה/י שוב בעוד רגע.",
+      );
+    } finally {
+      setIsSavingLocation(false);
+    }
+  }
+
+  async function deletePickupLocation(locationId: string) {
+    if (isSavingLocation) return;
+
+    const location = state.pickupLocations.find((item) => item.id === locationId);
+    const confirmed = window.confirm(
+      `למחוק את נקודת האיסוף ${location?.name ?? ""}? חבילות קיימות לא יימחקו.`,
+    );
+
+    if (!confirmed) return;
+
+    setIsSavingLocation(true);
+    try {
+      const result = await operationsRepository.deletePickupLocation(
         state,
-        {
-          name,
-          address,
-          openingHours,
-          weeklyHours: hours.weeklyHours,
-        },
+        locationId,
         actionDeps,
       );
       applyRepositoryState(result.state);
-      setLocationDraft(createEmptyLocationDraft());
-      setIsAddLocationModalOpen(false);
-      notify("נקודת האיסוף נוספה.");
+      setHomeLocationFilterId((current) => (current === locationId ? null : current));
+      if (editingLocationId === locationId) {
+        closeLocationModal();
+      }
+      notify("נקודת האיסוף נמחקה.");
     } catch {
-      notify("לא הצלחנו להוסיף את נקודת האיסוף. נסה/י שוב בעוד רגע.");
+      notify("לא הצלחנו למחוק את נקודת האיסוף. נסה/י שוב בעוד רגע.");
     } finally {
       setIsSavingLocation(false);
     }
@@ -934,19 +1114,63 @@ export function LahavPackagesApp() {
     }
   }
 
-  function updateArrival() {
-    setState(
-      updateCollectedPackagesArrival(
+  async function markReceived(packageId: string) {
+    if (receivingPackageId) return;
+
+    setReceivingPackageId(packageId);
+    try {
+      const nextState = await operationsRepository.markPackageReceived(
+        state,
+        packageId,
+        actionDeps,
+      );
+      applyRepositoryState(nextState);
+      notify("החבילה סומנה כנמסרה.");
+    } catch {
+      notify("לא הצלחנו לסמן את החבילה כנמסרה. נסה/י שוב בעוד רגע.");
+    } finally {
+      setReceivingPackageId(null);
+    }
+  }
+
+  async function updateArrival() {
+    try {
+      const nextState = await operationsRepository.updateCollectedPackagesArrival(
         state,
         {
           dropLocation,
           dropNote,
         },
         actionDeps,
-      ),
+      );
+      applyRepositoryState(nextState);
+      setScreen("home");
+      notify("מיקום החבילות בקיבוץ עודכן.");
+    } catch {
+      notify("לא הצלחנו לעדכן את מיקום החבילות בקיבוץ. נסה/י שוב בעוד רגע.");
+    }
+  }
+
+  async function deletePackage(packageId: string) {
+    if (adminActionId) return;
+
+    const pkg = state.packages.find((item) => item.id === packageId);
+    const confirmed = window.confirm(
+      `למחוק את החבילה של ${pkg?.ownerName ?? "המשתמש"}? הפעולה תסיר אותה מהאפליקציה.`,
     );
-    setScreen("home");
-    notify("מיקום החבילות בקיבוץ עודכן.");
+
+    if (!confirmed) return;
+
+    setAdminActionId(`delete-package-${packageId}`);
+    try {
+      const nextState = await operationsRepository.deletePackage(state, packageId, actionDeps);
+      applyRepositoryState(nextState);
+      notify("החבילה נמחקה.");
+    } catch {
+      notify("לא הצלחנו למחוק את החבילה. נסה/י שוב בעוד רגע.");
+    } finally {
+      setAdminActionId(null);
+    }
   }
 
   async function approveJoinRequest(requestId: string) {
@@ -1030,7 +1254,6 @@ export function LahavPackagesApp() {
           <div>
             <div className="statusbar">
               <span>14:28</span>
-              <span>להב</span>
             </div>
             <header className="app-header">
               <div className="header-row">
@@ -1043,6 +1266,15 @@ export function LahavPackagesApp() {
                       aria-label="חזרה"
                     >
                       <ArrowLeft />
+                    </button>
+                  ) : headerConfig.showAdmin ? (
+                    <button
+                      className="icon-button admin-header-button"
+                      aria-label="ניהול"
+                      onClick={() => navigateToScreen("admin")}
+                      type="button"
+                    >
+                      <Settings />
                     </button>
                   ) : headerConfig.showBell ? (
                     <button className="icon-button" aria-label="התראות" type="button">
@@ -1068,15 +1300,18 @@ export function LahavPackagesApp() {
           <section className={`content content-${effectiveScreen}`}>{renderScreen()}</section>
 
           <nav className="bottom-nav" aria-label="ניווט ראשי">
-            {navItems.map(([itemScreen, label, icon]) => (
+            {navItems.map((item) => (
               <button
-                className={`nav-item nav-${itemScreen} ${effectiveScreen === itemScreen ? "active" : ""}`}
-                key={itemScreen}
-                onClick={() => navigateToScreen(itemScreen)}
+                aria-disabled={item.disabled ? "true" : undefined}
+                className={`nav-item nav-${item.screen} ${effectiveScreen === item.screen ? "active" : ""}`}
+                disabled={item.disabled}
+                key={item.screen}
+                onClick={() => navigateToScreen(item.screen)}
+                title={item.disabled ? "מסירה זמינה לאחר אישור משתמש" : undefined}
                 type="button"
               >
-                <span className="nav-icon">{icon}</span>
-                <span className="nav-label">{label}</span>
+                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-label">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -1204,8 +1439,64 @@ export function LahavPackagesApp() {
             className="confirm-modal admin-location-modal"
             role="dialog"
           >
-            <h2 id="add-location-title">הוסף נקודת איסוף</h2>
-            <p>נקודת איסוף חדשה תופיע בבית, בהוספת חבילה ובמסך האיסוף.</p>
+            <h2 id="add-location-title">
+              {editingLocation ? "עריכת נקודת איסוף" : "הוסף נקודת איסוף"}
+            </h2>
+            <p>
+              {editingLocation
+                ? "עדכון נקודת איסוף ישפיע על הבית, הוספת חבילה ומסך האיסוף."
+                : "נקודת איסוף חדשה תופיע בבית, בהוספת חבילה ובמסך האיסוף."}
+            </p>
+
+            <div className="location-manager-panel" aria-label="נקודות איסוף קיימות">
+              <div className="location-manager-title">נקודות קיימות</div>
+              <div className="location-manager-list">
+                {state.pickupLocations.map((location) => (
+                  <div
+                    className={`location-manager-row ${
+                      editingLocationId === location.id ? "selected" : ""
+                    }`}
+                    key={location.id}
+                  >
+                    <div>
+                      <strong>{location.name}</strong>
+                      <span>{location.address}</span>
+                    </div>
+                    <div className="location-manager-actions">
+                      <button
+                        aria-label={`ערוך ${location.name}`}
+                        className="button icon-only"
+                        disabled={isSavingLocation}
+                        onClick={() => openEditLocationModal(location)}
+                        type="button"
+                      >
+                        <Pencil />
+                      </button>
+                      <button
+                        aria-label={`מחק ${location.name}`}
+                        className="button icon-only warn"
+                        disabled={isSavingLocation}
+                        onClick={() => deletePickupLocation(location.id)}
+                        type="button"
+                      >
+                        <Trash2 />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {editingLocation ? (
+                <button
+                  className="button full"
+                  disabled={isSavingLocation}
+                  onClick={openAddLocationModal}
+                  type="button"
+                >
+                  <MapPin />
+                  עבור להוספת נקודה חדשה
+                </button>
+              ) : null}
+            </div>
 
             <div className="stack location-admin-form">
               <div className="field">
@@ -1327,10 +1618,7 @@ export function LahavPackagesApp() {
                 <button
                   className="button"
                   disabled={isSavingLocation}
-                  onClick={() => {
-                    setLocationDraft(createEmptyLocationDraft());
-                    setIsAddLocationModalOpen(false);
-                  }}
+                  onClick={closeLocationModal}
                   type="button"
                 >
                   ביטול
@@ -1342,7 +1630,13 @@ export function LahavPackagesApp() {
                   type="button"
                 >
                   <MapPin />
-                  {isSavingLocation ? "מוסיף..." : "הוסף"}
+                  {isSavingLocation
+                    ? editingLocation
+                      ? "מעדכן..."
+                      : "מוסיף..."
+                    : editingLocation
+                      ? "עדכן"
+                      : "הוסף"}
                 </button>
               </div>
             </div>
@@ -1386,22 +1680,34 @@ export function LahavPackagesApp() {
         <section className="home-top">
           <h1 className="screen-title">מה מצב החבילות?</h1>
 
-          <div className="summary-grid" aria-label="סיכום">
-            <div className="metric">
+          <div className="home-status-band" aria-label="סיכום מצב החבילות">
+            <div className="home-status-item home-status-waiting">
+              <span className="home-status-icon">
+                <Package />
+              </span>
               <strong>{waitingPackages.length}</strong>
-              <span>ממתינות לאיסוף</span>
+              <span className="home-status-label">ממתינות לאיסוף</span>
             </div>
-            <div className="metric">
+            <div className="home-status-item home-status-collected">
+              <span className="home-status-icon home-status-truck">
+                <Truck />
+              </span>
               <strong>{collectedPackages.length}</strong>
-              <span>בדרך לקיבוץ</span>
+              <span className="home-status-label">בדרך לקיבוץ</span>
             </div>
-            <div className="metric">
+            <div className="home-status-item home-status-arrived">
+              <span className="home-status-icon">
+                <ClipboardList />
+              </span>
               <strong>{arrivedPackages.length}</strong>
-              <span>ממתינות למסירה</span>
+              <span className="home-status-label">ממתינות למסירה</span>
             </div>
-            <div className="metric">
+            <div className="home-status-item home-status-delivered">
+              <span className="home-status-icon">
+                <Check />
+              </span>
               <strong>{deliveredPackages.length}</strong>
-              <span>נמסרו</span>
+              <span className="home-status-label">נמסרו</span>
             </div>
           </div>
 
@@ -1420,6 +1726,7 @@ export function LahavPackagesApp() {
                   (pkg) => pkg.pickupLocationId === location.id && pkg.status === "waiting",
                 ).length;
                 const openState = getPickupLocationOpenState(location);
+                const displayName = pickupLocationDisplayName(location);
                 const selectLocation = () => {
                   setHomeLocationFilterId(location.id);
                   if (locationPackageCount > 0) {
@@ -1429,7 +1736,7 @@ export function LahavPackagesApp() {
                 return (
                   <div className="pickup-card-group" key={location.id}>
                     <div
-                      aria-label={`${location.name}, ${locationPackageCount} חבילות ממתינות`}
+                      aria-label={`${displayName}, ${locationPackageCount} חבילות ממתינות`}
                       className={`pickup-card pickup-card-${openState} ${homeLocationFilterId === location.id ? "selected" : ""}`}
                       data-pickup-location-id={location.id}
                       onClick={(event) => {
@@ -1454,16 +1761,18 @@ export function LahavPackagesApp() {
                       role="button"
                       tabIndex={0}
                     >
-                      <span>{location.name}</span>
+                      <span>{displayName}</span>
                       <strong>{locationPackageCount}</strong>
                     </div>
                     <button
-                      aria-label={`שעות פתיחה - ${location.name}`}
+                      aria-label={`שעות פתיחה - ${displayName}`}
                       className={`opening-hours-icon-button opening-hours-icon-${openState}`}
                       onClick={() => setHoursLocationId(location.id)}
                       title="שעות פתיחה"
                       type="button"
-                    />
+                    >
+                      <span>{openState === "open" ? "OPEN" : "CLOSED"}</span>
+                    </button>
                   </div>
                 );
               })}
@@ -1519,22 +1828,26 @@ export function LahavPackagesApp() {
           </div>
           <div className="field">
             <label htmlFor="pickup-location">בחר/י נקודת איסוף</label>
-            <select
-              id="pickup-location"
-              value={draft.pickupLocationId}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  pickupLocationId: event.target.value,
-                }))
-              }
-            >
-              {state.pickupLocations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
+            {state.pickupLocations.length ? (
+              <select
+                id="pickup-location"
+                value={effectiveDraftPickupLocationId}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    pickupLocationId: event.target.value,
+                  }))
+                }
+              >
+                {state.pickupLocations.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="card empty-state">אין נקודות איסוף פעילות.</div>
+            )}
           </div>
           <div className="field">
             <label htmlFor="message">הודעת חברת משלוחים מקורית</label>
@@ -1556,7 +1869,7 @@ export function LahavPackagesApp() {
           </div>
           <button
             className="button primary full"
-            disabled={isSavingPackage}
+            disabled={isSavingPackage || !state.pickupLocations.length}
             onClick={saveDraftPackage}
             type="button"
           >
@@ -1701,6 +2014,7 @@ export function LahavPackagesApp() {
         (user.role === "admin" || user.role === "owner") &&
         user.verificationStatus === "approved",
     );
+    const adminPackages = state.packages;
 
     return (
       <>
@@ -1710,7 +2024,7 @@ export function LahavPackagesApp() {
         <div className="admin-card add-location-card">
           <button
             className="button primary full"
-            onClick={() => setIsAddLocationModalOpen(true)}
+            onClick={openAddLocationModal}
             type="button"
           >
             <MapPin />
@@ -1748,6 +2062,15 @@ export function LahavPackagesApp() {
           >
             <strong>{managerUsers.length}</strong>
             <span>מנהלים</span>
+          </button>
+          <button
+            aria-pressed={adminListView === "packages"}
+            className={`metric metric-button ${adminListView === "packages" ? "selected" : ""}`}
+            onClick={() => setAdminListView("packages")}
+            type="button"
+          >
+            <strong>{adminPackages.length}</strong>
+            <span>חבילות</span>
           </button>
         </div>
 
@@ -1874,6 +2197,57 @@ export function LahavPackagesApp() {
                 </div>
               ))
             : null}
+
+          {adminListView === "packages" && adminPackages.length === 0 ? (
+            <div className="card empty-state">אין חבילות להצגה.</div>
+          ) : null}
+
+          {adminListView === "packages"
+            ? adminPackages.map((pkg) => {
+                const collectorName = getUserName(state.users, pkg.collectorUserId);
+                const pickupLocationName = getLocationName(
+                  state.pickupLocations,
+                  pkg.pickupLocationId,
+                );
+                return (
+                  <div className="admin-card" key={pkg.id}>
+                    <div className="package-top">
+                      <div>
+                        <div className="package-name">{pkg.ownerName}</div>
+                        <div className="package-meta">
+                          {pickupLocationName} · {statusLabel(pkg.status)}
+                        </div>
+                      </div>
+                      <span className={statusBadgeClass(pkg.status)}>
+                        {statusLabel(pkg.status)}
+                      </span>
+                    </div>
+                    <div className="message-preview admin-package-log">
+                      <strong>יומן חבילה</strong>
+                      <span>נקודת איסוף: {pickupLocationName}</span>
+                      <span>אסף/ה: {collectorName ?? "טרם נאספה"}</span>
+                      {pkg.currentKibbutzLocationText ? (
+                        <span>מסירה בקיבוץ: {pkg.currentKibbutzLocationText}</span>
+                      ) : null}
+                      {pkg.deliveredAt ? (
+                        <span>אישור קבלה: {formatHebrewDateTime(pkg.deliveredAt)}</span>
+                      ) : null}
+                    </div>
+                    <div className="card-actions single-action">
+                      <button
+                        className="button warn full"
+                        disabled={adminActionId !== null}
+                        onClick={() => deletePackage(pkg.id)}
+                        type="button"
+                      >
+                        <Trash2 />
+                        {adminActionId === `delete-package-${pkg.id}` ? "מוחק..." : "מחק חבילה"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            : null}
         </div>
       </>
     );
@@ -1882,6 +2256,11 @@ export function LahavPackagesApp() {
   function PackageCard({ pkg }: { pkg: DeliveryPackage }) {
     const collectorName = getUserName(state.users, pkg.collectorUserId);
     const detailBadge = packageDetailBadge(pkg);
+    const canConfirmReceived =
+      pkg.ownerUserId === currentUserId &&
+      (pkg.status === "arrived" || pkg.status === "ready_for_handoff");
+    const hasConfirmedReceived = pkg.ownerUserId === currentUserId && pkg.status === "delivered";
+    const isReceiving = receivingPackageId === pkg.id;
     const wasCollected =
       pkg.status === "collected" ||
       pkg.status === "arrived" ||
@@ -1911,6 +2290,25 @@ export function LahavPackagesApp() {
           ) : null}
           {collectorName && wasCollected ? (
             <div className="package-note">נאספה על ידי {collectorName}</div>
+          ) : null}
+          {canConfirmReceived || hasConfirmedReceived ? (
+            <div className="receive-action-row">
+              {canConfirmReceived ? (
+                <button
+                  className="button receive-button"
+                  disabled={receivingPackageId !== null}
+                  onClick={() => markReceived(pkg.id)}
+                  type="button"
+                >
+                  {isReceiving ? "מאשר..." : "אשר קבלה"}
+                </button>
+              ) : (
+                <button className="button receive-confirmed-button" disabled type="button">
+                  <Check />
+                  התקבלה
+                </button>
+              )}
+            </div>
           ) : null}
         </div>
       </div>

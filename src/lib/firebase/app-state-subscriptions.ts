@@ -37,7 +37,7 @@ function mergePickupLocations(remoteLocations: PickupLocation[]) {
 
   return [
     ...initialAppState.pickupLocations.filter((location) => !remoteIds.has(location.id)),
-    ...remoteLocations,
+    ...remoteLocations.filter((location) => !location.isDeleted),
   ];
 }
 
@@ -121,7 +121,9 @@ export function subscribeFirestoreAppState(
     onSnapshot(
       collection(db, "pickupLocations"),
       (snapshot) => {
-        const remoteLocations = snapshot.docs.map((item) => item.data() as PickupLocation);
+        const remoteLocations = snapshot.docs.map(
+          (item) => ({ id: item.id, ...item.data() }) as PickupLocation,
+        );
         emit({
           pickupLocations: mergePickupLocations(remoteLocations),
         });

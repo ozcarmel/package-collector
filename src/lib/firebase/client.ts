@@ -10,7 +10,23 @@ let db: Firestore | null = null;
 let functions: Functions | null = null;
 let storage: FirebaseStorage | null = null;
 
+function forceLocalDemoMode() {
+  if (process.env.NEXT_PUBLIC_FORCE_LOCAL_DEMO === "1") {
+    return true;
+  }
+
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return new URLSearchParams(window.location.search).get("e2eDemo") === "1";
+}
+
 export function hasFirebaseConfig() {
+  if (forceLocalDemoMode()) {
+    return false;
+  }
+
   return Boolean(
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
       process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&

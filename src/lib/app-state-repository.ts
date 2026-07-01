@@ -4,13 +4,17 @@ import {
   createJoinRequest,
   createPackage,
   createPickupLocation,
+  deletePackage,
+  deletePickupLocation,
   getWaitingPackageCount,
   logSensitiveAccess,
   markPackageCollected,
+  markPackageReceived,
   promoteUser,
   rejectJoinRequest,
   startPickupRun,
   updateCollectedPackagesArrival,
+  updatePickupLocation,
 } from "@/lib/app-state-actions";
 import type { AppOperationsRepository } from "@/lib/app-repository-contract";
 import type { AppState } from "@/lib/types";
@@ -74,6 +78,10 @@ export const localDemoRepository: AppStateRepository = {
 
   createPickupLocation,
 
+  updatePickupLocation,
+
+  deletePickupLocation,
+
   getWaitingPackageCount,
 
   startPickupRun,
@@ -81,6 +89,10 @@ export const localDemoRepository: AppStateRepository = {
   logSensitiveAccess,
 
   markPackageCollected,
+
+  markPackageReceived,
+
+  deletePackage,
 
   updateCollectedPackagesArrival,
 

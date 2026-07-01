@@ -5,13 +5,17 @@ import {
   createJoinRequest,
   createPackage,
   createPickupLocation,
+  deletePackage,
+  deletePickupLocation,
   getWaitingPackageCount,
   logSensitiveAccess,
   markPackageCollected,
+  markPackageReceived,
   promoteUser,
   rejectJoinRequest,
   startPickupRun,
   updateCollectedPackagesArrival,
+  updatePickupLocation,
   type ActionDeps,
 } from "@/lib/app-state-actions";
 import { initialAppState } from "@/lib/demo-data";
@@ -205,6 +209,45 @@ describe("app state actions", () => {
     expect(result.state.pickupLocations).toHaveLength(state.pickupLocations.length + 1);
   });
 
+  it("updates an existing pickup location without changing its id or request count", () => {
+    const state = cloneState();
+    const original = state.pickupLocations.find((location) => location.id === "pitzutz");
+    expect(original).toBeTruthy();
+
+    const result = updatePickupLocation(state, {
+      locationId: "pitzutz",
+      name: "פיצוץ להב מעודכן",
+      address: "מרכז להב",
+      openingHours: "א-ה 10:00-15:00",
+      weeklyHours: {
+        0: [{ open: "10:00", close: "15:00" }],
+      },
+    });
+
+    const updated = result.state.pickupLocations.find((location) => location.id === "pitzutz");
+    expect(updated).toMatchObject({
+      id: "pitzutz",
+      name: "פיצוץ להב מעודכן",
+      address: "מרכז להב",
+      openingHours: "א-ה 10:00-15:00",
+      activeRequests: original?.activeRequests,
+      weeklyHours: {
+        0: [{ open: "10:00", close: "15:00" }],
+      },
+    });
+    expect(updated?.navigationUrl).toContain(encodeURIComponent("פיצוץ להב מעודכן מרכז להב"));
+  });
+
+  it("deletes a pickup location from active state without deleting packages", () => {
+    const state = cloneState();
+    const result = deletePickupLocation(state, "eshkolot");
+
+    expect(result.state.pickupLocations.some((location) => location.id === "eshkolot")).toBe(
+      false,
+    );
+    expect(result.state.packages).toHaveLength(state.packages.length);
+  });
+
   it("starts pickup run only for waiting packages at the selected location", () => {
     const deps = createTestDeps();
     const state = cloneState();
@@ -315,6 +358,41 @@ describe("app state actions", () => {
     });
   });
 
+  it("lets the package recipient mark an arrived package as delivered", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const arrivedPackage = state.packages.find((pkg) => pkg.status === "arrived");
+    expect(arrivedPackage).toBeTruthy();
+    const recipientState: AppState = {
+      ...state,
+      currentUser: {
+        id: arrivedPackage?.ownerUserId ?? "",
+        fullName: "Package Recipient",
+        phone: "050-777-7777",
+        role: "member",
+        verificationStatus: "approved",
+        createdAt: "2026-06-28T10:00:00.000Z",
+      },
+    };
+
+    const delivered = markPackageReceived(recipientState, arrivedPackage?.id ?? "", deps);
+
+    expect(delivered.packages.find((pkg) => pkg.id === arrivedPackage?.id)).toMatchObject({
+      status: "delivered",
+      deliveredAt: "2026-06-28T10:00:00.000Z",
+      updatedAt: "2026-06-28T10:00:00.000Z",
+    });
+  });
+
+  it("allows admins to delete packages in any status from active state", () => {
+    const state = cloneState();
+    const arrivedPackage = state.packages.find((pkg) => pkg.status === "arrived");
+    expect(arrivedPackage).toBeTruthy();
+    const result = deletePackage(state, arrivedPackage?.id ?? "");
+
+    expect(result.packages.some((pkg) => pkg.id === arrivedPackage?.id)).toBe(false);
+  });
+
   it("promotes an approved member to admin", () => {
     const state = cloneState();
     const memberId = state.users.find((user) => user.role === "member")?.id;
@@ -322,6 +400,23 @@ describe("app state actions", () => {
 
     const promoted = promoteUser(state, memberId ?? "", createTestDeps());
     expect(promoted.users.find((user) => user.id === memberId)?.role).toBe("admin");
+  });
+
+  it("promotes members only when the current owner is Oz with the approved phone number", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const memberId = state.users.find((user) => user.role === "member")?.id ?? "";
+    const wrongPhoneOwnerState: AppState = {
+      ...state,
+      currentUser: {
+        ...state.currentUser,
+        phone: "050-000-0000",
+      },
+    };
+
+    const attempted = promoteUser(wrongPhoneOwnerState, memberId, deps);
+
+    expect(attempted.users.find((user) => user.id === memberId)?.role).toBe("member");
   });
 
   it("blocks an approved member without removing user history", () => {
@@ -386,6 +481,38 @@ describe("app state actions", () => {
     expect(blocked.users.find((user) => user.id === "legacy-owner")).toMatchObject({
       verificationStatus: "blocked",
       blockedByUserId: state.currentUser.id,
+    });
+  });
+
+  it("prevents non-Oz owners from blocking managers", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const memberId = state.users.find((user) => user.role === "member")?.id ?? "";
+    const withAdmin = promoteUser(state, memberId, deps);
+    const wrongPhoneOwnerState: AppState = {
+      ...withAdmin,
+      currentUser: {
+        ...withAdmin.currentUser,
+        phone: "050-000-0000",
+      },
+    };
+
+    const attempted = blockUser(wrongPhoneOwnerState, memberId, deps);
+
+    expect(attempted.users.find((user) => user.id === memberId)?.verificationStatus).toBe(
+      "approved",
+    );
+  });
+
+  it("prevents users from blocking themselves", () => {
+    const state = cloneState();
+    const deps = createTestDeps();
+
+    const attempted = blockUser(state, state.currentUser.id, deps);
+
+    expect(attempted.currentUser.verificationStatus).toBe("approved");
+    expect(attempted.users.find((user) => user.id === state.currentUser.id)).toMatchObject({
+      verificationStatus: "approved",
     });
   });
 

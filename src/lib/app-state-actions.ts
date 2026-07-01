@@ -42,6 +42,10 @@ export interface CreatePickupLocationInput {
   weeklyHours?: WeeklyOpeningHours;
 }
 
+export interface UpdatePickupLocationInput extends CreatePickupLocationInput {
+  locationId: string;
+}
+
 export interface UpdateArrivalInput {
   dropLocation: KibbutzDropLocation;
   dropNote: string;
@@ -162,6 +166,12 @@ function createPickupLocationId(state: AppState, name: string, deps: ActionDeps)
   return existingIds.has(preferredId) ? fallbackId : preferredId;
 }
 
+function createNavigationUrl(name: string, address: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    `${name} ${address}`,
+  )}`;
+}
+
 export function createPickupLocation(
   state: AppState,
   input: CreatePickupLocationInput,
@@ -175,9 +185,7 @@ export function createPickupLocation(
     name,
     address,
     openingHours,
-    navigationUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      `${name} ${address}`,
-    )}`,
+    navigationUrl: createNavigationUrl(name, address),
     activeRequests: 0,
     ...(input.weeklyHours ? { weeklyHours: input.weeklyHours } : {}),
   };
@@ -187,6 +195,48 @@ export function createPickupLocation(
     state: {
       ...state,
       pickupLocations: [...state.pickupLocations, location],
+    },
+  };
+}
+
+export function updatePickupLocation(state: AppState, input: UpdatePickupLocationInput) {
+  const name = input.name.trim();
+  const address = input.address.trim();
+  const openingHours = input.openingHours.trim();
+  const existingLocation = state.pickupLocations.find(
+    (location) => location.id === input.locationId,
+  );
+
+  if (!existingLocation) {
+    return { locationId: input.locationId, state };
+  }
+
+  const updatedLocation: PickupLocation = {
+    ...existingLocation,
+    name,
+    address,
+    openingHours,
+    navigationUrl: createNavigationUrl(name, address),
+    ...(input.weeklyHours ? { weeklyHours: input.weeklyHours } : { weeklyHours: undefined }),
+  };
+
+  return {
+    locationId: input.locationId,
+    state: {
+      ...state,
+      pickupLocations: state.pickupLocations.map((location) =>
+        location.id === input.locationId ? updatedLocation : location,
+      ),
+    },
+  };
+}
+
+export function deletePickupLocation(state: AppState, locationId: string) {
+  return {
+    locationId,
+    state: {
+      ...state,
+      pickupLocations: state.pickupLocations.filter((location) => location.id !== locationId),
     },
   };
 }
@@ -303,6 +353,39 @@ export function markPackageCollected(
   };
 }
 
+export function markPackageReceived(state: AppState, packageId: string, deps: ActionDeps) {
+  assertApprovedUser(state, "mark packages received");
+
+  const targetPackage = state.packages.find((pkg) => pkg.id === packageId);
+  if (!targetPackage) {
+    throw new Error("Package was not found.");
+  }
+
+  if (targetPackage.ownerUserId !== state.currentUser.id) {
+    throw new Error("Only the package owner can mark it received.");
+  }
+
+  if (targetPackage.status !== "arrived" && targetPackage.status !== "ready_for_handoff") {
+    throw new Error("Only arrived packages can be marked received.");
+  }
+
+  const deliveredAt = deps.now();
+
+  return {
+    ...state,
+    packages: state.packages.map((pkg) =>
+      pkg.id === packageId
+        ? {
+            ...pkg,
+            status: "delivered" as const,
+            deliveredAt,
+            updatedAt: deliveredAt,
+          }
+        : pkg,
+    ),
+  };
+}
+
 export function updateCollectedPackagesArrival(
   state: AppState,
   input: UpdateArrivalInput,
@@ -321,6 +404,19 @@ export function updateCollectedPackagesArrival(
           }
         : pkg,
     ),
+  };
+}
+
+export function deletePackage(state: AppState, packageId: string) {
+  if (state.currentUser.role !== "admin" && state.currentUser.role !== "owner") {
+    throw new Error("Only admins can delete packages.");
+  }
+
+  return {
+    ...state,
+    packages: state.packages.filter((pkg) => pkg.id !== packageId),
+    pickupRunItems: state.pickupRunItems.filter((item) => item.packageId !== packageId),
+    accessLogs: state.accessLogs.filter((log) => log.packageId !== packageId),
   };
 }
 

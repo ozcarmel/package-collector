@@ -55,7 +55,7 @@ export const initialAppState: AppState = {
   pickupLocations: [
     {
       id: "home-paami",
-      name: "הום פעמי להבים",
+      name: "הום פעמי",
       address: "שדרות שעורה 1, להבים",
       openingHours: "א'-ה' 09:00-20:00, ו' 08:30-14:30",
       navigationUrl:
@@ -120,7 +120,7 @@ export const initialAppState: AppState = {
     },
     {
       id: "deli-place",
-      name: "דלי פלייס להבים",
+      name: "דלי פלייס",
       address: "שדרות שעורה 1, מרכז עזריאלי פאלאס, להבים",
       openingHours: "א'-ה' 08:30-14:00 ו-16:00-20:00, ו' 07:30-15:00",
       navigationUrl:

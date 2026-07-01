@@ -13,5 +13,6 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: false,
+    include: ["src/lib/__tests__/**/*.test.ts"],
   },
 });

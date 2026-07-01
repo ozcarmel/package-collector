@@ -150,6 +150,15 @@ service cloud.firestore {
           .hasOnly(["publicSummary", "updatedAt"]);
     }
 
+    function validOwnerPackageReceivedUpdate() {
+      return approved() &&
+        resource.data.ownerUserId == request.auth.uid &&
+        resource.data.status in ["arrived", "ready_for_handoff"] &&
+        request.resource.data.status == "delivered" &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "deliveredAt", "updatedAt"]);
+    }
+
     function validPackageCreate(packageId) {
       return approved() &&
         request.resource.data.id == packageId &&
@@ -288,6 +297,7 @@ service cloud.firestore {
       allow update: if approved() && (
         validCollectorArrivalUpdate() ||
         validCollectorPackageCollectedUpdate(packageId) ||
+        validOwnerPackageReceivedUpdate() ||
         validOwnerPackageUpdate() ||
         admin()
       );

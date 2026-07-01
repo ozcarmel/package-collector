@@ -70,6 +70,9 @@ export interface PickupLocation {
   weeklyHours?: WeeklyOpeningHours;
   navigationUrl: string;
   activeRequests: number;
+  isDeleted?: boolean;
+  deletedAt?: string;
+  deletedByUserId?: string;
 }
 
 export interface DeliveryPackage {

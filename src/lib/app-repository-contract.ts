@@ -3,6 +3,7 @@ import type {
   CreateJoinRequestInput,
   CreatePackageInput,
   CreatePickupLocationInput,
+  UpdatePickupLocationInput,
   UpdateArrivalInput,
 } from "@/lib/app-state-actions";
 import type { AppState } from "@/lib/types";
@@ -59,6 +60,18 @@ export interface AppOperationsRepository {
     deps: ActionDeps,
   ): PickupLocationResult | Promise<PickupLocationResult>;
 
+  updatePickupLocation(
+    state: AppState,
+    input: UpdatePickupLocationInput,
+    deps: ActionDeps,
+  ): PickupLocationResult | Promise<PickupLocationResult>;
+
+  deletePickupLocation(
+    state: AppState,
+    locationId: string,
+    deps: ActionDeps,
+  ): PickupLocationResult | Promise<PickupLocationResult>;
+
   getWaitingPackageCount(state: AppState, pickupLocationId: string): number | Promise<number>;
 
   startPickupRun(
@@ -82,6 +95,10 @@ export interface AppOperationsRepository {
     input: { activeRunId: string | null; packageId: string },
     deps: ActionDeps,
   ): RepositoryStateResult;
+
+  markPackageReceived(state: AppState, packageId: string, deps: ActionDeps): RepositoryStateResult;
+
+  deletePackage(state: AppState, packageId: string, deps: ActionDeps): RepositoryStateResult;
 
   updateCollectedPackagesArrival(
     state: AppState,
