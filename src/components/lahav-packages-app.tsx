@@ -127,6 +127,32 @@ const initialJoinDraft: JoinDraft = {
   note: "היי, אני חבר/ת להב. אפשר לאשר אותי?",
 };
 
+const firebaseBootstrapUser: AppState["currentUser"] = {
+  id: "firebase-bootstrap",
+  fullName: "",
+  phone: "",
+  role: "member",
+  verificationStatus: "phone_pending",
+  createdAt: "",
+};
+
+function getInitialRuntimeState(): AppState {
+  if (!hasFirebaseConfig()) {
+    return initialAppState;
+  }
+
+  return {
+    ...initialAppState,
+    currentUser: firebaseBootstrapUser,
+    users: [firebaseBootstrapUser],
+    joinRequests: [],
+    packages: [],
+    pickupRuns: [],
+    pickupRunItems: [],
+    accessLogs: [],
+  };
+}
+
 const weekdayLabels: Array<[Weekday, string]> = [
   [0, "א׳"],
   [1, "ב׳"],
@@ -322,7 +348,7 @@ function shouldShowPackageOnHome(pkg: DeliveryPackage, currentTimeMs: number | n
 }
 
 export function LahavPackagesApp() {
-  const [state, setState] = useState<AppState>(initialAppState);
+  const [state, setState] = useState<AppState>(() => getInitialRuntimeState());
   const [currentTimeMs, setCurrentTimeMs] = useState<number | null>(null);
   const [repositoryReady, setRepositoryReady] = useState(false);
   const [isSubmittingJoinRequest, setIsSubmittingJoinRequest] = useState(false);
@@ -359,6 +385,8 @@ export function LahavPackagesApp() {
   const ozDuplicateCleanupRef = useRef<string | null>(null);
   const firebaseEnabled = hasFirebaseConfig();
   const currentUser = state.currentUser;
+  const isFirebaseBootstrapUser = currentUser.id === firebaseBootstrapUser.id;
+  const isJoinSubmissionReady = !firebaseEnabled || (repositoryReady && !isFirebaseBootstrapUser);
   const currentUserId = currentUser.id;
   const currentUserRole = currentUser.role;
   const currentUserVerificationStatus = currentUser.verificationStatus;
@@ -556,6 +584,10 @@ export function LahavPackagesApp() {
   const effectiveScreen: Screen =
     screen === "pending" && submittedJoinRequest?.status === "approved"
       ? "home"
+      : screen === "home" && !isApprovedUser
+        ? submittedJoinRequest
+          ? "pending"
+          : "join"
       : screen === "admin" && !canManageCommunity
         ? "home"
         : requestedScreenAccessMessage
@@ -868,6 +900,11 @@ export function LahavPackagesApp() {
     const note = joinDraft.note.trim();
 
     if (isSubmittingJoinRequest) return;
+
+    if (!isJoinSubmissionReady) {
+      notify("אנחנו עדיין מתחברים. נסה/י שוב בעוד רגע.");
+      return;
+    }
 
     if (!fullName || !phone) {
       notify("צריך למלא שם מלא ומספר טלפון נייד.");
@@ -1651,6 +1688,7 @@ export function LahavPackagesApp() {
       case "join":
         return (
           <JoinScreen
+            canSubmit={isJoinSubmissionReady}
             isSubmitting={isSubmittingJoinRequest}
             joinDraft={joinDraft}
             onChange={setJoinDraft}
@@ -2404,11 +2442,13 @@ export function LahavPackagesApp() {
 }
 
 function JoinScreen({
+  canSubmit,
   isSubmitting,
   joinDraft,
   onChange,
   onPending,
 }: {
+  canSubmit: boolean;
   isSubmitting: boolean;
   joinDraft: JoinDraft;
   onChange: (draft: JoinDraft | ((current: JoinDraft) => JoinDraft)) => void;
@@ -2453,12 +2493,12 @@ function JoinScreen({
         </div>
         <button
           className="button primary full"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !canSubmit}
           onClick={onPending}
           type="button"
         >
           <Send />
-          {isSubmitting ? "שולח בקשה..." : "שלח בקשת הצטרפות"}
+          {!canSubmit ? "מתחבר..." : isSubmitting ? "שולח בקשה..." : "שלח בקשת הצטרפות"}
         </button>
       </div>
     </>

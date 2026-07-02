@@ -1,10 +1,10 @@
 import {
   collection,
   doc,
-  onSnapshot,
+  getDoc,
+  getDocs,
   query,
   where,
-  type Unsubscribe,
 } from "firebase/firestore";
 import { initialAppState } from "@/lib/demo-data";
 import { getFirebaseDb, hasFirebaseConfig } from "@/lib/firebase/client";
@@ -62,151 +62,110 @@ export function subscribeFirestoreAppState(
 ) {
   const db = getFirebaseDb();
   if (!hasFirebaseConfig() || !db) return null;
+  const firestoreDb = db;
 
-  let state: AppState = {
-    ...initialAppState,
-    currentUser,
-    users: [currentUser],
-    joinRequests: [],
-    pickupLocations: [],
-    packages: [],
-    pickupRuns: [],
-    pickupRunItems: [],
-    accessLogs: [],
-  };
+  let isDisposed = false;
+  let isLoading = false;
 
-  const unsubs: Unsubscribe[] = [];
-  const emit = (patch: Partial<AppState>) => {
-    state = mergeState(state, patch);
-    onState(state);
-  };
-  const handleError = (error: Error) => onError(error);
+  async function loadState() {
+    if (isLoading) return;
+    isLoading = true;
 
-  unsubs.push(
-    onSnapshot(
-      doc(db, "users", currentUser.id),
-      (snapshot) => {
-        const user = snapshot.exists() ? (snapshot.data() as AppUser) : currentUser;
-        emit({
-          currentUser: user,
-          users: [user, ...state.users.filter((item) => item.id !== user.id)],
-        });
-      },
-      handleError,
-    ),
-  );
+    try {
+      const userSnapshot = await getDoc(doc(firestoreDb, "users", currentUser.id));
+      const user = userSnapshot.exists() ? (userSnapshot.data() as AppUser) : currentUser;
+      const ownRequestsSnapshot = await getDocs(
+        query(collection(firestoreDb, "joinRequests"), where("userId", "==", currentUser.id)),
+      );
+      const ownRequests = ownRequestsSnapshot.docs.map((item) => item.data() as JoinRequest);
+      const isApproved = user.verificationStatus === "approved";
+      const isAdmin = isApproved && (user.role === "admin" || user.role === "owner");
 
-  unsubs.push(
-    onSnapshot(
-      query(collection(db, "joinRequests"), where("userId", "==", currentUser.id)),
-      (snapshot) => {
-        const ownRequests = snapshot.docs.map((item) => item.data() as JoinRequest);
-        emit({
-          joinRequests: [
-            ...ownRequests,
-            ...state.joinRequests.filter((request) => request.userId !== currentUser.id),
-          ],
-        });
-      },
-      handleError,
-    ),
-  );
+      const nextState: AppState = {
+        ...initialAppState,
+        currentUser: user,
+        users: [user],
+        joinRequests: ownRequests,
+        pickupLocations: [],
+        packages: [],
+        pickupRuns: [],
+        pickupRunItems: [],
+        accessLogs: [],
+      };
 
-  if (currentUser.verificationStatus !== "approved") {
-    onState(state);
-    return () => unsubs.forEach((unsubscribe) => unsubscribe());
-  }
-
-  unsubs.push(
-    onSnapshot(
-      collection(db, "pickupLocations"),
-      (snapshot) => {
-        const remoteLocations = snapshot.docs.map(
+      if (isApproved) {
+        const [locationsSnapshot, packagesSnapshot, pickupRunsSnapshot] = await Promise.all([
+          getDocs(collection(firestoreDb, "pickupLocations")),
+          getDocs(collection(firestoreDb, "packages")),
+          getDocs(
+            query(collection(firestoreDb, "pickupRuns"), where("collectorUserId", "==", user.id)),
+          ),
+        ]);
+        const remoteLocations = locationsSnapshot.docs.map(
           (item) => ({ id: item.id, ...item.data() }) as PickupLocation,
         );
-        emit({
-          pickupLocations: mergePickupLocations(remoteLocations),
-        });
-      },
-      handleError,
-    ),
-  );
-
-  unsubs.push(
-    onSnapshot(
-      collection(db, "packages"),
-      (snapshot) => {
-        emit({
-          packages: sortByUpdatedAt(snapshot.docs.map((item) => item.data() as DeliveryPackage)),
-        });
-      },
-      handleError,
-    ),
-  );
-
-  unsubs.push(
-    onSnapshot(
-      query(collection(db, "pickupRuns"), where("collectorUserId", "==", currentUser.id)),
-      (snapshot) => {
-        emit({
-          pickupRuns: sortByUpdatedAt(snapshot.docs.map((item) => item.data() as PickupRun)),
-        });
-      },
-      handleError,
-    ),
-  );
-
-  unsubs.push(
-    onSnapshot(
-      collection(db, "pickupRunItems"),
-      (snapshot) => {
-        emit({
-          pickupRunItems: snapshot.docs.map((item) => item.data() as PickupRunItem),
-        });
-      },
-      handleError,
-    ),
-  );
-
-  if (currentUser.role === "admin" || currentUser.role === "owner") {
-    unsubs.push(
-      onSnapshot(
-        query(collection(db, "joinRequests"), where("status", "==", "pending")),
-        (snapshot) => {
-          const pendingRequests = snapshot.docs.map((item) => item.data() as JoinRequest);
-          emit({
-            joinRequests: mergePendingJoinRequests(state.joinRequests, pendingRequests),
-          });
-        },
-        handleError,
-      ),
-    );
-
-    unsubs.push(
-      onSnapshot(
-        collection(db, "users"),
-        (snapshot) => {
-          emit({ users: snapshot.docs.map((item) => item.data() as AppUser) });
-        },
-        handleError,
-      ),
-    );
-
-    unsubs.push(
-      onSnapshot(
-        collection(db, "sensitiveAccessLogs"),
-        (snapshot) => {
-          emit({
-            accessLogs: sortByUpdatedAt(
-              snapshot.docs.map((item) => item.data() as SensitiveAccessLog),
+        const pickupRuns = sortByUpdatedAt(
+          pickupRunsSnapshot.docs.map((item) => item.data() as PickupRun),
+        );
+        const runItems = (
+          await Promise.all(
+            pickupRuns.map((run) =>
+              getDocs(
+                query(collection(firestoreDb, "pickupRunItems"), where("pickupRunId", "==", run.id)),
+              ),
             ),
-          });
-        },
-        handleError,
-      ),
-    );
+          )
+        ).flatMap((snapshot) => snapshot.docs.map((item) => item.data() as PickupRunItem));
+
+        nextState.pickupLocations = mergePickupLocations(remoteLocations);
+        nextState.packages = sortByUpdatedAt(
+          packagesSnapshot.docs.map((item) => item.data() as DeliveryPackage),
+        );
+        nextState.pickupRuns = pickupRuns;
+        nextState.pickupRunItems = runItems;
+
+        if (isAdmin) {
+          const [pendingRequestsSnapshot, usersSnapshot, accessLogsSnapshot, runItemsSnapshot] =
+            await Promise.all([
+              getDocs(
+                query(collection(firestoreDb, "joinRequests"), where("status", "==", "pending")),
+              ),
+              getDocs(collection(firestoreDb, "users")),
+              getDocs(collection(firestoreDb, "sensitiveAccessLogs")),
+              getDocs(collection(firestoreDb, "pickupRunItems")),
+            ]);
+          const pendingRequests = pendingRequestsSnapshot.docs.map(
+            (item) => item.data() as JoinRequest,
+          );
+
+          nextState.joinRequests = mergePendingJoinRequests(ownRequests, pendingRequests);
+          nextState.users = usersSnapshot.docs.map((item) => item.data() as AppUser);
+          nextState.pickupRunItems = runItemsSnapshot.docs.map(
+            (item) => item.data() as PickupRunItem,
+          );
+          nextState.accessLogs = sortByUpdatedAt(
+            accessLogsSnapshot.docs.map((item) => item.data() as SensitiveAccessLog),
+          );
+        }
+      }
+
+      if (!isDisposed) {
+        onState(nextState);
+      }
+    } catch (error) {
+      if (!isDisposed) {
+        onError(error instanceof Error ? error : new Error(String(error)));
+      }
+    } finally {
+      isLoading = false;
+    }
   }
 
-  onState(state);
-  return () => unsubs.forEach((unsubscribe) => unsubscribe());
+  void loadState();
+  const intervalId = window.setInterval(loadState, 5000);
+
+  return () => {
+    isDisposed = true;
+    window.clearInterval(intervalId);
+  };
 }
