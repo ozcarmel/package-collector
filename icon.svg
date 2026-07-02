@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="חבילות להב">
+  <defs>
+    <linearGradient id="bg" x1="92" y1="66" x2="424" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f7d55"/>
+      <stop offset="0.58" stop-color="#246f4b"/>
+      <stop offset="1" stop-color="#123f2e"/>
+    </linearGradient>
+    <linearGradient id="top" x1="147" y1="96" x2="361" y2="211" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffe4be"/>
+      <stop offset="1" stop-color="#ffc077"/>
+    </linearGradient>
+    <linearGradient id="left" x1="128" y1="157" x2="255" y2="370" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffc389"/>
+      <stop offset="1" stop-color="#eb8844"/>
+    </linearGradient>
+    <linearGradient id="right" x1="252" y1="153" x2="383" y2="370" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffbd78"/>
+      <stop offset="1" stop-color="#f39a55"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="234" y1="104" x2="307" y2="342" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d56e45"/>
+      <stop offset="1" stop-color="#9b3f2d"/>
+    </linearGradient>
+    <filter id="shadow" x="68" y="72" width="380" height="362" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="22" stdDeviation="18" flood-color="#0f241b" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <path d="M91 380c53 29 257 52 330-25 22-23 26-65 9-100-29-62-88-119-164-131-69-11-137 8-172 57-42 59-45 175-3 199Z" fill="#fff8ec" opacity=".13"/>
+
+  <g filter="url(#shadow)">
+    <path d="M127 158 255 119l130 42-132 48-126-51Z" fill="url(#top)"/>
+    <path d="M127 158 253 209v178L127 334V158Z" fill="url(#left)"/>
+    <path d="M253 209 385 161v171l-132 55V209Z" fill="url(#right)"/>
+    <path d="M127 158 255 119l130 42-132 48-126-51Z" fill="#fff7e9" opacity=".16"/>
+    <path d="M253 209v178" fill="none" stroke="#d8753b" stroke-width="5" stroke-linecap="round" opacity=".35"/>
+
+    <path d="M233 125 284 141v164l-25-15-26 33V125Z" fill="url(#ribbon)"/>
+    <path d="M233 125 284 141v39l-51-16v-39Z" fill="#e38961" opacity=".38"/>
+
+    <rect x="153" y="237" width="78" height="84" rx="16" fill="#fff6e8" opacity=".96"/>
+    <path d="M175 276h37M175 296h25" fill="none" stroke="#1f6847" stroke-width="10" stroke-linecap="round"/>
+    <path d="m188 253 19 22-23 25" fill="none" stroke="#1f6847" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <g fill="#194832" opacity=".92">
+      <rect x="303" y="301" width="17" height="17" rx="4"/>
+      <rect x="327" y="291" width="17" height="17" rx="4"/>
+      <rect x="351" y="281" width="17" height="17" rx="4"/>
+      <rect x="326" y="321" width="17" height="17" rx="4"/>
+      <rect x="350" y="311" width="17" height="17" rx="4"/>
+    </g>
+  </g>
+</svg>

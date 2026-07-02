@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 220" role="img" aria-label="חבילות להב">
+  <defs>
+    <linearGradient id="markBg" x1="28" y1="18" x2="189" y2="196" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f7d55"/>
+      <stop offset=".62" stop-color="#246f4b"/>
+      <stop offset="1" stop-color="#123f2e"/>
+    </linearGradient>
+    <linearGradient id="boxTop" x1="58" y1="50" x2="164" y2="101" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffe4be"/>
+      <stop offset="1" stop-color="#ffc077"/>
+    </linearGradient>
+    <linearGradient id="boxSideA" x1="51" y1="79" x2="110" y2="176" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffc389"/>
+      <stop offset="1" stop-color="#eb8844"/>
+    </linearGradient>
+    <linearGradient id="boxSideB" x1="111" y1="77" x2="173" y2="176" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffbd78"/>
+      <stop offset="1" stop-color="#f39a55"/>
+    </linearGradient>
+    <linearGradient id="boxRibbon" x1="100" y1="53" x2="134" y2="151" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d56e45"/>
+      <stop offset="1" stop-color="#9b3f2d"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="24" y="24" width="172" height="172" rx="38" fill="url(#markBg)"/>
+  <path d="M52 84 111 66l60 19-61 22-58-23Z" fill="url(#boxTop)"/>
+  <path d="M52 84 110 107v82L52 165V84Z" fill="url(#boxSideA)"/>
+  <path d="M110 107 171 85v79l-61 25v-82Z" fill="url(#boxSideB)"/>
+  <path d="M101 69 124 76v75l-11-7-12 15V69Z" fill="url(#boxRibbon)"/>
+  <rect x="64" y="119" width="36" height="39" rx="7" fill="#fff6e8"/>
+  <path d="M74 137h17M74 147h12" fill="none" stroke="#1f6847" stroke-width="5" stroke-linecap="round"/>
+  <path d="m80 126 9 11-11 12" fill="none" stroke="#1f6847" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g font-family="Heebo, Noto Sans Hebrew, Arial, sans-serif" direction="rtl">
+    <text x="720" y="96" text-anchor="end" fill="#193d2e" font-size="62" font-weight="900">חבילות להב</text>
+    <text x="720" y="141" text-anchor="end" fill="#766d5f" font-size="25" font-weight="700">ניהול איסוף ומסירת חבילות בקיבוץ</text>
+  </g>
+  <path d="M299 169h421" fill="none" stroke="#dfcfb8" stroke-width="6" stroke-linecap="round"/>
+</svg>

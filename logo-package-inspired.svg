@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 240" role="img" aria-label="חבילות להב">
+  <defs>
+    <linearGradient id="bladeLogoIconBg" x1="22" y1="14" x2="216" y2="226" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#334156"/>
+      <stop offset=".58" stop-color="#263244"/>
+      <stop offset="1" stop-color="#151C28"/>
+    </linearGradient>
+    <linearGradient id="bladeLogoTop" x1="58" y1="52" x2="176" y2="106" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE2C2"/>
+      <stop offset="1" stop-color="#F7A768"/>
+    </linearGradient>
+    <linearGradient id="bladeLogoLeft" x1="50" y1="86" x2="116" y2="181" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFC28B"/>
+      <stop offset="1" stop-color="#EA7E43"/>
+    </linearGradient>
+    <linearGradient id="bladeLogoRight" x1="113" y1="83" x2="184" y2="181" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F7AB6C"/>
+      <stop offset="1" stop-color="#D96F3E"/>
+    </linearGradient>
+    <linearGradient id="bladeLogoTape" x1="99" y1="45" x2="150" y2="163" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFBB83"/>
+      <stop offset=".44" stop-color="#E36F4E"/>
+      <stop offset="1" stop-color="#A93C32"/>
+    </linearGradient>
+    <filter id="bladeLogoShadow" x="22" y="31" width="185" height="187" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#101722" flood-opacity=".32"/>
+    </filter>
+  </defs>
+
+  <rect x="18" y="18" width="204" height="204" rx="48" fill="url(#bladeLogoIconBg)"/>
+  <path d="M48 181c29 20 108 32 149-4 18-16 18-48 2-75-21-37-56-61-102-58-42 3-74 30-83 67-8 33 7 54 34 70Z" fill="#FFF2DE" opacity=".08"/>
+
+  <g filter="url(#bladeLogoShadow)">
+    <path d="M52 86 116 62l67 25-67 28-64-29Z" fill="url(#bladeLogoTop)"/>
+    <path d="M52 86 116 115v76L52 160V86Z" fill="url(#bladeLogoLeft)"/>
+    <path d="M116 115 183 87v73l-67 31v-76Z" fill="url(#bladeLogoRight)"/>
+    <path d="M116 115v75" fill="none" stroke="#B95331" stroke-width="3" stroke-linecap="round" opacity=".35"/>
+    <path d="M97 69 128 58l24 10-17 18 27 18-40 52 5-40-32-17 24-13-22-17Z" fill="url(#bladeLogoTape)"/>
+    <path d="M97 69 128 58l24 10-17 18 27 18-40 52 5-40-32-17 24-13-22-17Z" fill="none" stroke="#FFDFBF" stroke-width="2" stroke-linejoin="round" opacity=".28"/>
+  </g>
+
+  <g fill="none" stroke="#253244" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="67" y="126" width="34" height="34" rx="8" fill="#FFF1DE" stroke="none"/>
+    <path d="M76 145h17"/>
+    <path d="M84 136v18"/>
+    <path d="M77 139l7-7 7 7"/>
+  </g>
+
+  <g font-family="Heebo, Noto Sans Hebrew, Arial, sans-serif">
+    <text x="300" y="102" text-anchor="start" fill="#253244" font-size="66" font-weight="900">חבילות להב</text>
+    <text x="300" y="149" text-anchor="start" fill="#9A5A42" font-size="26" font-weight="700">ניהול איסוף ומסירת חבילות</text>
+  </g>
+  <path d="M308 178h472" fill="none" stroke="#F0B47E" stroke-width="7" stroke-linecap="round"/>
+  <path d="M630 178h150" fill="none" stroke="#253244" stroke-width="7" stroke-linecap="round"/>
+</svg>
