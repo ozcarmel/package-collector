@@ -1173,6 +1173,12 @@ form.stack,
   resize: vertical;
 }
 
+.field input::placeholder,
+.field textarea::placeholder {
+  color: #928879;
+  opacity: 1;
+}
+
 .help {
   margin: 0;
   color: var(--muted);

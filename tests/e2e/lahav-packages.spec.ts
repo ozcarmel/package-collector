@@ -183,6 +183,37 @@ test("admin-created pickup locations appear across home, add, pickup, and hours 
   await expect(app(page).locator(".location-button").filter({ hasText: "נקודת בדיקה" })).toBeVisible();
 });
 
+test("add package uses example placeholders without saving empty demo values", async ({ page }) => {
+  await gotoAdmin(page);
+  await clickPhoneNav(page, "הוספה");
+
+  const ownerInput = app(page).locator("#owner");
+  const messageInput = app(page).locator("#message");
+
+  await expect(ownerInput).toHaveValue("");
+  await expect(ownerInput).toHaveAttribute("placeholder", "עוז כרמל");
+  await expect(app(page).locator("#pickup-location")).toHaveValue("pitzutz");
+  await expect(messageInput).toHaveValue("");
+  await expect(messageInput).toHaveAttribute("placeholder", /שלום עוז/);
+
+  await app(page).getByRole("button", { name: /שמור/ }).click();
+  await expect(page.getByRole("status")).toContainText("יש להזין את שם מקבל החבילה");
+  await expect(ownerInput).toBeVisible();
+
+  await ownerInput.fill("עוז כרמל");
+  await app(page).getByRole("button", { name: /שמור/ }).click();
+  await expect(page.getByRole("status")).toContainText("יש להדביק את הודעת חברת המשלוחים");
+  await expect(messageInput).toBeVisible();
+
+  await messageInput.fill(
+    "שלום עוז, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0",
+  );
+  await app(page).getByRole("button", { name: /שמור/ }).click();
+
+  await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
+  await expect(app(page).locator(".package-list").first()).toContainText("עוז כרמל");
+});
+
 test("packages added to each pickup location increase only that location count", async ({ page }) => {
   const locationIds = [
     "home-paami",

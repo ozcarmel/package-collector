@@ -115,11 +115,14 @@ const appName = "חבילות להב";
 const deliveredHomeGracePeriodMs = 5 * 60 * 1000;
 
 const emptyDraft: DraftPackage = {
-  ownerName: "דניאלה קטלן",
+  ownerName: "",
   pickupLocationId: "pitzutz",
-  sensitiveDeliveryMessage:
-    "שלום Daniela, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0",
+  sensitiveDeliveryMessage: "",
 };
+
+const packageOwnerExample = "עוז כרמל";
+const deliveryMessageExample =
+  "שלום עוז, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0";
 
 const initialJoinDraft: JoinDraft = {
   fullName: "טל יוד",
@@ -952,14 +955,27 @@ export function LahavPackagesApp() {
       return;
     }
 
+    const ownerName = draft.ownerName.trim();
+    const sensitiveDeliveryMessage = draft.sensitiveDeliveryMessage.trim();
+
+    if (!ownerName) {
+      notify("יש להזין את שם מקבל החבילה");
+      return;
+    }
+
+    if (!sensitiveDeliveryMessage) {
+      notify("יש להדביק את הודעת חברת המשלוחים");
+      return;
+    }
+
     setIsSavingPackage(true);
     try {
       const result = await operationsRepository.createPackage(
         state,
         {
-          ownerName: draft.ownerName,
+          ownerName,
           pickupLocationId: effectiveDraftPickupLocationId,
-          sensitiveDeliveryMessage: draft.sensitiveDeliveryMessage,
+          sensitiveDeliveryMessage,
         },
         actionDeps,
       );
@@ -1857,7 +1873,7 @@ export function LahavPackagesApp() {
             <label htmlFor="owner">שם מקבל החבילה</label>
             <input
               id="owner"
-              placeholder="הקלד/י שם מלא"
+              placeholder={packageOwnerExample}
               value={draft.ownerName}
               onChange={(event) =>
                 setDraft((current) => ({ ...current, ownerName: event.target.value }))
@@ -1891,7 +1907,7 @@ export function LahavPackagesApp() {
             <label htmlFor="message">הודעת חברת משלוחים מקורית</label>
             <textarea
               id="message"
-              placeholder="הדבק/י כאן את ההודעה המקורית שקיבלת מחברת המשלוחים"
+              placeholder={deliveryMessageExample}
               value={draft.sensitiveDeliveryMessage}
               onChange={(event) =>
                 setDraft((current) => ({

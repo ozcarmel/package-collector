@@ -23,8 +23,8 @@ export const initialAppState: AppState = {
       approvedAt: now,
     },
     {
-      id: "u-daniela",
-      fullName: "דניאלה קטלן",
+      id: "u-demo-member",
+      fullName: "חבר לדוגמה",
       phone: "050-111-1111",
       role: "member",
       verificationStatus: "approved",
@@ -139,17 +139,17 @@ export const initialAppState: AppState = {
   ],
   packages: [
     {
-      id: "pkg-daniela",
-      ownerUserId: "u-daniela",
-      ownerName: "דניאלה קטלן",
+      id: "pkg-oz",
+      ownerUserId: "u-admin",
+      ownerName: "עוז כרמל",
       pickupLocationId: "pitzutz",
       publicSummary: "ממתינה לאיסוף",
       status: "waiting",
       sensitiveDeliveryMessage:
-        "שלום Daniela, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0",
+        "שלום עוז, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0",
       sensitivePickupLink: "https://u.cheetahint.com/vknpgt0",
       parsedCourierCompany: "Cheetah",
-      parsedAddresseeName: "Daniela",
+      parsedAddresseeName: "עוז",
       parsedTrackingNumber: "AE04062389",
       updatedAt: now,
     },
