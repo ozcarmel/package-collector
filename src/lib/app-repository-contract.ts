@@ -13,6 +13,7 @@ export type RepositoryStateResult = AppState | void | Promise<AppState | void>;
 export interface JoinRequestResult {
   requestId: string;
   state?: AppState;
+  recognizedApprovedUser?: boolean;
 }
 
 export interface PackageResult {

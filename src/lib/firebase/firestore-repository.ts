@@ -108,6 +108,29 @@ async function findApprovedUserWithPhone(
     );
 }
 
+async function approveCurrentSessionFromExistingUser(
+  db: Firestore,
+  state: AppState,
+  approvedUser: AppState["users"][number],
+  now: string,
+) {
+  const approvedSessionUser = {
+    ...state.currentUser,
+    fullName: approvedUser.fullName,
+    phone: approvedUser.phone,
+    role: "member" as const,
+    verificationStatus: "approved" as const,
+    createdAt: state.currentUser.createdAt || now,
+    approvedAt: now,
+  };
+
+  await setDoc(doc(db, "users", state.currentUser.id), withoutUndefined(approvedSessionUser), {
+    merge: true,
+  });
+
+  return approvedSessionUser;
+}
+
 export const firestoreRepository: AppOperationsRepository = {
   async createJoinRequest(state: AppState, input: CreateJoinRequestInput, deps: ActionDeps) {
     const db = requireFirestore();
@@ -126,6 +149,29 @@ export const firestoreRepository: AppOperationsRepository = {
     };
 
     if (!isOzAdmin) {
+      const existingApprovedUser = await findApprovedUserWithPhone(db, input.phone, state.currentUser.id);
+      if (existingApprovedUser) {
+        const approvedSessionUser = await approveCurrentSessionFromExistingUser(
+          db,
+          state,
+          existingApprovedUser,
+          now,
+        );
+
+        return {
+          requestId: deps.createId("recognized"),
+          recognizedApprovedUser: true,
+          state: {
+            ...state,
+            currentUser: approvedSessionUser,
+            users: [
+              approvedSessionUser,
+              ...state.users.filter((user) => user.id !== approvedSessionUser.id),
+            ],
+          },
+        };
+      }
+
       const ownJoinRequests = await getDocs(
         query(collection(db, "joinRequests"), where("userId", "==", state.currentUser.id)),
       );

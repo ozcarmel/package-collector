@@ -67,8 +67,9 @@ export function createJoinRequest(
   input: CreateJoinRequestInput,
   deps: ActionDeps,
 ) {
+  const now = deps.now();
+
   if (isOzAdminShortcut(input)) {
-    const now = deps.now();
     const blockedDuplicateOzManagers = state.users.map((user) =>
       user.id !== state.currentUser.id &&
       user.verificationStatus === "approved" &&
@@ -119,13 +120,39 @@ export function createJoinRequest(
       user.verificationStatus === "approved" &&
       normalizePhone(user.phone) === normalizedPhone,
   );
+
+  if (normalizedPhone && duplicateApprovedUser) {
+    const approvedSessionUser = {
+      ...state.currentUser,
+      fullName: duplicateApprovedUser.fullName,
+      phone: duplicateApprovedUser.phone,
+      role: "member" as const,
+      verificationStatus: "approved" as const,
+      createdAt: state.currentUser.createdAt || now,
+      approvedAt: now,
+    };
+
+    return {
+      requestId: deps.createId("recognized"),
+      recognizedApprovedUser: true,
+      state: {
+        ...state,
+        currentUser: approvedSessionUser,
+        users: [
+          approvedSessionUser,
+          ...state.users.filter((user) => user.id !== approvedSessionUser.id),
+        ],
+      },
+    };
+  }
+
   const duplicatePendingRequest = state.joinRequests.find(
     (request) =>
       request.status === "pending" &&
       normalizePhone(request.phone) === normalizedPhone,
   );
 
-  if (normalizedPhone && (duplicateApprovedUser || duplicatePendingRequest)) {
+  if (normalizedPhone && duplicatePendingRequest) {
     throw new Error("duplicate-user-phone");
   }
 
@@ -136,7 +163,7 @@ export function createJoinRequest(
     phone: input.phone,
     note: input.note,
     status: "pending" as const,
-    createdAt: deps.now(),
+    createdAt: now,
   };
 
   return {

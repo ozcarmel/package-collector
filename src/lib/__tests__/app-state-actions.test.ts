@@ -69,14 +69,44 @@ describe("app state actions", () => {
     expect(approved.users.some((user) => user.id === "guest-2")).toBe(true);
   });
 
-  it("prevents creating a request when an approved user with the same phone exists", () => {
+  it("lets an approved phone enter from a new session without another admin approval", () => {
     const deps = createTestDeps();
-    expect(() =>
-      createJoinRequest(cloneState(), {
-        fullName: "Duplicate Member",
+    const result = createJoinRequest(
+      cloneState(),
+      {
+        fullName: "Different Name",
         phone: "0501111111",
-      }, deps),
-    ).toThrow("duplicate-user-phone");
+      },
+      deps,
+    );
+
+    expect(result.requestId).toBe("recognized-1");
+    expect(result.recognizedApprovedUser).toBe(true);
+    expect(result.state.currentUser).toMatchObject({
+      fullName: "חבר לדוגמה",
+      phone: "050-111-1111",
+      role: "member",
+      verificationStatus: "approved",
+    });
+    expect(result.state.joinRequests).toHaveLength(cloneState().joinRequests.length);
+  });
+
+  it("treats Israeli local and international phone formats as the same approved phone", () => {
+    const deps = createTestDeps();
+    const result = createJoinRequest(
+      cloneState(),
+      {
+        fullName: "International Phone",
+        phone: "+972501111111",
+      },
+      deps,
+    );
+
+    expect(result.state.currentUser).toMatchObject({
+      fullName: "חבר לדוגמה",
+      phone: "050-111-1111",
+      verificationStatus: "approved",
+    });
   });
 
   it("prevents approving a request when an approved user with the same phone exists", () => {

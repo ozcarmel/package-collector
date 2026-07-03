@@ -121,6 +121,18 @@ test("fresh users can request access but cannot add or pick up before approval",
   );
 });
 
+test("approved phone can enter from a new device without another admin approval", async ({ page }) => {
+  await gotoFreshUser(page);
+
+  await app(page).getByLabel("מספר טלפון נייד").fill("+972501111111");
+  await app(page).getByLabel("שם מלא").fill("שם אחר");
+  await app(page).getByRole("button", { name: /שלח בקשת הצטרפות/ }).click();
+
+  await expect(page.getByRole("status")).toContainText("זוהית כמשתמש מאושר");
+  await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
+  await expect(app(page).locator(".bottom-nav").getByRole("button", { name: "הוספה" })).toBeEnabled();
+});
+
 test("admin can approve pending users and approved users appear as regular members", async ({ page }) => {
   await gotoAdmin(page);
   await expect(app(page).locator(".bottom-nav button")).toHaveCount(4);

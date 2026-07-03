@@ -48,6 +48,29 @@ service cloud.firestore {
         request.resource.data.verificationStatus in ["phone_pending", "admin_pending"];
     }
 
+    function validNewSelfApprovedMemberSession(userId) {
+      return signedIn() &&
+        request.auth.uid == userId &&
+        request.resource.data.id == userId &&
+        request.resource.data.role == "member" &&
+        request.resource.data.verificationStatus == "approved" &&
+        request.resource.data.keys()
+          .hasOnly([
+            "id",
+            "fullName",
+            "phone",
+            "role",
+            "verificationStatus",
+            "createdAt",
+            "approvedAt"
+          ]);
+    }
+
+    function validSelfApprovedMemberSessionUpdate(userId) {
+      return validNewSelfApprovedMemberSession(userId) &&
+        resource.data.verificationStatus in ["phone_pending", "admin_pending"];
+    }
+
     function validSelfUserUpdate(userId) {
       return signedIn() &&
         request.auth.uid == userId &&
@@ -259,11 +282,13 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && (request.auth.uid == userId || admin());
+      allow read: if signedIn();
       allow create: if validNewSelfUser(userId) ||
+        validNewSelfApprovedMemberSession(userId) ||
         validOzOwnerSelfWrite(userId) ||
         validAdminCreateApprovedMember(userId);
       allow update: if validSelfUserUpdate(userId) ||
+        validSelfApprovedMemberSessionUpdate(userId) ||
         validOzOwnerSelfWrite(userId) ||
         validAdminApproveUser() ||
         validPromoteApprovedMember(userId) ||

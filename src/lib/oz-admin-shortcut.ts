@@ -7,7 +7,17 @@ export const ozAdminPhones = [ozSuperAdminPhone];
 export const ozAdminPhone = ozAdminPhones[0];
 
 export function normalizePhone(phone: string) {
-  return phone.replace(/\D/g, "");
+  const digits = phone.replace(/\D/g, "");
+
+  if (digits.startsWith("00972") && digits.length > 5) {
+    return `0${digits.slice(5).replace(/^0/, "")}`;
+  }
+
+  if (digits.startsWith("972") && digits.length > 3) {
+    return `0${digits.slice(3).replace(/^0/, "")}`;
+  }
+
+  return digits;
 }
 
 export function isOzAdminShortcut(input: Pick<CreateJoinRequestInput, "fullName" | "phone">) {

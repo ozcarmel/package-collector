@@ -106,6 +106,84 @@ describe("firestore security rules", () => {
     );
   });
 
+  it("allows signed-in users to read user profiles for returning-phone lookup", async () => {
+    await seedDoc("users/u-approved", userDoc("u-approved"));
+
+    await assertSucceeds(dbFor("u-new-device").doc("users/u-approved").get());
+  });
+
+  it("allows a signed-in session to approve itself as a regular member only", async () => {
+    await assertSucceeds(
+      dbFor("u-new-device").doc("users/u-new-device").set({
+        id: "u-new-device",
+        fullName: "Returning User",
+        phone: "050-111-1111",
+        role: "member",
+        verificationStatus: "approved",
+        createdAt: now,
+        approvedAt: now,
+      }),
+    );
+
+    await seedDoc("users/u-pending-device", {
+      id: "u-pending-device",
+      fullName: "",
+      phone: "",
+      role: "member",
+      verificationStatus: "phone_pending",
+      createdAt: now,
+    });
+    await assertSucceeds(
+      dbFor("u-pending-device").doc("users/u-pending-device").set(
+        {
+          id: "u-pending-device",
+          fullName: "Returning User",
+          phone: "050-111-1111",
+          role: "member",
+          verificationStatus: "approved",
+          createdAt: now,
+          approvedAt: now,
+        },
+        { merge: true },
+      ),
+    );
+
+    await assertFails(
+      dbFor("u-not-admin").doc("users/u-not-admin").set({
+        id: "u-not-admin",
+        fullName: "Not Admin",
+        phone: "050-222-2222",
+        role: "admin",
+        verificationStatus: "approved",
+        createdAt: now,
+        approvedAt: now,
+      }),
+    );
+
+    await seedDoc("users/u-blocked-device", {
+      id: "u-blocked-device",
+      fullName: "Blocked User",
+      phone: "050-333-3333",
+      role: "member",
+      verificationStatus: "blocked",
+      createdAt: now,
+    });
+    await assertFails(
+      dbFor("u-blocked-device").doc("users/u-blocked-device").set(
+        {
+          id: "u-blocked-device",
+          fullName: "Blocked User",
+          phone: "050-333-3333",
+          role: "member",
+          verificationStatus: "approved",
+          createdAt: now,
+          approvedAt: now,
+        },
+        { merge: true },
+      ),
+    );
+  });
+
   it("hides sensitive package details until a collector has an access grant", async () => {
     await seedDoc("users/u-owner", userDoc("u-owner"));
     await seedDoc("users/u-collector", userDoc("u-collector"));

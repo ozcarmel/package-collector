@@ -926,13 +926,16 @@ export function LahavPackagesApp() {
         setState(result.state);
       }
       setSubmittedJoinRequestId(result.requestId);
-      if (isOzAdmin) {
+      const isRecognizedApprovedUser = result.recognizedApprovedUser === true;
+      if (isOzAdmin || isRecognizedApprovedUser) {
         setJoinPreviewMode(false);
       }
-      setScreen(isOzAdmin ? "home" : "pending");
+      setScreen(isOzAdmin || isRecognizedApprovedUser ? "home" : "pending");
       notify(
         isOzAdmin
           ? "זוהית כמנהל. הרשאת הניהול פעילה."
+          : isRecognizedApprovedUser
+            ? "זוהית כמשתמש מאושר. אפשר להמשיך."
           : "בקשת ההצטרפות נשלחה לאישור מנהל.",
       );
     } catch (error) {
