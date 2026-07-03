@@ -1390,7 +1390,11 @@ export function LahavPackagesApp() {
                 </div>
                 <div className="header-side header-right">
                   {headerConfig.showMark ? (
-                    <div className="brand-mark" aria-hidden="true" />
+                    <div
+                      className="brand-mark"
+                      aria-hidden="true"
+                      style={{ backgroundImage: 'url("icon.svg")' }}
+                    />
                   ) : null}
                 </div>
               </div>

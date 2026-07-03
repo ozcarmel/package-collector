@@ -1,14 +1,16 @@
 ﻿import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const publicBasePath = process.env.GITHUB_PAGES === "true" ? "/package-collector" : "";
+
 export const metadata: Metadata = {
   title: "חבילות להב",
   description: "ניהול איסוף ומסירת חבילות בקיבוץ להב",
-  manifest: "/manifest.json",
+  manifest: `${publicBasePath}/manifest.json`,
   icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
-    apple: "/icon-180.png",
+    icon: `${publicBasePath}/icon.svg`,
+    shortcut: `${publicBasePath}/icon.svg`,
+    apple: `${publicBasePath}/icon-180.png`,
   },
   appleWebApp: {
     capable: true,

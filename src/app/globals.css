@@ -194,9 +194,10 @@ select:focus-visible {
 
 .brand-mark {
   overflow: hidden;
-  background:
-    center / contain no-repeat url("/icon.svg"),
-    transparent;
+  background-color: transparent;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
   border: 0;
 }
 
