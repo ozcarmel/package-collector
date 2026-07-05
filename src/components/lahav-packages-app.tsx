@@ -123,7 +123,7 @@ const emptyDraft: DraftPackage = {
 
 const packageOwnerExample = "עוז כרמל";
 const deliveryMessageExample =
-  "לחיצה ארוכה > הדבק";
+  "הדביקו כאן במלואה את ההודעה שקיבלתם ב-SMS או במייל, כולל קוד וקישור";
 const urlPattern = /(https?:\/\/[^\s]+)/g;
 const fullUrlPattern = /^https?:\/\/[^\s]+$/;
 const dropNoteExamples: Record<KibbutzDropLocation, string> = {
