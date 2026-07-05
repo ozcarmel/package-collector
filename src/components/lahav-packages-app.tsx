@@ -45,7 +45,11 @@ import {
   isOzSuperAdminUser,
   normalizePhone,
 } from "@/lib/oz-admin-shortcut";
-import { shouldShowPackageOnHome } from "@/lib/home-package-visibility";
+import {
+  getUserAddedPackages,
+  shouldShowPackageInAdminList,
+  shouldShowPackageOnHome,
+} from "@/lib/home-package-visibility";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import { normalizePickupLocationSchedules } from "@/lib/pickup-location-schedule-defaults";
 import type {
@@ -695,11 +699,7 @@ export function LahavPackagesApp() {
     ? draft.pickupLocationId
     : state.pickupLocations[0]?.id ?? "";
   const draftMessageUrls = extractMessageUrls(draft.sensitiveDeliveryMessage);
-  const userAddedPackages = [...state.packages]
-    .filter((pkg) => pkg.ownerUserId === currentUserId)
-    .sort((a, b) =>
-      (b.createdAt ?? b.updatedAt ?? "").localeCompare(a.createdAt ?? a.updatedAt ?? ""),
-    );
+  const userAddedPackages = getUserAddedPackages(state.packages, currentUserId);
   const activeRun = state.pickupRuns.find((run) => run.id === activeRunId);
   const activeRunItems = state.pickupRunItems.filter(
     (item) => item.pickupRunId === activeRunId,
@@ -2198,7 +2198,7 @@ export function LahavPackagesApp() {
             <span>{userAddedPackages.length} פריטים</span>
           </div>
           <p className="section-help-text">
-            כאן אפשר לראות מה כבר הזנת ולתקן פרטים כל עוד החבילה ממתינה לאיסוף.
+            כאן ניתן לצפות בחבילות שהוספו בעבר ולערוך את פרטי החבילה אם עוד לא נאספה
           </p>
           <div className="added-packages-list">
             {userAddedPackages.length ? (
@@ -2459,7 +2459,9 @@ export function LahavPackagesApp() {
       ),
       currentUserId,
     );
-    const adminPackages = state.packages;
+    const adminPackages = state.packages.filter((pkg) =>
+      shouldShowPackageInAdminList(pkg, currentTimeMs),
+    );
 
     return (
       <>

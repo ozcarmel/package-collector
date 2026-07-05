@@ -258,6 +258,11 @@ test("add package uses example placeholders without saving empty demo values", a
   await app(page).getByRole("button", { name: /שמור/ }).click();
 
   await expect(app(page).getByRole("heading", { name: "חבילות שהוספת" })).toBeVisible();
+  await expect(
+    app(page).getByText(
+      "כאן ניתן לצפות בחבילות שהוספו בעבר ולערוך את פרטי החבילה אם עוד לא נאספה",
+    ),
+  ).toBeVisible();
   const addedPackage = app(page).locator(".added-package-row").filter({ hasText: "עוז כרמל בדיקה" });
   await expect(addedPackage).toContainText("פיצוץ להבים");
   await expect(addedPackage).toContainText("https://u.cheetahint.com/vknpgt0");
