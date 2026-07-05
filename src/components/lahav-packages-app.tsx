@@ -2197,6 +2197,9 @@ export function LahavPackagesApp() {
             <h2>חבילות שהוספת</h2>
             <span>{userAddedPackages.length} פריטים</span>
           </div>
+          <p className="section-help-text">
+            כאן אפשר לראות מה כבר הזנת ולתקן פרטים כל עוד החבילה ממתינה לאיסוף.
+          </p>
           <div className="added-packages-list">
             {userAddedPackages.length ? (
               userAddedPackages.map((pkg) => {

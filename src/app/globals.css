@@ -1413,6 +1413,13 @@ form.stack,
   margin-top: 18px;
 }
 
+.section-help-text {
+  margin: -2px 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .added-packages-list {
   display: grid;
   gap: 8px;
