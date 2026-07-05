@@ -238,15 +238,15 @@ function hasJoinPreviewParam() {
 function statusLabel(status: PackageStatus) {
   switch (status) {
     case "waiting":
-      return "ממתין לאיסוף";
+      return "ממתינה לאיסוף";
     case "assigned":
-      return "ממתין לאיסוף";
+      return "ממתינה לאיסוף";
     case "collected":
       return "נאספה";
     case "arrived":
-      return "בקיבוץ";
+      return "הגיעה לקיבוץ";
     case "ready_for_handoff":
-      return "ממתינה למסירה";
+      return "הגיעה לקיבוץ";
     case "delivered":
       return "נמסרה";
     case "cancelled":
@@ -358,7 +358,7 @@ function homePackageStatusLabel(pkg: DeliveryPackage) {
     case "collected":
       return "נאספה";
     case "arrived":
-      return "נמסרו";
+      return "הגיעה לקיבוץ";
     case "delivered":
       return "נמסרה";
     case null:
@@ -389,11 +389,7 @@ function homePackageDetailBadge(pkg: DeliveryPackage) {
     case "waiting":
       return null;
     case "collected":
-      return {
-        className: "badge blue",
-        icon: null,
-        text: "בדרך לקיבוץ",
-      };
+      return null;
     case "arrived":
       return {
         className: "badge done",
@@ -1995,14 +1991,14 @@ export function LahavPackagesApp() {
                 <Truck />
               </span>
               <strong>{collectedPackages.length}</strong>
-              <span className="home-status-label">בדרך לקיבוץ</span>
+              <span className="home-status-label">נאספו</span>
             </div>
             <div className="home-status-item home-status-arrived">
               <span className="home-status-icon">
                 <ClipboardList />
               </span>
               <strong>{arrivedPackages.length}</strong>
-              <span className="home-status-label">ממתינות למסירה</span>
+              <span className="home-status-label">הגיעו לקיבוץ</span>
             </div>
             <div className="home-status-item home-status-delivered">
               <span className="home-status-icon">
@@ -2829,7 +2825,7 @@ export function LahavPackagesApp() {
             </div>
           </div>
           <span className={isCollected ? "badge done" : "badge waiting"}>
-            {isCollected ? "נאספה" : "ממתין לאיסוף"}
+            {isCollected ? "נאספה" : "ממתינה לאיסוף"}
           </span>
         </div>
 

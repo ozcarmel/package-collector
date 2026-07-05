@@ -295,6 +295,10 @@ test("new package appears on home under its pickup location and package status w
   await expect(app(page).locator(".added-package-row").filter({ hasText: "בדיקת סנכרון מיידי" })).toBeVisible();
   await clickPhoneNav(page, "בית");
   await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
+  await expect(app(page).locator(".home-status-band")).toContainText("ממתינות לאיסוף");
+  await expect(app(page).locator(".home-status-band")).toContainText("נאספו");
+  await expect(app(page).locator(".home-status-band")).toContainText("הגיעו לקיבוץ");
+  await expect(app(page).locator(".home-status-band")).toContainText("נמסרו");
   await expect(app(page).locator(".home-status-waiting strong")).toHaveText(
     String(beforeWaitingCount + 1),
     { timeout: 5000 },
@@ -416,7 +420,7 @@ test("saving two kibbutz delivery rows updates home status and shows both packag
                   card.querySelector(".package-name")?.textContent?.trim() ?? "";
                 return (
                   packageName === expectedName &&
-                  (card.textContent ?? "").includes("נמסרו")
+                  (card.textContent ?? "").includes("הגיעה לקיבוץ")
                 );
               }),
             ),
