@@ -351,9 +351,20 @@ select:focus-visible {
   justify-items: center;
   align-items: center;
   text-align: center;
+  font: inherit;
+  cursor: pointer;
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 74%),
     0 8px 18px rgb(82 63 35 / 12%);
+}
+
+.home-status-item:focus-visible {
+  outline: 3px solid rgb(31 112 74 / 28%);
+  outline-offset: 3px;
+}
+
+.home-status-item:active {
+  transform: translateY(1px);
 }
 
 .home-status-item:not(:last-child) {
@@ -2080,6 +2091,135 @@ form.stack,
   padding: 18px;
   direction: rtl;
   text-align: right;
+}
+
+.status-sheet-backdrop {
+  align-items: end;
+  background: rgb(23 33 27 / 34%);
+  padding: 0 12px 12px;
+}
+
+.status-bottom-sheet {
+  width: min(100%, 430px);
+  max-height: min(64dvh, 520px);
+  border: 1px solid #dcc8aa;
+  border-radius: 22px 22px 14px 14px;
+  background:
+    linear-gradient(180deg, rgb(255 249 238 / 100%) 0%, rgb(250 240 223 / 100%) 100%);
+  box-shadow:
+    0 -18px 48px rgb(29 37 30 / 24%),
+    inset 0 1px 0 rgb(255 255 255 / 76%);
+  padding: 10px 16px 16px;
+  direction: rtl;
+  text-align: right;
+  overflow: hidden;
+}
+
+.status-sheet-grip {
+  width: 48px;
+  height: 5px;
+  margin: 0 auto 12px;
+  border-radius: 99px;
+  background: #d7c2a2;
+}
+
+.status-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgb(219 198 166 / 74%);
+}
+
+.status-sheet-header h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 21px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.status-sheet-header span {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-sheet-close {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgb(212 192 160 / 88%);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #325141;
+  background: rgb(255 248 236 / 76%);
+  cursor: pointer;
+}
+
+.status-sheet-close svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
+}
+
+.status-sheet-list {
+  max-height: calc(min(64dvh, 520px) - 98px);
+  overflow-y: auto;
+  padding-top: 12px;
+  display: grid;
+  gap: 9px;
+}
+
+.status-sheet-row,
+.status-sheet-empty {
+  border: 1px solid rgb(220 201 169 / 82%);
+  border-radius: var(--radius);
+  background: rgb(255 252 244 / 76%);
+  padding: 10px 12px;
+}
+
+.status-sheet-row {
+  display: grid;
+  gap: 3px;
+}
+
+.status-sheet-name {
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 900;
+}
+
+.status-sheet-meta,
+.status-sheet-empty {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.status-bottom-sheet-waiting .status-sheet-row {
+  border-color: var(--status-waiting-border);
+  background: color-mix(in srgb, var(--status-waiting-bg) 42%, #fffaf0);
+}
+
+.status-bottom-sheet-collected .status-sheet-row {
+  border-color: var(--status-collected-border);
+  background: color-mix(in srgb, var(--status-collected-bg) 48%, #fffaf0);
+}
+
+.status-bottom-sheet-arrived .status-sheet-row {
+  border-color: var(--status-arrived-border);
+  background: color-mix(in srgb, var(--status-arrived-bg) 48%, #fffaf0);
+}
+
+.status-bottom-sheet-delivered .status-sheet-row {
+  border-color: var(--status-delivered-border);
+  background: color-mix(in srgb, var(--status-delivered-bg) 48%, #fffaf0);
 }
 
 .modal-backdrop.anchored .confirm-modal {

@@ -366,6 +366,28 @@ test("packages added to each pickup location increase only that location count",
   }
 });
 
+test("top package status capsules open a bottom sheet with matching packages", async ({ page }) => {
+  await gotoAdmin(page);
+
+  await app(page).locator(".home-status-waiting").click();
+  await expect(page.getByRole("dialog", { name: "ממתינות לאיסוף" })).toBeVisible();
+  await expect(page.locator(".status-bottom-sheet")).toContainText("עוז כרמל");
+  await expect(page.locator(".status-bottom-sheet")).toContainText("הילה נבו");
+  await page.getByRole("button", { name: "סגור" }).click();
+  await expect(page.getByRole("dialog", { name: "ממתינות לאיסוף" })).toHaveCount(0);
+
+  await app(page).locator(".home-status-arrived").click();
+  await expect(page.getByRole("dialog", { name: "הגיעו לקיבוץ" })).toBeVisible();
+  await expect(page.locator(".status-bottom-sheet")).toContainText("נעה אמבולוס");
+  await page.getByRole("button", { name: "סגור" }).click();
+
+  await app(page).locator(".home-status-delivered").click();
+  await expect(page.getByRole("dialog", { name: "נמסרו" })).toBeVisible();
+  await expect(page.locator(".status-bottom-sheet")).toContainText(
+    "אין חבילות בסטטוס הזה כרגע.",
+  );
+});
+
 test("collecting one location does not hide active packages from other locations on home", async ({
   context,
   page,

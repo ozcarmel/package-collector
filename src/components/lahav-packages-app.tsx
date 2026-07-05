@@ -29,6 +29,7 @@ import {
   User,
   UserCheck,
   UserX,
+  X,
 } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
@@ -74,6 +75,13 @@ type Screen =
 
 type AdminListView = "pending" | "approved" | "managers" | "packages";
 type HomePackageStatusBucket = "waiting" | "collected" | "arrived" | "delivered";
+
+const homeStatusBucketLabels: Record<HomePackageStatusBucket, string> = {
+  waiting: "ממתינות לאיסוף",
+  collected: "נאספו",
+  arrived: "הגיעו לקיבוץ",
+  delivered: "נמסרו",
+};
 
 interface DraftPackage {
   ownerName: string;
@@ -496,6 +504,9 @@ export function LahavPackagesApp() {
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
   const [adminListView, setAdminListView] = useState<AdminListView>("pending");
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
+  const [activeStatusSheet, setActiveStatusSheet] = useState<HomePackageStatusBucket | null>(
+    null,
+  );
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [pendingDeleteLocationId, setPendingDeleteLocationId] = useState<string | null>(null);
   const [pendingDeletePackageId, setPendingDeletePackageId] = useState<string | null>(null);
@@ -700,6 +711,16 @@ export function LahavPackagesApp() {
   const deliveredPackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) === "delivered",
   );
+  const statusSheetPackages =
+    activeStatusSheet === "waiting"
+      ? waitingPackages
+      : activeStatusSheet === "collected"
+        ? collectedPackages
+        : activeStatusSheet === "arrived"
+          ? arrivedPackages
+          : activeStatusSheet === "delivered"
+            ? deliveredPackages
+            : [];
   const visibleHomePackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) !== null,
   );
@@ -866,6 +887,25 @@ export function LahavPackagesApp() {
 
   function notify(message: string) {
     setToast(message);
+  }
+
+  function statusSheetPackageMeta(pkg: DeliveryPackage) {
+    const pickupLocation = getLocationName(state.pickupLocations, pkg.pickupLocationId);
+    const collectorName = getUserName(state.users, pkg.collectorUserId);
+    const bucket = getHomePackageStatusBucket(pkg.status);
+
+    switch (bucket) {
+      case "waiting":
+        return pickupLocation;
+      case "collected":
+        return collectorName ? `נאספה על ידי ${collectorName}` : pickupLocation;
+      case "arrived":
+        return pkg.currentKibbutzLocationText?.trim() || "הגיעה לקיבוץ";
+      case "delivered":
+        return "נמסרה לבעל החבילה";
+      case null:
+        return pickupLocation;
+    }
   }
 
   function navigateToScreen(nextScreen: Screen) {
@@ -1697,6 +1737,49 @@ export function LahavPackagesApp() {
           {toast}
         </div>
       ) : null}
+      {activeStatusSheet ? (
+        <div
+          className="modal-backdrop status-sheet-backdrop"
+          onClick={() => setActiveStatusSheet(null)}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="status-sheet-title"
+            aria-modal="true"
+            className={`status-bottom-sheet status-bottom-sheet-${activeStatusSheet}`}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="status-sheet-grip" aria-hidden="true" />
+            <header className="status-sheet-header">
+              <div>
+                <h2 id="status-sheet-title">{homeStatusBucketLabels[activeStatusSheet]}</h2>
+                <span>{statusSheetPackages.length} חבילות</span>
+              </div>
+              <button
+                aria-label="סגור"
+                className="status-sheet-close"
+                onClick={() => setActiveStatusSheet(null)}
+                type="button"
+              >
+                <X />
+              </button>
+            </header>
+            <div className="status-sheet-list">
+              {statusSheetPackages.length ? (
+                statusSheetPackages.map((pkg) => (
+                  <div className="status-sheet-row" key={pkg.id}>
+                    <span className="status-sheet-name">{pkg.ownerName}</span>
+                    <span className="status-sheet-meta">{statusSheetPackageMeta(pkg)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="status-sheet-empty">אין חבילות בסטטוס הזה כרגע.</div>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
       {pendingUnlockLocation ? (
         <div
           className={`modal-backdrop ${pendingUnlockAnchor ? "anchored" : ""}`}
@@ -2095,50 +2178,58 @@ export function LahavPackagesApp() {
           <h1 className="screen-title">מה מצב החבילות?</h1>
 
           <div className="home-status-band" aria-label="סיכום מצב החבילות">
-            <div
+            <button
               className="home-status-item home-status-waiting"
               aria-label={`ממתינות לאיסוף: ${waitingPackages.length}`}
+              onClick={() => setActiveStatusSheet("waiting")}
               title={`ממתינות לאיסוף: ${waitingPackages.length}`}
+              type="button"
             >
               <span className="home-status-icon">
                 <Package />
               </span>
               <strong>{waitingPackages.length}</strong>
               <span className="home-status-label">ממתינות לאיסוף</span>
-            </div>
-            <div
+            </button>
+            <button
               className="home-status-item home-status-collected"
               aria-label={`נאספו: ${collectedPackages.length}`}
+              onClick={() => setActiveStatusSheet("collected")}
               title={`נאספו: ${collectedPackages.length}`}
+              type="button"
             >
               <span className="home-status-icon home-status-truck">
                 <Truck />
               </span>
               <strong>{collectedPackages.length}</strong>
               <span className="home-status-label">נאספו</span>
-            </div>
-            <div
+            </button>
+            <button
               className="home-status-item home-status-arrived"
               aria-label={`הגיעו לקיבוץ: ${arrivedPackages.length}`}
+              onClick={() => setActiveStatusSheet("arrived")}
               title={`הגיעו לקיבוץ: ${arrivedPackages.length}`}
+              type="button"
             >
               <span className="home-status-icon">
                 <ClipboardList />
               </span>
               <strong>{arrivedPackages.length}</strong>
               <span className="home-status-label">הגיעו לקיבוץ</span>
-            </div>
-            <div
+            </button>
+            <button
               className="home-status-item home-status-delivered"
               aria-label={`נמסרו: ${deliveredPackages.length}`}
+              onClick={() => setActiveStatusSheet("delivered")}
               title={`נמסרו: ${deliveredPackages.length}`}
+              type="button"
             >
               <span className="home-status-icon">
                 <Check />
               </span>
               <strong>{deliveredPackages.length}</strong>
               <span className="home-status-label">נמסרו</span>
-            </div>
+            </button>
           </div>
 
           <div className="section-title-row pickup-locations-title">
