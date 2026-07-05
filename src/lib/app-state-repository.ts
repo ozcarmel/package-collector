@@ -14,6 +14,7 @@ import {
   rejectJoinRequest,
   startPickupRun,
   updateCollectedPackagesArrival,
+  updatePackage,
   updatePickupLocation,
 } from "@/lib/app-state-actions";
 import type { AppOperationsRepository } from "@/lib/app-repository-contract";
@@ -75,6 +76,8 @@ export const localDemoRepository: AppStateRepository = {
   createJoinRequest,
 
   createPackage,
+
+  updatePackage,
 
   createPickupLocation,
 

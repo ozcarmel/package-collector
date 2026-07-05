@@ -42,6 +42,7 @@ function packageDoc(
     pickupLocationId,
     publicSummary: "Waiting for pickup",
     status: "waiting",
+    createdAt: now,
     updatedAt: now,
     ...overrides,
   };

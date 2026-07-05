@@ -3,6 +3,7 @@ import type {
   CreateJoinRequestInput,
   CreatePackageInput,
   CreatePickupLocationInput,
+  UpdatePackageInput,
   UpdatePickupLocationInput,
   UpdateArrivalInput,
 } from "@/lib/app-state-actions";
@@ -54,6 +55,12 @@ export interface AppOperationsRepository {
     input: CreatePackageInput,
     deps: ActionDeps,
   ): PackageResult | Promise<PackageResult>;
+
+  updatePackage(
+    state: AppState,
+    input: UpdatePackageInput,
+    deps: ActionDeps,
+  ): RepositoryStateResult;
 
   createPickupLocation(
     state: AppState,

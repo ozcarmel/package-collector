@@ -482,6 +482,7 @@ export function LahavPackagesApp() {
   const [repositoryReady, setRepositoryReady] = useState(false);
   const [isSubmittingJoinRequest, setIsSubmittingJoinRequest] = useState(false);
   const [isSavingPackage, setIsSavingPackage] = useState(false);
+  const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
   const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [isStartingPickupRun, setIsStartingPickupRun] = useState(false);
   const [collectingPackageId, setCollectingPackageId] = useState<string | null>(null);
@@ -694,6 +695,11 @@ export function LahavPackagesApp() {
     ? draft.pickupLocationId
     : state.pickupLocations[0]?.id ?? "";
   const draftMessageUrls = extractMessageUrls(draft.sensitiveDeliveryMessage);
+  const userAddedPackages = [...state.packages]
+    .filter((pkg) => pkg.ownerUserId === currentUserId)
+    .sort((a, b) =>
+      (b.createdAt ?? b.updatedAt ?? "").localeCompare(a.createdAt ?? a.updatedAt ?? ""),
+    );
   const activeRun = state.pickupRuns.find((run) => run.id === activeRunId);
   const activeRunItems = state.pickupRunItems.filter(
     (item) => item.pickupRunId === activeRunId,
@@ -1105,25 +1111,63 @@ export function LahavPackagesApp() {
 
     setIsSavingPackage(true);
     try {
-      const result = await operationsRepository.createPackage(
-        state,
-        {
-          ownerName,
-          pickupLocationId: effectiveDraftPickupLocationId,
-          sensitiveDeliveryMessage,
-        },
-        actionDeps,
-      );
-      pendingCreatedPackageIdsRef.current.add(result.packageId);
-      applyRepositoryState(result.state);
+      if (editingPackageId) {
+        const nextState = await operationsRepository.updatePackage(
+          state,
+          {
+            packageId: editingPackageId,
+            ownerName,
+            pickupLocationId: effectiveDraftPickupLocationId,
+            sensitiveDeliveryMessage,
+          },
+          actionDeps,
+        );
+        applyRepositoryState(nextState);
+        setEditingPackageId(null);
+        notify("החבילה עודכנה.");
+      } else {
+        const result = await operationsRepository.createPackage(
+          state,
+          {
+            ownerName,
+            pickupLocationId: effectiveDraftPickupLocationId,
+            sensitiveDeliveryMessage,
+          },
+          actionDeps,
+        );
+        pendingCreatedPackageIdsRef.current.add(result.packageId);
+        applyRepositoryState(result.state);
+        notify("החבילה נשמרה והפרטים הרגישים מוגנים.");
+      }
       setDraft(emptyDraft);
-      setScreen("home");
-      notify("החבילה נשמרה והפרטים הרגישים מוגנים.");
     } catch {
-      notify("לא הצלחנו לשמור את החבילה. נסה/י שוב בעוד רגע.");
+      notify(
+        editingPackageId
+          ? "לא הצלחנו לעדכן את החבילה. נסה/י שוב בעוד רגע."
+          : "לא הצלחנו לשמור את החבילה. נסה/י שוב בעוד רגע.",
+      );
     } finally {
       setIsSavingPackage(false);
     }
+  }
+
+  function startPackageEdit(pkg: DeliveryPackage) {
+    if (pkg.status !== "waiting") {
+      notify("אפשר לערוך רק חבילה שעדיין ממתינה לאיסוף.");
+      return;
+    }
+
+    setEditingPackageId(pkg.id);
+    setDraft({
+      ownerName: pkg.ownerName,
+      pickupLocationId: pkg.pickupLocationId,
+      sensitiveDeliveryMessage: pkg.sensitiveDeliveryMessage ?? "",
+    });
+  }
+
+  function cancelPackageEdit() {
+    setEditingPackageId(null);
+    setDraft(emptyDraft);
   }
 
   async function startPickupRun(locationId: string) {
@@ -2139,9 +2183,61 @@ export function LahavPackagesApp() {
             type="button"
           >
             <Save />
-            {isSavingPackage ? "שומר..." : "שמור"}
+            {isSavingPackage ? "שומר..." : editingPackageId ? "עדכן חבילה" : "שמור"}
           </button>
+          {editingPackageId ? (
+            <button className="button full" onClick={cancelPackageEdit} type="button">
+              ביטול עריכה
+            </button>
+          ) : null}
         </form>
+
+        <section className="added-packages-panel" aria-label="חבילות שהוספת">
+          <div className="section-title-row">
+            <h2>חבילות שהוספת</h2>
+            <span>{userAddedPackages.length} פריטים</span>
+          </div>
+          <div className="added-packages-list">
+            {userAddedPackages.length ? (
+              userAddedPackages.map((pkg) => {
+                const canEditPackage = pkg.status === "waiting";
+                return (
+                  <article className="added-package-row" key={pkg.id}>
+                    <div className="added-package-main">
+                      <div className="added-package-head">
+                        <strong>{pkg.ownerName}</strong>
+                        <span>{statusLabel(pkg.status)}</span>
+                      </div>
+                      <div className="added-package-meta">
+                        {formatHebrewDateTime(pkg.createdAt ?? pkg.updatedAt)} ·{" "}
+                        {getLocationName(state.pickupLocations, pkg.pickupLocationId)}
+                      </div>
+                      <div className="added-package-message">
+                        {pkg.sensitiveDeliveryMessage ??
+                          "הודעת המשלוח המקורית שמורה ומוגנת."}
+                      </div>
+                    </div>
+                    <button
+                      className="button compact"
+                      disabled={!canEditPackage || isSavingPackage}
+                      onClick={() => startPackageEdit(pkg)}
+                      title={
+                        canEditPackage
+                          ? "עריכת פרטי החבילה"
+                          : "אפשר לערוך רק חבילה שממתינה לאיסוף"
+                      }
+                      type="button"
+                    >
+                      ערוך
+                    </button>
+                  </article>
+                );
+              })
+            ) : (
+              <div className="card empty-state">עדיין לא הוספת חבילות.</div>
+            )}
+          </div>
+        </section>
       </>
     );
   }

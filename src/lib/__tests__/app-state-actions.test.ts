@@ -16,6 +16,7 @@ import {
   rejectJoinRequest,
   startPickupRun,
   updateCollectedPackagesArrival,
+  updatePackage,
   updatePickupLocation,
   type ActionDeps,
 } from "@/lib/app-state-actions";
@@ -269,6 +270,34 @@ describe("app state actions", () => {
         deps,
       ),
     ).toThrow("User must be approved to create packages.");
+  });
+
+  it("lets the package owner edit a waiting package", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const targetPackage = state.packages.find(
+      (pkg) => pkg.ownerUserId === state.currentUser.id && pkg.status === "waiting",
+    );
+
+    const updated = updatePackage(
+      state,
+      {
+        packageId: targetPackage?.id ?? "",
+        ownerName: "Updated Owner",
+        pickupLocationId: "post-office",
+        sensitiveDeliveryMessage:
+          "Updated package at post office. Approval link: https://example.com/updated",
+      },
+      deps,
+    );
+
+    expect(updated.packages.find((pkg) => pkg.id === targetPackage?.id)).toMatchObject({
+      ownerName: "Updated Owner",
+      pickupLocationId: "post-office",
+      sensitiveDeliveryMessage:
+        "Updated package at post office. Approval link: https://example.com/updated",
+      sensitivePickupLink: "https://example.com/updated",
+    });
   });
 
   it("creates a pickup location with weekly hours and a generated navigation URL", () => {

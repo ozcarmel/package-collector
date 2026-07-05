@@ -247,7 +247,7 @@ test("add package uses example placeholders without saving empty demo values", a
   await expect(page.getByRole("status")).toContainText("יש להזין את שם מקבל החבילה");
   await expect(ownerInput).toBeVisible();
 
-  await ownerInput.fill("עוז כרמל");
+  await ownerInput.fill("עוז כרמל בדיקה");
   await app(page).getByRole("button", { name: /שמור/ }).click();
   await expect(page.getByRole("status")).toContainText("יש להדביק את הודעת חברת המשלוחים");
   await expect(messageInput).toBeVisible();
@@ -257,8 +257,16 @@ test("add package uses example placeholders without saving empty demo values", a
   );
   await app(page).getByRole("button", { name: /שמור/ }).click();
 
-  await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
-  await expect(app(page).locator(".package-list").first()).toContainText("עוז כרמל");
+  await expect(app(page).getByRole("heading", { name: "חבילות שהוספת" })).toBeVisible();
+  const addedPackage = app(page).locator(".added-package-row").filter({ hasText: "עוז כרמל בדיקה" });
+  await expect(addedPackage).toContainText("פיצוץ להבים");
+  await expect(addedPackage).toContainText("https://u.cheetahint.com/vknpgt0");
+  await addedPackage.getByRole("button", { name: "ערוך" }).click();
+  await expect(ownerInput).toHaveValue("עוז כרמל בדיקה");
+  await ownerInput.fill("עוז כרמל עריכה");
+  await app(page).getByRole("button", { name: /עדכן חבילה/ }).click();
+  await expect(page.getByRole("status")).toContainText("החבילה עודכנה");
+  await expect(app(page).locator(".added-package-row").filter({ hasText: "עוז כרמל עריכה" })).toBeVisible();
 });
 
 test("new package appears on home under its pickup location and package status within five seconds", async ({
@@ -279,6 +287,8 @@ test("new package appears on home under its pickup location and package status w
     );
   await app(page).getByRole("button", { name: /שמור/ }).click();
 
+  await expect(app(page).locator(".added-package-row").filter({ hasText: "בדיקת סנכרון מיידי" })).toBeVisible();
+  await clickPhoneNav(page, "בית");
   await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
   await expect(app(page).locator(".home-status-waiting strong")).toHaveText(
     String(beforeWaitingCount + 1),
@@ -320,6 +330,7 @@ test("packages added to each pickup location increase only that location count",
       .fill(`Package for ${locationId}. Approval link: https://example.com/${locationId}`);
     await app(page).getByRole("button", { name: /שמור/ }).click();
 
+    await clickPhoneNav(page, "בית");
     await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
     await expect(
       app(page).locator(`.pickup-card[data-pickup-location-id="${locationId}"] strong`),
@@ -341,6 +352,7 @@ test("saving two kibbutz delivery rows updates home status and shows both packag
     .getByLabel("הודעת המשלוח המקורית")
     .fill("משלוח ESH-001 ממתין לאיסוף באשכולות. קוד 111222.");
   await app(page).getByRole("button", { name: /שמור/ }).click();
+  await clickPhoneNav(page, "בית");
   await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
 
   const beforeArrivedCount = await readHomeStatusCount(page, "home-status-arrived");

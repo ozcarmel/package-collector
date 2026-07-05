@@ -175,8 +175,19 @@ service cloud.firestore {
     function validOwnerPackageUpdate() {
       return approved() &&
         resource.data.ownerUserId == request.auth.uid &&
+        resource.data.status == "waiting" &&
+        request.resource.data.status == "waiting" &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(["publicSummary", "updatedAt"]);
+          .hasOnly([
+            "ownerName",
+            "pickupLocationId",
+            "publicSummary",
+            "parsedCourierCompany",
+            "parsedAddresseeName",
+            "parsedTrackingNumber",
+            "parsedPickupDeadline",
+            "updatedAt"
+          ]);
     }
 
     function validOwnerPackageReceivedUpdate() {
@@ -204,6 +215,7 @@ service cloud.firestore {
           "parsedAddresseeName",
           "parsedTrackingNumber",
           "parsedPickupDeadline",
+          "createdAt",
           "updatedAt"
         ]);
     }
@@ -288,6 +300,25 @@ service cloud.firestore {
         ]);
     }
 
+    function validSensitiveDetailsOwnerUpdate(packageId) {
+      let pkg = packageDoc(packageId);
+      return approved() &&
+        resource.data.ownerUserId == request.auth.uid &&
+        resource.data.packageId == packageId &&
+        pkg.data.ownerUserId == request.auth.uid &&
+        pkg.data.status == "waiting" &&
+        request.resource.data.packageId == packageId &&
+        request.resource.data.ownerUserId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            "pickupLocationId",
+            "sensitiveDeliveryMessage",
+            "sensitivePickupLink",
+            "sensitivePackageCode",
+            "updatedAt"
+          ]);
+    }
+
     match /users/{userId} {
       allow read: if signedIn();
       allow create: if validNewSelfUser(userId) ||
@@ -368,7 +399,8 @@ service cloud.firestore {
         admin()
       );
       allow create: if validSensitiveDetailsCreate(packageId);
-      allow update, delete: if false;
+      allow update: if validSensitiveDetailsOwnerUpdate(packageId);
+      allow delete: if false;
     }
   }
 }

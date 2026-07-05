@@ -94,11 +94,22 @@ export function subscribeFirestoreAppState(
       };
 
       if (isApproved) {
-        const [locationsSnapshot, packagesSnapshot, pickupRunsSnapshot] = await Promise.all([
+        const [
+          locationsSnapshot,
+          packagesSnapshot,
+          pickupRunsSnapshot,
+          ownSensitiveDetailsSnapshot,
+        ] = await Promise.all([
           getDocs(collection(firestoreDb, "pickupLocations")),
           getDocs(collection(firestoreDb, "packages")),
           getDocs(
             query(collection(firestoreDb, "pickupRuns"), where("collectorUserId", "==", user.id)),
+          ),
+          getDocs(
+            query(
+              collection(firestoreDb, "sensitivePackageDetails"),
+              where("ownerUserId", "==", user.id),
+            ),
           ),
         ]);
         const remoteLocations = locationsSnapshot.docs.map(
@@ -118,8 +129,25 @@ export function subscribeFirestoreAppState(
         ).flatMap((snapshot) => snapshot.docs.map((item) => item.data() as PickupRunItem));
 
         nextState.pickupLocations = mergePickupLocations(remoteLocations);
+        const sensitiveDetailsByPackageId = new Map(
+          ownSensitiveDetailsSnapshot.docs.map((item) => [
+            item.id,
+            item.data() as Partial<DeliveryPackage>,
+          ]),
+        );
         nextState.packages = sortByUpdatedAt(
-          packagesSnapshot.docs.map((item) => item.data() as DeliveryPackage),
+          packagesSnapshot.docs.map((item) => {
+            const pkg = item.data() as DeliveryPackage;
+            const details = sensitiveDetailsByPackageId.get(pkg.id);
+            return details
+              ? {
+                  ...pkg,
+                  sensitiveDeliveryMessage: details.sensitiveDeliveryMessage,
+                  sensitivePickupLink: details.sensitivePickupLink,
+                  sensitivePackageCode: details.sensitivePackageCode,
+                }
+              : pkg;
+          }),
         );
         nextState.pickupRuns = pickupRuns;
         nextState.pickupRunItems = runItems;

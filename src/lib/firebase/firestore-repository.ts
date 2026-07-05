@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -28,6 +29,7 @@ import type {
   CreateJoinRequestInput,
   CreatePackageInput,
   CreatePickupLocationInput,
+  UpdatePackageInput,
   UpdatePickupLocationInput,
   UpdateArrivalInput,
 } from "@/lib/app-state-actions";
@@ -36,6 +38,7 @@ import {
   createPickupLocation as createPickupLocationAction,
   deletePickupLocation as deletePickupLocationAction,
   resolveKibbutzDropNote,
+  updatePackage as updatePackageAction,
   updateCollectedPackagesArrival as updateCollectedPackagesArrivalAction,
   updatePickupLocation as updatePickupLocationAction,
 } from "@/lib/app-state-actions";
@@ -208,6 +211,7 @@ export const firestoreRepository: AppOperationsRepository = {
       parsedAddresseeName: parsed.addresseeName,
       parsedTrackingNumber: parsed.trackingNumber,
       parsedPickupDeadline: parsed.pickupDeadline,
+      createdAt: updatedAt,
       updatedAt,
     };
 
@@ -228,7 +232,15 @@ export const firestoreRepository: AppOperationsRepository = {
       packageId,
       state: {
         ...state,
-        packages: [publicPackage, ...state.packages],
+        packages: [
+          {
+            ...publicPackage,
+            sensitiveDeliveryMessage: input.sensitiveDeliveryMessage,
+            sensitivePickupLink: parsed.pickupLink,
+            sensitivePackageCode: parsed.packageCode,
+          },
+          ...state.packages,
+        ],
         pickupLocations: state.pickupLocations.map((location) =>
           location.id === input.pickupLocationId
             ? { ...location, activeRequests: location.activeRequests + 1 }
@@ -236,6 +248,56 @@ export const firestoreRepository: AppOperationsRepository = {
         ),
       },
     };
+  },
+
+  async updatePackage(state: AppState, input: UpdatePackageInput, deps: ActionDeps) {
+    if (state.currentUser.verificationStatus !== "approved") {
+      throw new Error("User must be approved to update packages.");
+    }
+
+    const db = requireFirestore();
+    const packageRef = doc(db, "packages", input.packageId);
+    const packageSnapshot = await getDoc(packageRef);
+    const pkg = packageSnapshot.data() as DeliveryPackage | undefined;
+
+    if (!pkg) return;
+    if (pkg.ownerUserId !== state.currentUser.id) {
+      throw new Error("Only the package owner can edit this package.");
+    }
+    if (pkg.status !== "waiting") {
+      throw new Error("Only waiting packages can be edited.");
+    }
+
+    const parsed = parseDeliveryMessage(input.sensitiveDeliveryMessage, state.pickupLocations);
+    const updatedAt = deps.now();
+    const batch = writeBatch(db);
+
+    batch.update(packageRef, {
+      ownerName: input.ownerName,
+      pickupLocationId: input.pickupLocationId,
+      publicSummary: "ממתינה לאיסוף",
+      parsedCourierCompany: parsed.courierCompany ?? deleteField(),
+      parsedAddresseeName: parsed.addresseeName ?? deleteField(),
+      parsedTrackingNumber: parsed.trackingNumber ?? deleteField(),
+      parsedPickupDeadline: parsed.pickupDeadline ?? deleteField(),
+      updatedAt,
+    });
+    batch.set(
+      doc(db, "sensitivePackageDetails", input.packageId),
+      withoutUndefined({
+        packageId: input.packageId,
+        ownerUserId: state.currentUser.id,
+        pickupLocationId: input.pickupLocationId,
+        sensitiveDeliveryMessage: input.sensitiveDeliveryMessage,
+        sensitivePickupLink: parsed.pickupLink ?? deleteField(),
+        sensitivePackageCode: parsed.packageCode ?? deleteField(),
+        updatedAt,
+      }),
+      { merge: true },
+    );
+
+    await batch.commit();
+    return updatePackageAction(state, input, deps);
   },
 
   async createPickupLocation(

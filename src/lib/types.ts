@@ -92,6 +92,7 @@ export interface DeliveryPackage {
   currentKibbutzLocation?: KibbutzDropLocation;
   currentKibbutzLocationText?: string;
   collectorUserId?: string;
+  createdAt?: string;
   updatedAt: string;
   deliveredAt?: string;
 }

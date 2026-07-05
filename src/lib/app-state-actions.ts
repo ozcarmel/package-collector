@@ -36,6 +36,10 @@ export interface CreatePackageInput {
   sensitiveDeliveryMessage: string;
 }
 
+export interface UpdatePackageInput extends CreatePackageInput {
+  packageId: string;
+}
+
 export interface CreatePickupLocationInput {
   name: string;
   address: string;
@@ -183,6 +187,7 @@ export function createPackage(state: AppState, input: CreatePackageInput, deps: 
   assertApprovedUser(state, "create packages");
 
   const parsed = parseDeliveryMessage(input.sensitiveDeliveryMessage, state.pickupLocations);
+  const now = deps.now();
   const newPackage: DeliveryPackage = {
     id: deps.createId("pkg"),
     ownerUserId: state.currentUser.id,
@@ -197,7 +202,8 @@ export function createPackage(state: AppState, input: CreatePackageInput, deps: 
     parsedAddresseeName: parsed.addresseeName,
     parsedTrackingNumber: parsed.trackingNumber,
     parsedPickupDeadline: parsed.pickupDeadline,
-    updatedAt: deps.now(),
+    createdAt: now,
+    updatedAt: now,
   };
 
   return {
@@ -211,6 +217,59 @@ export function createPackage(state: AppState, input: CreatePackageInput, deps: 
           : location,
       ),
     },
+  };
+}
+
+export function updatePackage(state: AppState, input: UpdatePackageInput, deps: ActionDeps) {
+  assertApprovedUser(state, "update packages");
+
+  const targetPackage = state.packages.find((pkg) => pkg.id === input.packageId);
+  if (!targetPackage) return state;
+
+  if (targetPackage.ownerUserId !== state.currentUser.id) {
+    throw new Error("Only the package owner can edit this package.");
+  }
+
+  if (targetPackage.status !== "waiting") {
+    throw new Error("Only waiting packages can be edited.");
+  }
+
+  const parsed = parseDeliveryMessage(input.sensitiveDeliveryMessage, state.pickupLocations);
+  const updatedAt = deps.now();
+
+  return {
+    ...state,
+    packages: state.packages.map((pkg) =>
+      pkg.id === input.packageId
+        ? {
+            ...pkg,
+            ownerName: input.ownerName,
+            pickupLocationId: input.pickupLocationId,
+            publicSummary: "ממתינה לאיסוף",
+            sensitiveDeliveryMessage: input.sensitiveDeliveryMessage,
+            sensitivePickupLink: parsed.pickupLink,
+            sensitivePackageCode: parsed.packageCode,
+            parsedCourierCompany: parsed.courierCompany,
+            parsedAddresseeName: parsed.addresseeName,
+            parsedTrackingNumber: parsed.trackingNumber,
+            parsedPickupDeadline: parsed.pickupDeadline,
+            updatedAt,
+          }
+        : pkg,
+    ),
+    pickupLocations: state.pickupLocations.map((location) => {
+      if (targetPackage.pickupLocationId === input.pickupLocationId) return location;
+      if (location.id === targetPackage.pickupLocationId) {
+        return {
+          ...location,
+          activeRequests: Math.max(0, location.activeRequests - 1),
+        };
+      }
+      if (location.id === input.pickupLocationId) {
+        return { ...location, activeRequests: location.activeRequests + 1 };
+      }
+      return location;
+    }),
   };
 }
 
