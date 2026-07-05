@@ -124,8 +124,8 @@ const deliveryMessageExample =
   "שלום עוז, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0";
 
 const initialJoinDraft: JoinDraft = {
-  fullName: "טל יוד",
-  phone: "050-203-4475",
+  fullName: "",
+  phone: "",
   note: "היי, אני חבר/ת להב. אפשר לאשר אותי?",
 };
 
@@ -2511,6 +2511,7 @@ function JoinScreen({
           <input
             id="join-phone"
             inputMode="tel"
+            placeholder="050-1234567"
             value={joinDraft.phone}
             onChange={(event) =>
               onChange((current) => ({ ...current, phone: event.target.value }))
@@ -2521,6 +2522,7 @@ function JoinScreen({
           <label htmlFor="join-name">שם מלא</label>
           <input
             id="join-name"
+            placeholder="ישראלה ישראלי"
             value={joinDraft.fullName}
             onChange={(event) =>
               onChange((current) => ({ ...current, fullName: event.target.value }))

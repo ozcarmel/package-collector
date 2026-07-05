@@ -121,6 +121,23 @@ test("fresh users can request access but cannot add or pick up before approval",
   );
 });
 
+test("join screen uses placeholders instead of demo name and phone values", async ({ page }) => {
+  await gotoFreshUser(page);
+
+  const phoneInput = app(page).locator("#join-phone");
+  const nameInput = app(page).locator("#join-name");
+
+  await expect(phoneInput).toHaveValue("");
+  await expect(phoneInput).toHaveAttribute("placeholder", "050-1234567");
+  await expect(nameInput).toHaveValue("");
+  await expect(nameInput).toHaveAttribute("placeholder", "ישראלה ישראלי");
+
+  await phoneInput.fill("052-111-2222");
+  await nameInput.fill("משתמש בדיקה");
+  await expect(phoneInput).toHaveValue("052-111-2222");
+  await expect(nameInput).toHaveValue("משתמש בדיקה");
+});
+
 test("approved phone can enter from a new device without another admin approval", async ({ page }) => {
   await gotoFreshUser(page);
 
