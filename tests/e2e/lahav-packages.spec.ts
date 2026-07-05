@@ -317,6 +317,21 @@ test("pickup flow reveals original messages only after confirmation and records 
   await clickPhoneNav(page, "מסירה");
   await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();
   await expect(app(page).getByText("אלה החבילות שמחכות לעדכון מיקום בקיבוץ")).toBeVisible();
+  const dropNote = app(page).locator("#drop-note");
+  const dropLocation = app(page).locator("#drop-location");
+  await expect(dropNote).toHaveValue("");
+  await expect(dropNote).toHaveAttribute("placeholder", "שמתי בדולב");
+  await dropLocation.selectOption("kolbo");
+  await expect(dropNote).toHaveValue("");
+  await expect(dropNote).toHaveAttribute("placeholder", "שמתי בארון הכלבו למעלה");
+  await dropLocation.selectOption("collector-home");
+  await expect(dropNote).toHaveValue("");
+  await expect(dropNote).toHaveAttribute("placeholder", "מוזמנים לקחת ממני, שמתי ליד הדלת");
+  await dropLocation.selectOption("direct-home");
+  await expect(dropNote).toHaveValue("");
+  await expect(dropNote).toHaveAttribute("placeholder", "");
+  await dropNote.fill("השארתי ליד המזכירות");
+  await expect(dropNote).toHaveValue("השארתי ליד המזכירות");
 });
 
 test("home and form UI avoid the known layout regressions", async ({ page }) => {

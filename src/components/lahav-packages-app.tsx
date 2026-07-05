@@ -122,6 +122,13 @@ const emptyDraft: DraftPackage = {
 const packageOwnerExample = "עוז כרמל";
 const deliveryMessageExample =
   "שלום עוז, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0";
+const dropNoteExamples: Record<KibbutzDropLocation, string> = {
+  "gate-crate": "שמתי בדולב",
+  kolbo: "שמתי בארון הכלבו למעלה",
+  "collector-home": "מוזמנים לקחת ממני, שמתי ליד הדלת",
+  "direct-home": "",
+  other: "",
+};
 
 const initialJoinDraft: JoinDraft = {
   fullName: "",
@@ -439,7 +446,7 @@ export function LahavPackagesApp() {
   const [homeLocationFilterId, setHomeLocationFilterId] = useState<string | null>(null);
   const [joinPreviewMode, setJoinPreviewMode] = useState(() => hasJoinPreviewParam());
   const [dropLocation, setDropLocation] = useState<KibbutzDropLocation>("gate-crate");
-  const [dropNote, setDropNote] = useState("שלוש החבילות בדולב, בצד ימין למעלה.");
+  const [dropNote, setDropNote] = useState("");
   const pickupLocationStripRef = useRef<HTMLDivElement | null>(null);
   const pickupLocationArrowRef = useRef<HTMLButtonElement | null>(null);
   const ozPendingRecoveryRef = useRef<string | null>(null);
@@ -1251,11 +1258,12 @@ export function LahavPackagesApp() {
         state,
         {
           dropLocation,
-          dropNote,
+          dropNote: dropNote.trim(),
         },
         actionDeps,
       );
       applyRepositoryState(nextState);
+      setDropNote("");
       setScreen("home");
       notify("מיקום החבילות בקיבוץ עודכן.");
     } catch {
@@ -2075,6 +2083,7 @@ export function LahavPackagesApp() {
             <label htmlFor="drop-note">הערה למסירה</label>
             <textarea
               id="drop-note"
+              placeholder={dropNoteExamples[dropLocation]}
               value={dropNote}
               onChange={(event) => setDropNote(event.target.value)}
             />
