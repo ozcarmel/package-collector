@@ -623,16 +623,34 @@ test("home and form UI avoid the known layout regressions", async ({ page }) => 
       getComputedStyle(home.querySelector(selector) as Element).backgroundColor;
 
     return {
-      topWaiting: style(".home-status-waiting .home-status-label"),
+      topWaiting: style(".home-status-waiting .home-status-icon"),
       packageWaiting: style(".package-card .badge.waiting"),
-      topArrived: style(".home-status-arrived .home-status-label"),
+      topArrived: style(".home-status-arrived .home-status-icon"),
       packageArrived: style(".package-card .badge.arrived"),
-      topDelivered: style(".home-status-delivered .home-status-label"),
+      topDelivered: style(".home-status-delivered .home-status-icon"),
     };
   });
   expect(statusColors.topWaiting).toBe(statusColors.packageWaiting);
   expect(statusColors.topArrived).toBe(statusColors.packageArrived);
   expect(statusColors.topDelivered).not.toBe(statusColors.topArrived);
+
+  await expect(app(page).locator(".home-status-waiting")).toHaveAttribute("title", /ממתינות לאיסוף/);
+  const homeStatusLabelBox = await app(page)
+    .locator(".home-status-label")
+    .first()
+    .evaluate((label) => {
+      const rect = label.getBoundingClientRect();
+      const styles = getComputedStyle(label);
+
+      return {
+        height: rect.height,
+        position: styles.position,
+        width: rect.width,
+      };
+    });
+  expect(homeStatusLabelBox.position).toBe("absolute");
+  expect(homeStatusLabelBox.width).toBeLessThanOrEqual(1);
+  expect(homeStatusLabelBox.height).toBeLessThanOrEqual(1);
 
   const packageStatusBadgeHeights = await app(page).locator(".content-home").evaluate((home) => {
     const height = (selector: string) =>

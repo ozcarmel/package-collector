@@ -2010,28 +2010,44 @@ export function LahavPackagesApp() {
           <h1 className="screen-title">מה מצב החבילות?</h1>
 
           <div className="home-status-band" aria-label="סיכום מצב החבילות">
-            <div className="home-status-item home-status-waiting">
+            <div
+              className="home-status-item home-status-waiting"
+              aria-label={`ממתינות לאיסוף: ${waitingPackages.length}`}
+              title={`ממתינות לאיסוף: ${waitingPackages.length}`}
+            >
               <span className="home-status-icon">
                 <Package />
               </span>
               <strong>{waitingPackages.length}</strong>
               <span className="home-status-label">ממתינות לאיסוף</span>
             </div>
-            <div className="home-status-item home-status-collected">
+            <div
+              className="home-status-item home-status-collected"
+              aria-label={`נאספו: ${collectedPackages.length}`}
+              title={`נאספו: ${collectedPackages.length}`}
+            >
               <span className="home-status-icon home-status-truck">
                 <Truck />
               </span>
               <strong>{collectedPackages.length}</strong>
               <span className="home-status-label">נאספו</span>
             </div>
-            <div className="home-status-item home-status-arrived">
+            <div
+              className="home-status-item home-status-arrived"
+              aria-label={`הגיעו לקיבוץ: ${arrivedPackages.length}`}
+              title={`הגיעו לקיבוץ: ${arrivedPackages.length}`}
+            >
               <span className="home-status-icon">
                 <ClipboardList />
               </span>
               <strong>{arrivedPackages.length}</strong>
               <span className="home-status-label">הגיעו לקיבוץ</span>
             </div>
-            <div className="home-status-item home-status-delivered">
+            <div
+              className="home-status-item home-status-delivered"
+              aria-label={`נמסרו: ${deliveredPackages.length}`}
+              title={`נמסרו: ${deliveredPackages.length}`}
+            >
               <span className="home-status-icon">
                 <Check />
               </span>
