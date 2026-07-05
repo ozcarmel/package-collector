@@ -327,7 +327,8 @@ function openingHoursRows(location: PickupLocation) {
 
 function statusBadgeClass(status: PackageStatus) {
   if (status === "collected") return "badge blue";
-  if (status === "arrived" || status === "ready_for_handoff" || status === "delivered") return "badge done";
+  if (status === "arrived" || status === "ready_for_handoff") return "badge arrived";
+  if (status === "delivered") return "badge delivered";
   if (status === "cancelled") return "badge danger";
   return "badge waiting";
 }
@@ -375,8 +376,9 @@ function homePackageStatusBadgeClass(pkg: DeliveryPackage) {
     case "collected":
       return "badge blue";
     case "arrived":
+      return "badge arrived";
     case "delivered":
-      return "badge done";
+      return "badge delivered";
     case null:
       return statusBadgeClass(pkg.status);
   }
@@ -392,7 +394,7 @@ function homePackageDetailBadge(pkg: DeliveryPackage) {
       return null;
     case "arrived":
       return {
-        className: "badge done",
+        className: "badge arrived",
         icon: null,
         text:
           pkg.currentKibbutzLocationText?.trim() ||
@@ -401,7 +403,7 @@ function homePackageDetailBadge(pkg: DeliveryPackage) {
       };
     case "delivered":
       return {
-        className: "badge done",
+        className: "badge delivered",
         icon: null,
         text: "נמסרה לבעל החבילה",
       };

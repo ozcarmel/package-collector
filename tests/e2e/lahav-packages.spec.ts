@@ -616,6 +616,23 @@ test("home and form UI avoid the known layout regressions", async ({ page }) => 
   await expect(app(page).locator(".content-home")).toHaveCSS("overflow-y", "hidden");
   await expect(app(page).locator(".home-list")).toHaveCSS("overflow-y", "auto");
   await expect.poll(async () => app(page).locator(".pickup-card-open").count()).toBeGreaterThan(0);
+  await expect(app(page).locator(".package-card").filter({ hasText: "הגיעה לקיבוץ" })).toBeVisible();
+
+  const statusColors = await app(page).locator(".content-home").evaluate((home) => {
+    const style = (selector: string) =>
+      getComputedStyle(home.querySelector(selector) as Element).backgroundColor;
+
+    return {
+      topWaiting: style(".home-status-waiting .home-status-label"),
+      packageWaiting: style(".package-card .badge.waiting"),
+      topArrived: style(".home-status-arrived .home-status-label"),
+      packageArrived: style(".package-card .badge.arrived"),
+      topDelivered: style(".home-status-delivered .home-status-label"),
+    };
+  });
+  expect(statusColors.topWaiting).toBe(statusColors.packageWaiting);
+  expect(statusColors.topArrived).toBe(statusColors.packageArrived);
+  expect(statusColors.topDelivered).not.toBe(statusColors.topArrived);
 
   await openAdmin(page);
   await app(page).getByRole("button", { name: /הוסף נקודת איסוף/ }).click();

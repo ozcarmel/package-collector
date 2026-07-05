@@ -17,6 +17,18 @@
   --warning-soft: #fff0c9;
   --danger: #9e3d3d;
   --danger-soft: #f7dfdc;
+  --status-waiting-bg: #f7dfa0;
+  --status-waiting-text: #513c08;
+  --status-waiting-border: #ead08a;
+  --status-collected-bg: #e0eee9;
+  --status-collected-text: #206254;
+  --status-collected-border: #bed6cd;
+  --status-arrived-bg: #dcebd9;
+  --status-arrived-text: #103f2c;
+  --status-arrived-border: #bdd4b5;
+  --status-delivered-bg: #eadbc7;
+  --status-delivered-text: #674621;
+  --status-delivered-border: #d2b28d;
   --shadow: 0 26px 70px rgb(25 41 31 / 18%);
   --card-shadow: 0 10px 28px rgb(62 50 34 / 7%);
   --radius: 8px;
@@ -400,41 +412,50 @@ select:focus-visible {
 
 .home-status-label {
   grid-row: 2;
-  max-width: 74px;
+  min-height: 24px;
+  max-width: 86px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 7px;
   color: #285341;
   font-size: 12px;
   line-height: 1.18;
   font-weight: 700;
 }
 
-.home-status-waiting .home-status-icon {
-  color: #1f7653;
-}
-
+.home-status-waiting .home-status-icon,
 .home-status-waiting strong,
-.home-status-collected strong {
-  border-color: #91ba84;
-  color: #1f704a;
-  background: #edf7e4;
+.home-status-waiting .home-status-label {
+  border-color: var(--status-waiting-border);
+  color: var(--status-waiting-text);
+  background: var(--status-waiting-bg);
 }
 
-.home-status-collected .home-status-icon {
-  color: #1f7653;
+.home-status-collected .home-status-icon,
+.home-status-collected strong,
+.home-status-collected .home-status-label {
+  border-color: var(--status-collected-border);
+  color: var(--status-collected-text);
+  background: var(--status-collected-bg);
 }
 
-.home-status-arrived .home-status-icon {
-  color: #98773e;
-}
-
-.home-status-delivered .home-status-icon {
-  color: #9b814f;
-}
-
+.home-status-arrived .home-status-icon,
 .home-status-arrived strong,
-.home-status-delivered strong {
-  border-color: #d0b075;
-  color: #836333;
-  background: #fff2d9;
+.home-status-arrived .home-status-label {
+  border-color: var(--status-arrived-border);
+  color: var(--status-arrived-text);
+  background: var(--status-arrived-bg);
+}
+
+.home-status-delivered .home-status-icon,
+.home-status-delivered strong,
+.home-status-delivered .home-status-label {
+  border-color: var(--status-delivered-border);
+  color: var(--status-delivered-text);
+  background: var(--status-delivered-bg);
 }
 
 .metric,
@@ -1172,22 +1193,29 @@ form.stack,
 }
 
 .badge.waiting {
-  color: #513c08;
-  background: var(--warning);
-  border-color: #ead08a;
+  color: var(--status-waiting-text);
+  background: var(--status-waiting-bg);
+  border-color: var(--status-waiting-border);
 }
 
 .badge.locked,
 .badge.blue {
-  color: #206254;
-  background: #e0eee9;
-  border-color: #bed6cd;
+  color: var(--status-collected-text);
+  background: var(--status-collected-bg);
+  border-color: var(--status-collected-border);
 }
 
-.badge.done {
+.badge.done,
+.badge.arrived {
   color: var(--primary-strong);
-  background: var(--primary-soft);
-  border-color: #bdd4b5;
+  background: var(--status-arrived-bg);
+  border-color: var(--status-arrived-border);
+}
+
+.badge.delivered {
+  color: var(--status-delivered-text);
+  background: var(--status-delivered-bg);
+  border-color: var(--status-delivered-border);
 }
 
 .badge.danger {
