@@ -11,7 +11,6 @@ import {
   Copy,
   Home,
   Info,
-  Lock,
   Mail,
   MapPin,
   MapPinCheck,
@@ -128,7 +127,7 @@ const emptyDraft: DraftPackage = {
 
 const packageOwnerExample = "עוז כרמל";
 const deliveryMessageExample =
-  "הדביקו כאן במלואה את ההודעה שקיבלתם ב-SMS או במייל, כולל קוד וקישור";
+  "הדביקו כאן במלואה את ההודעה שקיבלתם ב-SMS או במייל, כולל קוד וקישור. ההודעה שמורה בצורה מאובטחת ורק מי שאוסף יוכל לראות אותה.";
 const urlPattern = /(https?:\/\/[^\s]+)/g;
 const fullUrlPattern = /^https?:\/\/[^\s]+$/;
 const dropNoteExamples = kibbutzDropLocationDefaultNotes;
@@ -2063,7 +2062,6 @@ export function LahavPackagesApp() {
           </div>
           <div className="field">
             <label htmlFor="message">הודעת המשלוח המקורית</label>
-            <p className="help">הדביקו כאן את ההודעה שקיבלתם, כולל קוד וקישור</p>
             <textarea
               id="message"
               placeholder={deliveryMessageExample}
@@ -2086,10 +2084,6 @@ export function LahavPackagesApp() {
                   : "לא זוהה קישור. אפשר לשמור אם אין קישור בהודעה."}
               </p>
             ) : null}
-          </div>
-          <div className="security-note">
-            <Lock />
-            <span>ההודעה שמורה בצורה מאובטחת ורק מי שאוסף יוכל לראות אותה.</span>
           </div>
           <button
             className="button primary full"

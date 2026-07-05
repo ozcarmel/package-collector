@@ -225,7 +225,7 @@ test("add package uses example placeholders without saving empty demo values", a
   await expect(messageInput).toHaveValue("");
   await expect(messageInput).toHaveAttribute(
     "placeholder",
-    "הדביקו כאן במלואה את ההודעה שקיבלתם ב-SMS או במייל, כולל קוד וקישור",
+    "הדביקו כאן במלואה את ההודעה שקיבלתם ב-SMS או במייל, כולל קוד וקישור. ההודעה שמורה בצורה מאובטחת ורק מי שאוסף יוכל לראות אותה.",
   );
 
   await app(page).getByRole("button", { name: /שמור/ }).click();
