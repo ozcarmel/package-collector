@@ -45,6 +45,7 @@ import {
   isOzSuperAdminUser,
   normalizePhone,
 } from "@/lib/oz-admin-shortcut";
+import { shouldShowPackageOnHome } from "@/lib/home-package-visibility";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import { normalizePickupLocationSchedules } from "@/lib/pickup-location-schedule-defaults";
 import type {
@@ -117,7 +118,6 @@ interface NavItem {
 }
 
 const appName = "חבילות להב";
-const deliveredHomeGracePeriodMs = 5 * 60 * 1000;
 
 const emptyDraft: DraftPackage = {
   ownerName: "",
@@ -470,16 +470,6 @@ function formatHebrewDateTime(isoDate?: string) {
     month: "2-digit",
     year: "numeric",
   }).format(new Date(isoDate));
-}
-
-function shouldShowPackageOnHome(pkg: DeliveryPackage, currentTimeMs: number | null) {
-  if (pkg.status !== "delivered") return true;
-  if (!pkg.deliveredAt || currentTimeMs === null) return true;
-
-  const deliveredAtMs = Date.parse(pkg.deliveredAt);
-  if (Number.isNaN(deliveredAtMs)) return true;
-
-  return currentTimeMs - deliveredAtMs < deliveredHomeGracePeriodMs;
 }
 
 function extractMessageUrls(message: string) {
