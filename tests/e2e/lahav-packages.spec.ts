@@ -274,7 +274,9 @@ test("add package uses example placeholders without saving empty demo values", a
   await ownerInput.fill("עוז כרמל עריכה");
   await app(page).getByRole("button", { name: /עדכן פרטים/ }).click();
   await expect(page.getByRole("status")).toContainText("החבילה עודכנה");
-  await expect(app(page).locator(".added-package-row").filter({ hasText: "עוז כרמל עריכה" })).toBeVisible();
+  const editedPackage = app(page).locator(".added-package-row").filter({ hasText: "עוז כרמל עריכה" });
+  await expect(editedPackage).toBeVisible();
+  await expect(editedPackage).toContainText("נוספה עכשיו");
 });
 
 test("new package appears on home under its pickup location and package status within five seconds", async ({

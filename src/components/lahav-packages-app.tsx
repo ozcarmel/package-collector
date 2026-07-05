@@ -483,7 +483,10 @@ export function LahavPackagesApp() {
   const [isSubmittingJoinRequest, setIsSubmittingJoinRequest] = useState(false);
   const [isSavingPackage, setIsSavingPackage] = useState(false);
   const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
-  const [highlightedPackageId, setHighlightedPackageId] = useState<string | null>(null);
+  const [highlightedPackage, setHighlightedPackage] = useState<{
+    id: string;
+    nonce: number;
+  } | null>(null);
   const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [isStartingPickupRun, setIsStartingPickupRun] = useState(false);
   const [collectingPackageId, setCollectingPackageId] = useState<string | null>(null);
@@ -558,11 +561,11 @@ export function LahavPackagesApp() {
   }, []);
 
   useEffect(() => {
-    if (!highlightedPackageId) return undefined;
+    if (!highlightedPackage) return undefined;
 
-    const timeoutId = window.setTimeout(() => setHighlightedPackageId(null), 5000);
+    const timeoutId = window.setTimeout(() => setHighlightedPackage(null), 5000);
     return () => window.clearTimeout(timeoutId);
-  }, [highlightedPackageId]);
+  }, [highlightedPackage]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -1121,6 +1124,10 @@ export function LahavPackagesApp() {
       return;
     }
 
+    function highlightPackage(packageId: string) {
+      setHighlightedPackage({ id: packageId, nonce: Date.now() });
+    }
+
     setIsSavingPackage(true);
     try {
       if (editingPackageId) {
@@ -1135,6 +1142,7 @@ export function LahavPackagesApp() {
           actionDeps,
         );
         applyRepositoryState(nextState);
+        highlightPackage(editingPackageId);
         setEditingPackageId(null);
         notify("החבילה עודכנה.");
       } else {
@@ -1149,7 +1157,7 @@ export function LahavPackagesApp() {
         );
         pendingCreatedPackageIdsRef.current.add(result.packageId);
         applyRepositoryState(result.state);
-        setHighlightedPackageId(result.packageId);
+        highlightPackage(result.packageId);
         notify("החבילה נוספה.");
       }
       setDraft(emptyDraft);
@@ -2228,18 +2236,17 @@ export function LahavPackagesApp() {
             {userAddedPackages.length ? (
               userAddedPackages.map((pkg) => {
                 const canEditPackage = pkg.status === "waiting";
+                const isHighlightedPackage = highlightedPackage?.id === pkg.id;
                 return (
                   <article
-                    className={`added-package-row ${
-                      highlightedPackageId === pkg.id ? "recently-added" : ""
-                    }`}
+                    className={`added-package-row ${isHighlightedPackage ? "recently-added" : ""}`}
                     key={pkg.id}
                   >
                     <div className="added-package-main">
                       <div className="added-package-head">
                         <strong>{pkg.ownerName}</strong>
                         <span>
-                          {highlightedPackageId === pkg.id ? "נוספה עכשיו" : statusLabel(pkg.status)}
+                          {isHighlightedPackage ? "נוספה עכשיו" : statusLabel(pkg.status)}
                         </span>
                       </div>
                       <div className="added-package-meta">
