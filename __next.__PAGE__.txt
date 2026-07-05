@@ -1,6 +1,6 @@
 1:"$Sreact.fragment"
-2:I[22941,["/package-collector/_next/static/chunks/158myu8e_yme3.js","/package-collector/_next/static/chunks/1wa8el-2jdx2p.js"],"ClientHome"]
+2:I[22941,["/package-collector/_next/static/chunks/158myu8e_yme3.js","/package-collector/_next/static/chunks/2waitrvqv-py_.js"],"ClientHome"]
 3:I[97367,["/package-collector/_next/static/chunks/158myu8e_yme3.js"],"OutletBoundary"]
 4:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{}],[["$","script","script-0",{"src":"/package-collector/_next/static/chunks/1wa8el-2jdx2p.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"55uGXyVtdV3KGEMlXaE6B"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{}],[["$","script","script-0",{"src":"/package-collector/_next/static/chunks/2waitrvqv-py_.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"scW36h8qqyB2qhp1s0qO3"}
 5:null
