@@ -2407,7 +2407,7 @@ export function LahavPackagesApp() {
                         <option value="gate-crate">בדולב בש.ג</option>
                         <option value="kolbo">בכלבו</option>
                         <option value="collector-home">אצלי בבית</option>
-                        <option value="direct-home">נמסרה ישירות לבית המקבל</option>
+                        <option value="direct-home">נמסר ישירות לבעל החבילה</option>
                         <option value="other">אחר</option>
                       </select>
                     </div>
