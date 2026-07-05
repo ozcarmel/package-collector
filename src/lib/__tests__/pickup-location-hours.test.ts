@@ -115,5 +115,17 @@ describe("getPickupLocationOpenState", () => {
         new Date("2026-07-10T13:00:00+03:00"),
       ),
     ).toBe("open");
+    expect(
+      getPickupLocationOpenState(
+        demoLocation("shoval"),
+        new Date("2026-07-07T10:00:00+03:00"),
+      ),
+    ).toBe("open");
+    expect(
+      getPickupLocationOpenState(
+        demoLocation("shoval"),
+        new Date("2026-07-08T10:00:00+03:00"),
+      ),
+    ).toBe("closed");
   });
 });

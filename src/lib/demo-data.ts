@@ -156,7 +156,15 @@ export const initialAppState: AppState = {
       id: "shoval",
       name: "שובל",
       address: "\u05d3\u05d5\u05d0\u05e8 \u05e9\u05d5\u05d1\u05dc",
-      openingHours: "\u05e6\u05e8\u05d9\u05da \u05dc\u05d0\u05de\u05ea \u05e9\u05e2\u05d5\u05ea \u05e4\u05ea\u05d9\u05d7\u05d4",
+      openingHours: "א', ג', ה' 08:00-14:00, ב', ד', ו' סגור",
+      weeklyHours: {
+        0: [{ open: "08:00", close: "14:00" }],
+        1: [],
+        2: [{ open: "08:00", close: "14:00" }],
+        3: [],
+        4: [{ open: "08:00", close: "14:00" }],
+        5: [],
+      },
       navigationUrl:
         "https://www.google.com/maps/search/?api=1&query=%D7%93%D7%95%D7%90%D7%A8%20%D7%A9%D7%95%D7%91%D7%9C",
       activeRequests: 0,

@@ -67,6 +67,21 @@ const scheduleDefaults: Record<string, ScheduleDefault> = {
       location.openingHours.includes("07:30-15:00") ||
       location.openingHours.includes("צריך לאמת"),
   },
+  shoval: {
+    openingHours: "א', ג', ה' 08:00-14:00, ב', ד', ו' סגור",
+    weeklyHours: {
+      0: [{ open: "08:00", close: "14:00" }],
+      1: [],
+      2: [{ open: "08:00", close: "14:00" }],
+      3: [],
+      4: [{ open: "08:00", close: "14:00" }],
+      5: [],
+    },
+    shouldApply: (location) =>
+      !location.weeklyHours ||
+      location.openingHours.includes("16:00-17:30") ||
+      location.openingHours.includes("צריך לאמת"),
+  },
 };
 
 function normalizePickupLocationSchedule(location: PickupLocation): PickupLocation {

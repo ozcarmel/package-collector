@@ -45,11 +45,11 @@ const fallbackWeeklyHoursByLocationId: Record<string, PickupLocation["weeklyHour
   },
   shoval: {
     0: [{ open: "08:00", close: "14:00" }],
-    2: [
-      { open: "08:00", close: "14:00" },
-      { open: "16:00", close: "17:30" },
-    ],
+    1: [],
+    2: [{ open: "08:00", close: "14:00" }],
+    3: [],
     4: [{ open: "08:00", close: "14:00" }],
+    5: [],
   },
 };
 
