@@ -48,6 +48,7 @@ import {
   ozAdminPhone,
 } from "@/lib/oz-admin-shortcut";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
+import { normalizePickupLocationSchedules } from "@/lib/pickup-location-schedule-defaults";
 import type {
   AppState,
   DeliveryPackage,
@@ -141,10 +142,10 @@ const firebaseBootstrapUser: AppState["currentUser"] = {
 
 function getInitialRuntimeState(): AppState {
   if (!hasFirebaseConfig()) {
-    return initialAppState;
+    return normalizePickupLocationSchedules(initialAppState);
   }
 
-  return {
+  return normalizePickupLocationSchedules({
     ...initialAppState,
     currentUser: firebaseBootstrapUser,
     users: [firebaseBootstrapUser],
@@ -153,7 +154,7 @@ function getInitialRuntimeState(): AppState {
     pickupRuns: [],
     pickupRunItems: [],
     accessLogs: [],
-  };
+  });
 }
 
 const weekdayLabels: Array<[Weekday, string]> = [
@@ -252,6 +253,65 @@ function pickupLocationDisplayName(location: PickupLocation) {
   }
 
   return location.name;
+}
+
+const openingHoursDayNames = ["א", "ב", "ג", "ד", "ה", "ו", "שבת"];
+
+function openingHoursDayLabel(day: Weekday) {
+  return day === 6 ? "שבת" : `${openingHoursDayNames[day]}'`;
+}
+
+function openingHoursRangeLabel(start: Weekday, end: Weekday) {
+  if (start === end) return openingHoursDayLabel(start);
+  return `${openingHoursDayLabel(start)}-${openingHoursDayLabel(end)}`;
+}
+
+function openingHoursWindowText(windows: WeeklyOpeningHours[Weekday] = []) {
+  if (windows.length === 0) return "סגור";
+  return windows.map((window) => `${window.open}-${window.close}`).join(", ");
+}
+
+function openingHoursRows(location: PickupLocation) {
+  if (!location.weeklyHours) {
+    return [{ days: "", hours: location.openingHours }];
+  }
+
+  const configuredDays = weekdayLabels
+    .map(([day]) => day)
+    .filter((day) => Object.prototype.hasOwnProperty.call(location.weeklyHours, day));
+
+  if (configuredDays.length === 0) {
+    return [{ days: "", hours: location.openingHours }];
+  }
+
+  const rows: Array<{ days: string; hours: string }> = [];
+  let rangeStart = configuredDays[0];
+  let rangeEnd = configuredDays[0];
+  let previousText = openingHoursWindowText(location.weeklyHours[rangeStart]);
+
+  for (const currentDay of configuredDays.slice(1)) {
+    const currentText = openingHoursWindowText(location.weeklyHours[currentDay]);
+    const crossesIntoFriday = rangeEnd === 4 && currentDay === 5;
+    if (currentText === previousText && currentDay === rangeEnd + 1 && !crossesIntoFriday) {
+      rangeEnd = currentDay;
+      continue;
+    }
+
+    rows.push({
+      days: openingHoursRangeLabel(rangeStart, rangeEnd),
+      hours: previousText,
+    });
+    rangeStart = currentDay;
+    rangeEnd = currentDay;
+    previousText = currentText;
+  }
+
+  rows.push({
+    days: openingHoursRangeLabel(rangeStart, rangeEnd),
+    hours: previousText,
+  });
+
+  return rows;
 }
 
 function statusBadgeClass(status: PackageStatus) {
@@ -467,7 +527,7 @@ export function LahavPackagesApp() {
 
     const timeout = window.setTimeout(() => {
       const savedState = localDemoRepository.load();
-      if (savedState) setState(savedState);
+      if (savedState) setState(normalizePickupLocationSchedules(savedState));
       setRepositoryReady(true);
     }, 0);
 
@@ -484,7 +544,7 @@ export function LahavPackagesApp() {
 
     const unsubscribe = subscribeFirestoreAppState(
       subscriptionUser,
-      setState,
+      (nextState) => setState(normalizePickupLocationSchedules(nextState)),
       () => setToast("לא הצלחנו לקבל עדכונים חיים מ-Firebase."),
     );
 
@@ -649,7 +709,7 @@ export function LahavPackagesApp() {
           actionDeps,
         );
         if (result.state) {
-          setState(result.state);
+          setState(normalizePickupLocationSchedules(result.state));
         }
         setSubmittedJoinRequestId(result.requestId);
         setJoinPreviewMode(false);
@@ -923,7 +983,7 @@ export function LahavPackagesApp() {
         actionDeps,
       );
       if (result.state) {
-        setState(result.state);
+        setState(normalizePickupLocationSchedules(result.state));
       }
       setSubmittedJoinRequestId(result.requestId);
       const isRecognizedApprovedUser = result.recognizedApprovedUser === true;
@@ -1051,7 +1111,7 @@ export function LahavPackagesApp() {
   }
 
   function applyRepositoryState(nextState: AppState | void) {
-    if (nextState) setState(nextState);
+    if (nextState) setState(normalizePickupLocationSchedules(nextState));
   }
 
   function updateLocationDay(day: Weekday, patch: Partial<LocationDayDraft>) {
@@ -1478,7 +1538,14 @@ export function LahavPackagesApp() {
             <h2 id="opening-hours-title">שעות פתיחה</h2>
             <div className="hours-location-name">{hoursLocation.name}</div>
             <div className="hours-address">{hoursLocation.address}</div>
-            <div className="hours-summary">{hoursLocation.openingHours}</div>
+            <div className="hours-summary">
+              {openingHoursRows(hoursLocation).map((row) => (
+                <div className="hours-row" key={`${row.days}-${row.hours}`}>
+                  {row.days ? <span className="hours-days">{row.days}</span> : null}
+                  <span className="hours-value">{row.hours}</span>
+                </div>
+              ))}
+            </div>
             <div className="card-actions">
               <button
                 className="button primary full"

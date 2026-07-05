@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { initialAppState } from "@/lib/demo-data";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 
 describe("getPickupLocationOpenState", () => {
+  function demoLocation(id: string) {
+    const location = initialAppState.pickupLocations.find((item) => item.id === id);
+    if (!location) throw new Error(`Missing demo location ${id}`);
+    return location;
+  }
+
   it("uses demo state to mark Shoval open", () => {
     expect(
       getPickupLocationOpenState(
@@ -75,5 +82,38 @@ describe("getPickupLocationOpenState", () => {
         new Date("2026-06-29T10:00:00+03:00"),
       ),
     ).toBe("closed");
+  });
+
+  it("uses the updated pickup-location schedules", () => {
+    expect(
+      getPickupLocationOpenState(
+        demoLocation("home-paami"),
+        new Date("2026-07-05T09:30:00+03:00"),
+      ),
+    ).toBe("closed");
+    expect(
+      getPickupLocationOpenState(
+        demoLocation("home-paami"),
+        new Date("2026-07-05T10:30:00+03:00"),
+      ),
+    ).toBe("open");
+    expect(
+      getPickupLocationOpenState(
+        demoLocation("post-office"),
+        new Date("2026-07-09T14:00:00+03:00"),
+      ),
+    ).toBe("open");
+    expect(
+      getPickupLocationOpenState(
+        demoLocation("eshkolot"),
+        new Date("2026-07-10T10:00:00+03:00"),
+      ),
+    ).toBe("closed");
+    expect(
+      getPickupLocationOpenState(
+        demoLocation("deli-place"),
+        new Date("2026-07-10T13:00:00+03:00"),
+      ),
+    ).toBe("open");
   });
 });

@@ -4,18 +4,20 @@ export type PickupLocationOpenState = "open" | "closed" | "unknown";
 
 const fallbackWeeklyHoursByLocationId: Record<string, PickupLocation["weeklyHours"]> = {
   "home-paami": {
-    0: [{ open: "09:00", close: "20:00" }],
-    1: [{ open: "09:00", close: "20:00" }],
-    2: [{ open: "09:00", close: "20:00" }],
-    3: [{ open: "09:00", close: "20:00" }],
-    4: [{ open: "09:00", close: "20:00" }],
-    5: [{ open: "08:30", close: "14:30" }],
+    0: [{ open: "10:00", close: "19:00" }],
+    1: [{ open: "10:00", close: "19:00" }],
+    2: [{ open: "10:00", close: "19:00" }],
+    3: [{ open: "10:00", close: "19:00" }],
+    4: [{ open: "10:00", close: "19:00" }],
+    5: [{ open: "09:00", close: "12:00" }],
   },
   "post-office": {
     0: [{ open: "13:00", close: "18:00" }],
     1: [{ open: "11:00", close: "15:00" }],
     2: [{ open: "11:00", close: "15:00" }],
     3: [{ open: "11:00", close: "15:00" }],
+    4: [{ open: "13:00", close: "18:00" }],
+    5: [],
   },
   pitzutz: {
     0: [{ open: "08:00", close: "00:00" }],
@@ -25,28 +27,21 @@ const fallbackWeeklyHoursByLocationId: Record<string, PickupLocation["weeklyHour
     4: [{ open: "08:00", close: "00:00" }],
     5: [{ open: "09:00", close: "14:00" }],
   },
+  eshkolot: {
+    0: [{ open: "08:00", close: "13:00" }],
+    1: [{ open: "08:00", close: "13:00" }],
+    2: [{ open: "08:00", close: "13:00" }],
+    3: [{ open: "08:00", close: "13:00" }],
+    4: [{ open: "08:00", close: "13:00" }],
+    5: [],
+  },
   "deli-place": {
-    0: [
-      { open: "08:30", close: "14:00" },
-      { open: "16:00", close: "20:00" },
-    ],
-    1: [
-      { open: "08:30", close: "14:00" },
-      { open: "16:00", close: "20:00" },
-    ],
-    2: [
-      { open: "08:30", close: "14:00" },
-      { open: "16:00", close: "20:00" },
-    ],
-    3: [
-      { open: "08:30", close: "14:00" },
-      { open: "16:00", close: "20:00" },
-    ],
-    4: [
-      { open: "08:30", close: "14:00" },
-      { open: "16:00", close: "20:00" },
-    ],
-    5: [{ open: "07:30", close: "15:00" }],
+    0: [{ open: "08:30", close: "14:00" }],
+    1: [{ open: "08:30", close: "14:00" }],
+    2: [{ open: "08:30", close: "14:00" }],
+    3: [{ open: "08:30", close: "14:00" }],
+    4: [{ open: "08:30", close: "14:00" }],
+    5: [{ open: "08:30", close: "14:00" }],
   },
   shoval: {
     0: [{ open: "08:00", close: "14:00" }],

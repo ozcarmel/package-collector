@@ -9,7 +9,15 @@ const pickupLocations = [
     address:
       "\u05e9\u05d3\u05e8\u05d5\u05ea \u05e9\u05e2\u05d5\u05e8\u05d4 1, \u05dc\u05d4\u05d1\u05d9\u05dd",
     openingHours:
-      "\u05e6\u05e8\u05d9\u05da \u05dc\u05d0\u05de\u05ea \u05e9\u05e2\u05d5\u05ea \u05e4\u05ea\u05d9\u05d7\u05d4",
+      "\u05d0'-\u05d4' 10:00-19:00, \u05d5' 09:00-12:00",
+    weeklyHours: {
+      0: [{ open: "10:00", close: "19:00" }],
+      1: [{ open: "10:00", close: "19:00" }],
+      2: [{ open: "10:00", close: "19:00" }],
+      3: [{ open: "10:00", close: "19:00" }],
+      4: [{ open: "10:00", close: "19:00" }],
+      5: [{ open: "09:00", close: "12:00" }],
+    },
     navigationUrl:
       "https://www.google.com/maps/search/?api=1&query=%D7%94%D7%95%D7%9D%20%D7%A4%D7%A2%D7%9E%D7%99%20%D7%A9%D7%93%D7%A8%D7%95%D7%AA%20%D7%A9%D7%A2%D7%95%D7%A8%D7%94%201%20%D7%9C%D7%94%D7%91%D7%99%D7%9D",
     sortOrder: 10,
@@ -20,7 +28,15 @@ const pickupLocations = [
     address:
       "\u05e8\u05d9\u05de\u05d5\u05df 1, \u05dc\u05d4\u05d1\u05d9\u05dd",
     openingHours:
-      "\u05e6\u05e8\u05d9\u05da \u05dc\u05d0\u05de\u05ea \u05e9\u05e2\u05d5\u05ea \u05e4\u05ea\u05d9\u05d7\u05d4",
+      "\u05d0', \u05d4' 13:00-18:00, \u05d1'-\u05d3' 11:00-15:00, \u05d5' \u05e1\u05d2\u05d5\u05e8",
+    weeklyHours: {
+      0: [{ open: "13:00", close: "18:00" }],
+      1: [{ open: "11:00", close: "15:00" }],
+      2: [{ open: "11:00", close: "15:00" }],
+      3: [{ open: "11:00", close: "15:00" }],
+      4: [{ open: "13:00", close: "18:00" }],
+      5: [],
+    },
     navigationUrl:
       "https://www.google.com/maps/search/?api=1&query=%D7%93%D7%95%D7%90%D7%A8%20%D7%9C%D7%94%D7%91%D7%99%D7%9D%20%D7%A8%D7%99%D7%9E%D7%95%D7%9F%201",
     sortOrder: 20,
@@ -65,13 +81,14 @@ const pickupLocations = [
     address:
       "\u05de\u05d6\u05db\u05d9\u05e8\u05d5\u05ea \u05d0\u05e9\u05db\u05d5\u05dc\u05d5\u05ea",
     openingHours:
-      "\u05d0'-\u05d4' 08:00-13:00",
+      "\u05d0'-\u05d4' 08:00-13:00, \u05d5' \u05e1\u05d2\u05d5\u05e8",
     weeklyHours: {
       0: [{ open: "08:00", close: "13:00" }],
       1: [{ open: "08:00", close: "13:00" }],
       2: [{ open: "08:00", close: "13:00" }],
       3: [{ open: "08:00", close: "13:00" }],
       4: [{ open: "08:00", close: "13:00" }],
+      5: [],
     },
     navigationUrl:
       "https://www.google.com/maps/search/?api=1&query=%D7%9E%D7%96%D7%9B%D7%99%D7%A8%D7%95%D7%AA%20%D7%90%D7%A9%D7%9B%D7%95%D7%9C%D7%95%D7%AA",
@@ -84,7 +101,15 @@ const pickupLocations = [
     address:
       "\u05e9\u05d3\u05e8\u05d5\u05ea \u05e9\u05e2\u05d5\u05e8\u05d4 1, \u05dc\u05d4\u05d1\u05d9\u05dd",
     openingHours:
-      "\u05e6\u05e8\u05d9\u05da \u05dc\u05d0\u05de\u05ea \u05e9\u05e2\u05d5\u05ea \u05e4\u05ea\u05d9\u05d7\u05d4",
+      "\u05d0'-\u05d4' 08:30-14:00, \u05d5' 08:30-14:00",
+    weeklyHours: {
+      0: [{ open: "08:30", close: "14:00" }],
+      1: [{ open: "08:30", close: "14:00" }],
+      2: [{ open: "08:30", close: "14:00" }],
+      3: [{ open: "08:30", close: "14:00" }],
+      4: [{ open: "08:30", close: "14:00" }],
+      5: [{ open: "08:30", close: "14:00" }],
+    },
     navigationUrl:
       "https://www.google.com/maps/search/?api=1&query=%D7%93%D7%9C%D7%99%20%D7%A4%D7%9C%D7%99%D7%99%D7%A1%20%D7%A9%D7%93%D7%A8%D7%95%D7%AA%20%D7%A9%D7%A2%D7%95%D7%A8%D7%94%201%20%D7%9C%D7%94%D7%91%D7%99%D7%9D",
     sortOrder: 50,

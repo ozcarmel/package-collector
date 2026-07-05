@@ -1868,6 +1868,32 @@ form.stack,
   border-color: #c8dcc8;
   background: #edf4e6;
   font-weight: 800;
+  display: grid;
+  gap: 8px;
+}
+
+.hours-row {
+  display: grid;
+  grid-template-columns: minmax(54px, max-content) 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.hours-row + .hours-row {
+  border-top: 1px solid rgb(39 103 73 / 14%);
+  padding-top: 8px;
+}
+
+.hours-days {
+  color: #145236;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.hours-value {
+  color: #26362d;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .protected-value {
