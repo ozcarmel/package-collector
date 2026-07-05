@@ -235,13 +235,13 @@ select:focus-visible {
 .home-top {
   flex: 0 0 auto;
   display: grid;
-  gap: 12px;
-  padding-bottom: 10px;
+  gap: 8px;
+  padding-bottom: 6px;
 }
 
 .home-list {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 1 1 160px;
+  min-height: 96px;
   overflow-y: auto;
   overscroll-behavior: contain;
   overflow-anchor: none;
@@ -297,7 +297,7 @@ select:focus-visible {
 
 .home-status-band {
   position: relative;
-  min-height: 104px;
+  min-height: 92px;
   margin-top: -2px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -308,8 +308,8 @@ select:focus-visible {
 .home-status-band::before {
   position: absolute;
   inset-inline: 10px;
-  top: 11px;
-  height: 54px;
+  top: 8px;
+  height: 50px;
   border-radius: 999px;
   content: "";
   background:
@@ -323,7 +323,7 @@ select:focus-visible {
 .home-status-band::after {
   position: absolute;
   inset-inline: 54px;
-  top: 38px;
+  top: 34px;
   z-index: 1;
   height: 3px;
   border-radius: 999px;
@@ -336,10 +336,10 @@ select:focus-visible {
   position: relative;
   z-index: 2;
   min-width: 0;
-  padding: 9px 4px 0;
+  padding: 6px 4px 0;
   display: grid;
-  grid-template-rows: 62px minmax(34px, auto);
-  gap: 3px;
+  grid-template-rows: 55px minmax(30px, auto);
+  gap: 1px;
   justify-items: center;
   align-items: start;
   text-align: center;
@@ -353,8 +353,8 @@ select:focus-visible {
   position: relative;
   z-index: 2;
   grid-row: 1;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border: 1px solid #dfc8a2;
   border-radius: 999px;
   display: grid;
@@ -368,8 +368,8 @@ select:focus-visible {
 }
 
 .home-status-icon svg {
-  width: 23px;
-  height: 23px;
+  width: 21px;
+  height: 21px;
   stroke-width: 2.35;
 }
 
@@ -379,7 +379,7 @@ select:focus-visible {
 
 .home-status-item strong {
   position: absolute;
-  top: 39px;
+  top: 34px;
   right: calc(50% - 38px);
   z-index: 4;
   min-width: 23px;
@@ -402,7 +402,7 @@ select:focus-visible {
   grid-row: 2;
   max-width: 74px;
   color: #285341;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.18;
   font-weight: 700;
 }
@@ -528,7 +528,7 @@ select:focus-visible {
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-inline: contain;
-  min-height: 84px;
+  min-height: 74px;
   padding: 4px 0 2px;
   scroll-padding-inline: 10px;
 }
@@ -538,20 +538,20 @@ select:focus-visible {
   z-index: 1;
   flex: 0 0 98px;
   display: grid;
-  grid-template-rows: 54px 22px;
+  grid-template-rows: 50px 20px;
   justify-items: stretch;
-  gap: 4px;
-  height: 80px;
+  gap: 3px;
+  height: 72px;
   overflow: visible;
 }
 
 .location-more-indicator {
   position: absolute;
   left: 0;
-  top: 9px;
+  top: 7px;
   z-index: 4;
   width: 10px;
-  height: 48px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -582,8 +582,8 @@ select:focus-visible {
 .pickup-card {
   position: relative;
   width: 98px;
-  height: 54px;
-  min-height: 54px;
+  height: 50px;
+  min-height: 50px;
   border: 1px solid rgb(195 212 178 / 92%);
   border-radius: 13px;
   background: rgb(242 250 231 / 94%);
