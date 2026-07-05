@@ -528,6 +528,7 @@ export function LahavPackagesApp() {
   const pickupLocationStripRef = useRef<HTMLDivElement | null>(null);
   const pickupLocationArrowRef = useRef<HTMLButtonElement | null>(null);
   const ozPendingRecoveryRef = useRef<string | null>(null);
+  const pendingCreatedPackageIdsRef = useRef<Set<string>>(new Set());
   const firebaseEnabled = hasFirebaseConfig();
   const currentUser = state.currentUser;
   const isFirebaseBootstrapUser = currentUser.id === firebaseBootstrapUser.id;
@@ -626,7 +627,10 @@ export function LahavPackagesApp() {
 
     const unsubscribe = subscribeFirestoreAppState(
       subscriptionUser,
-      (nextState) => setState(normalizePickupLocationSchedules(nextState)),
+      (nextState) =>
+        setState((currentState) =>
+          normalizePickupLocationSchedules(mergePendingCreatedPackages(currentState, nextState)),
+        ),
       () => setToast("לא הצלחנו לקבל עדכונים חיים מ-Firebase."),
     );
 
@@ -1107,6 +1111,7 @@ export function LahavPackagesApp() {
         },
         actionDeps,
       );
+      pendingCreatedPackageIdsRef.current.add(result.packageId);
       applyRepositoryState(result.state);
       setDraft(emptyDraft);
       setScreen("home");
@@ -1187,6 +1192,27 @@ export function LahavPackagesApp() {
   function wasPickupLinkOpened(packageId: string) {
     const runItem = activeRunItems.find((item) => item.packageId === packageId);
     return Boolean(runItem?.sensitivePickupLinkOpenedAt || openedPickupLinkPackageIds.has(packageId));
+  }
+
+  function mergePendingCreatedPackages(currentState: AppState, remoteState: AppState) {
+    const pendingIds = pendingCreatedPackageIdsRef.current;
+    if (!pendingIds.size) return remoteState;
+
+    const remotePackageIds = new Set(remoteState.packages.map((pkg) => pkg.id));
+    pendingIds.forEach((packageId) => {
+      if (remotePackageIds.has(packageId)) pendingIds.delete(packageId);
+    });
+
+    const pendingLocalPackages = currentState.packages.filter(
+      (pkg) => pendingIds.has(pkg.id) && !remotePackageIds.has(pkg.id),
+    );
+
+    if (!pendingLocalPackages.length) return remoteState;
+
+    return {
+      ...remoteState,
+      packages: [...pendingLocalPackages, ...remoteState.packages],
+    };
   }
 
   function applyRepositoryState(nextState: AppState | void) {

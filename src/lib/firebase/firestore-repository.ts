@@ -224,7 +224,18 @@ export const firestoreRepository: AppOperationsRepository = {
       updatedAt,
     }));
     await batch.commit();
-    return { packageId };
+    return {
+      packageId,
+      state: {
+        ...state,
+        packages: [publicPackage, ...state.packages],
+        pickupLocations: state.pickupLocations.map((location) =>
+          location.id === input.pickupLocationId
+            ? { ...location, activeRequests: location.activeRequests + 1 }
+            : location,
+        ),
+      },
+    };
   },
 
   async createPickupLocation(
