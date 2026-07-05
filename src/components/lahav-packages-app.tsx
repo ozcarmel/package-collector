@@ -73,6 +73,8 @@ type Screen =
   | "arrival"
   | "admin";
 
+type EffectiveScreen = Screen | "loading";
+
 type AdminListView = "pending" | "approved" | "managers" | "packages";
 type HomePackageStatusBucket = "waiting" | "collected" | "arrived" | "delivered";
 
@@ -789,9 +791,11 @@ export function LahavPackagesApp() {
     isApprovedUser && (currentUser.role === "admin" || currentUser.role === "owner");
   const hasPackagesForDelivery = currentUserCollectedPackages.length > 0;
   const canOpenArrivalScreen = isApprovedUser;
+  const isResolvingFirebaseSession = firebaseEnabled && !repositoryReady && !joinPreviewMode;
   const requestedScreenAccessMessage = isApprovedUser ? null : unapprovedAccessMessage(screen);
-  const effectiveScreen: Screen =
-    screen === "pending" && submittedJoinRequest?.status === "approved"
+  const effectiveScreen: EffectiveScreen = isResolvingFirebaseSession
+    ? "loading"
+    : screen === "pending" && submittedJoinRequest?.status === "approved"
       ? "home"
       : screen === "home" && !isApprovedUser
         ? submittedJoinRequest
@@ -1014,6 +1018,11 @@ export function LahavPackagesApp() {
     showMark?: boolean;
   } {
     switch (effectiveScreen) {
+      case "loading":
+        return {
+          title: appName,
+          showMark: true,
+        };
       case "home":
         return {
           title: appName,
@@ -2144,6 +2153,8 @@ export function LahavPackagesApp() {
 
   function renderScreen() {
     switch (effectiveScreen) {
+      case "loading":
+        return <LoadingScreen />;
       case "join":
         return (
           <JoinScreen
@@ -3105,6 +3116,18 @@ export function LahavPackagesApp() {
       </div>
     );
   }
+}
+
+function LoadingScreen() {
+  return (
+    <div className="loading-screen" role="status" aria-live="polite">
+      <div className="loading-illustration" aria-hidden="true">
+        <Package />
+      </div>
+      <h1>טוען את חבילות להב...</h1>
+      <p>בודקים את פרטי המשתמש.</p>
+    </div>
+  );
 }
 
 function JoinScreen({

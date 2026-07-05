@@ -1875,6 +1875,46 @@ form.stack,
   line-height: 1.55;
 }
 
+.loading-screen {
+  min-height: 360px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.loading-illustration {
+  width: 96px;
+  height: 96px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  background: linear-gradient(180deg, #e9edcf 0%, #d8e7ca 100%);
+}
+
+.loading-illustration svg {
+  width: 46px;
+  height: 46px;
+  stroke-width: 1.8;
+}
+
+.loading-screen h1 {
+  margin: 4px 0 0;
+  color: #161f19;
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.loading-screen p {
+  margin: 0;
+  color: #403c34;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 .card-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
