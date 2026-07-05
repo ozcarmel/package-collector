@@ -44,8 +44,6 @@ import { hasFirebaseConfig } from "@/lib/firebase/client";
 import {
   isOzAdminShortcut,
   isOzSuperAdminUser,
-  normalizePhone,
-  ozAdminPhone,
 } from "@/lib/oz-admin-shortcut";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import { normalizePickupLocationSchedules } from "@/lib/pickup-location-schedule-defaults";
@@ -445,7 +443,6 @@ export function LahavPackagesApp() {
   const pickupLocationStripRef = useRef<HTMLDivElement | null>(null);
   const pickupLocationArrowRef = useRef<HTMLButtonElement | null>(null);
   const ozPendingRecoveryRef = useRef<string | null>(null);
-  const ozDuplicateCleanupRef = useRef<string | null>(null);
   const firebaseEnabled = hasFirebaseConfig();
   const currentUser = state.currentUser;
   const isFirebaseBootstrapUser = currentUser.id === firebaseBootstrapUser.id;
@@ -733,53 +730,6 @@ export function LahavPackagesApp() {
     repositoryReady,
     state,
     submittedJoinRequest,
-  ]);
-
-  useEffect(() => {
-    if (!repositoryReady || !canManageCommunity || !isOzSuperAdminUser(currentUser)) return;
-
-    const duplicateOzManagerIds = state.users
-      .filter(
-        (user) =>
-          user.id !== currentUserId &&
-          user.verificationStatus === "approved" &&
-          (user.role === "admin" || user.role === "owner") &&
-          normalizePhone(user.phone) === ozAdminPhone,
-      )
-      .map((user) => user.id)
-      .sort();
-
-    if (duplicateOzManagerIds.length === 0) return;
-
-    const cleanupKey = duplicateOzManagerIds.join("|");
-    if (ozDuplicateCleanupRef.current === cleanupKey) return;
-    ozDuplicateCleanupRef.current = cleanupKey;
-
-    void (async () => {
-      let nextState = state;
-      try {
-        for (const userId of duplicateOzManagerIds) {
-          const result = await operationsRepository.blockUser(nextState, userId, actionDeps);
-          if (result) {
-            nextState = result;
-          }
-        }
-        if (nextState !== state) {
-          applyRepositoryState(nextState);
-        }
-        notify("נמחקו הרשאות מנהל כפולות של עוז כרמל.");
-      } catch {
-        notify("לא הצלחנו לנקות הרשאות מנהל כפולות.");
-      }
-    })();
-  }, [
-    actionDeps,
-    canManageCommunity,
-    currentUser,
-    currentUserId,
-    operationsRepository,
-    repositoryReady,
-    state,
   ]);
 
   const pendingUnlockStyle: CSSProperties | undefined = pendingUnlockAnchor

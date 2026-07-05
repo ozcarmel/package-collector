@@ -61,34 +61,6 @@ function withoutUndefined<T extends object>(value: T) {
   ) as T;
 }
 
-async function blockDuplicateOzManagers(db: Firestore, currentUserId: string, now: string) {
-  const usersSnapshot = await getDocs(
-    query(collection(db, "users"), where("phone", "==", ozAdminPhone)),
-  );
-  const batch = writeBatch(db);
-  let hasDuplicate = false;
-
-  usersSnapshot.forEach((snapshot) => {
-    const user = snapshot.data() as AppState["users"][number];
-    if (
-      user.id !== currentUserId &&
-      user.verificationStatus === "approved" &&
-      (user.role === "admin" || user.role === "owner")
-    ) {
-      hasDuplicate = true;
-      batch.update(snapshot.ref, {
-        verificationStatus: "blocked",
-        blockedAt: now,
-        blockedByUserId: currentUserId,
-      });
-    }
-  });
-
-  if (hasDuplicate) {
-    await batch.commit();
-  }
-}
-
 async function findApprovedUserWithPhone(
   db: Firestore,
   phone: string,
@@ -203,7 +175,6 @@ export const firestoreRepository: AppOperationsRepository = {
     batch.set(doc(db, "joinRequests", request.id), withoutUndefined(request));
     batch.set(doc(db, "users", state.currentUser.id), withoutUndefined(adminUser), { merge: true });
     await batch.commit();
-    await blockDuplicateOzManagers(db, state.currentUser.id, now);
     return {
       requestId: request.id,
       state: {

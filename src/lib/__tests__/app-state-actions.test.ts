@@ -109,6 +109,40 @@ describe("app state actions", () => {
     });
   });
 
+  it("keeps existing Oz sessions approved when Oz joins from another device", () => {
+    const deps = createTestDeps();
+    const state: AppState = {
+      ...cloneState(),
+      currentUser: {
+        id: "guest-oz-second-device",
+        fullName: "",
+        phone: "",
+        role: "member",
+        verificationStatus: "phone_pending",
+        createdAt: "2026-06-28T10:00:00.000Z",
+      },
+    };
+
+    const result = createJoinRequest(
+      state,
+      {
+        fullName: "עוז כרמל",
+        phone: "0584411883",
+      },
+      deps,
+    );
+
+    expect(result.state.currentUser).toMatchObject({
+      id: "guest-oz-second-device",
+      role: "owner",
+      verificationStatus: "approved",
+    });
+    expect(result.state.users.find((user) => user.id === "u-admin")).toMatchObject({
+      role: "owner",
+      verificationStatus: "approved",
+    });
+  });
+
   it("prevents approving a request when an approved user with the same phone exists", () => {
     const deps = createTestDeps();
     const state: AppState = {

@@ -70,19 +70,6 @@ export function createJoinRequest(
   const now = deps.now();
 
   if (isOzAdminShortcut(input)) {
-    const blockedDuplicateOzManagers = state.users.map((user) =>
-      user.id !== state.currentUser.id &&
-      user.verificationStatus === "approved" &&
-      (user.role === "admin" || user.role === "owner") &&
-      normalizePhone(user.phone) === ozAdminPhone
-        ? {
-            ...user,
-            verificationStatus: "blocked" as const,
-            blockedAt: now,
-            blockedByUserId: state.currentUser.id,
-          }
-        : user,
-    );
     const adminUser = {
       ...state.currentUser,
       fullName: ozAdminFullName,
@@ -108,7 +95,7 @@ export function createJoinRequest(
       state: {
         ...state,
         currentUser: adminUser,
-        users: [adminUser, ...blockedDuplicateOzManagers.filter((user) => user.id !== adminUser.id)],
+        users: [adminUser, ...state.users.filter((user) => user.id !== adminUser.id)],
         joinRequests: [request, ...state.joinRequests],
       },
     };
