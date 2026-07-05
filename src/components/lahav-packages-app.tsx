@@ -69,6 +69,7 @@ type Screen =
   | "admin";
 
 type AdminListView = "pending" | "approved" | "managers" | "packages";
+type HomePackageStatusBucket = "waiting" | "collected" | "arrived" | "delivered";
 
 interface DraftPackage {
   ownerName: string;
@@ -327,15 +328,62 @@ function statusBadgeClass(status: PackageStatus) {
   return "badge waiting";
 }
 
-function packageDetailBadge(pkg: DeliveryPackage) {
-  switch (pkg.status) {
+function getHomePackageStatusBucket(status: PackageStatus): HomePackageStatusBucket | null {
+  switch (status) {
     case "waiting":
     case "assigned":
-      return {
-        className: "badge locked",
-        icon: <Lock />,
-        text: "פרטי איסוף מוגנים",
-      };
+      return "waiting";
+    case "collected":
+      return "collected";
+    case "arrived":
+    case "ready_for_handoff":
+      return "arrived";
+    case "delivered":
+      return "delivered";
+    case "cancelled":
+      return null;
+  }
+}
+
+function homePackageStatusLabel(pkg: DeliveryPackage) {
+  const bucket = getHomePackageStatusBucket(pkg.status);
+
+  switch (bucket) {
+    case "waiting":
+      return "ממתינה לאיסוף";
+    case "collected":
+      return "נאספה";
+    case "arrived":
+      return "ממתינה למסירה בקיבוץ";
+    case "delivered":
+      return "נמסרה";
+    case null:
+      return statusLabel(pkg.status);
+  }
+}
+
+function homePackageStatusBadgeClass(pkg: DeliveryPackage) {
+  const bucket = getHomePackageStatusBucket(pkg.status);
+
+  switch (bucket) {
+    case "waiting":
+      return "badge waiting";
+    case "collected":
+      return "badge blue";
+    case "arrived":
+    case "delivered":
+      return "badge done";
+    case null:
+      return statusBadgeClass(pkg.status);
+  }
+}
+
+function homePackageDetailBadge(pkg: DeliveryPackage) {
+  const bucket = getHomePackageStatusBucket(pkg.status);
+
+  switch (bucket) {
+    case "waiting":
+      return null;
     case "collected":
       return {
         className: "badge blue",
@@ -343,7 +391,6 @@ function packageDetailBadge(pkg: DeliveryPackage) {
         text: "בדרך לקיבוץ",
       };
     case "arrived":
-    case "ready_for_handoff":
       return {
         className: "badge done",
         icon: null,
@@ -358,11 +405,11 @@ function packageDetailBadge(pkg: DeliveryPackage) {
         icon: null,
         text: "נמסרה לבעל החבילה",
       };
-    case "cancelled":
+    case null:
       return {
-        className: "badge danger",
+        className: statusBadgeClass(pkg.status),
         icon: null,
-        text: "לא פעילה",
+        text: statusLabel(pkg.status),
       };
   }
 }
@@ -605,20 +652,30 @@ export function LahavPackagesApp() {
       document.removeEventListener("pointerdown", closeUnlockPopupWhenSwitchingLocations, true);
   }, [pendingUnlockLocationId]);
 
-  const waitingPackages = state.packages.filter((pkg) => pkg.status === "waiting");
-  const collectedPackages = state.packages.filter((pkg) => pkg.status === "collected");
+  const activeHomePackages = state.packages.filter(
+    (pkg) =>
+      getHomePackageStatusBucket(pkg.status) !== null && shouldShowPackageOnHome(pkg, currentTimeMs),
+  );
+  const waitingPackages = activeHomePackages.filter(
+    (pkg) => getHomePackageStatusBucket(pkg.status) === "waiting",
+  );
+  const collectedPackages = activeHomePackages.filter(
+    (pkg) => getHomePackageStatusBucket(pkg.status) === "collected",
+  );
   const currentUserCollectedPackages = collectedPackages.filter(
     (pkg) => pkg.collectorUserId === currentUserId,
   );
-  const arrivedPackages = state.packages.filter(
-    (pkg) => pkg.status === "arrived" || pkg.status === "ready_for_handoff",
+  const arrivedPackages = activeHomePackages.filter(
+    (pkg) => getHomePackageStatusBucket(pkg.status) === "arrived",
   );
-  const deliveredPackages = state.packages.filter((pkg) => pkg.status === "delivered");
+  const deliveredPackages = activeHomePackages.filter(
+    (pkg) => getHomePackageStatusBucket(pkg.status) === "delivered",
+  );
   const homePackages = homeLocationFilterId
-    ? state.packages.filter((pkg) => pkg.pickupLocationId === homeLocationFilterId)
-    : state.packages;
-  const visibleHomePackages = homePackages.filter((pkg) =>
-    shouldShowPackageOnHome(pkg, currentTimeMs),
+    ? activeHomePackages.filter((pkg) => pkg.pickupLocationId === homeLocationFilterId)
+    : activeHomePackages;
+  const visibleHomePackages = homePackages.filter(
+    (pkg) => getHomePackageStatusBucket(pkg.status) !== null,
   );
   const effectiveDraftPickupLocationId = state.pickupLocations.some(
     (location) => location.id === draft.pickupLocationId,
@@ -2376,7 +2433,7 @@ export function LahavPackagesApp() {
 
   function PackageCard({ pkg }: { pkg: DeliveryPackage }) {
     const collectorName = getUserName(state.users, pkg.collectorUserId);
-    const detailBadge = packageDetailBadge(pkg);
+    const detailBadge = homePackageDetailBadge(pkg);
     const canConfirmReceived =
       pkg.ownerUserId === currentUserId &&
       (pkg.status === "arrived" || pkg.status === "ready_for_handoff");
@@ -2401,9 +2458,11 @@ export function LahavPackagesApp() {
                 {getLocationName(state.pickupLocations, pkg.pickupLocationId)}
               </div>
             </div>
-            <span className={statusBadgeClass(pkg.status)}>{statusLabel(pkg.status)}</span>
+            <span className={homePackageStatusBadgeClass(pkg)}>
+              {homePackageStatusLabel(pkg)}
+            </span>
           </div>
-          {pkg.status !== "waiting" && pkg.status !== "assigned" ? (
+          {detailBadge ? (
             <span className={detailBadge.className}>
               {detailBadge.icon}
               {detailBadge.text}
