@@ -332,6 +332,12 @@ test("pickup flow reveals original messages only after confirmation and records 
   await expect(dropNote).toHaveAttribute("placeholder", "");
   await dropNote.fill("השארתי ליד המזכירות");
   await expect(dropNote).toHaveValue("השארתי ליד המזכירות");
+
+  await dropLocation.selectOption("gate-crate");
+  await dropNote.fill("");
+  await app(page).getByRole("button", { name: /עדכן מיקום/ }).click();
+  await expect(page.getByRole("status")).toContainText("מיקום החבילות בקיבוץ עודכן");
+  await expect(app(page).getByText("שמתי בדולב").first()).toBeVisible();
 });
 
 test("home and form UI avoid the known layout regressions", async ({ page }) => {

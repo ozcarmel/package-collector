@@ -346,7 +346,10 @@ function packageDetailBadge(pkg: DeliveryPackage) {
       return {
         className: "badge done",
         icon: null,
-        text: pkg.currentKibbutzLocationText ?? "מיקום בקיבוץ לא צוין",
+        text:
+          pkg.currentKibbutzLocationText?.trim() ||
+          (pkg.currentKibbutzLocation ? dropNoteExamples[pkg.currentKibbutzLocation] : "") ||
+          "מיקום בקיבוץ לא צוין",
       };
     case "delivered":
       return {
@@ -1253,12 +1256,14 @@ export function LahavPackagesApp() {
   }
 
   async function updateArrival() {
+    const effectiveDropNote = dropNote.trim() || dropNoteExamples[dropLocation];
+
     try {
       const nextState = await operationsRepository.updateCollectedPackagesArrival(
         state,
         {
           dropLocation,
-          dropNote: dropNote.trim(),
+          dropNote: effectiveDropNote,
         },
         actionDeps,
       );
