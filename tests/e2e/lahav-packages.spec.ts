@@ -243,19 +243,20 @@ test("add package uses example placeholders without saving empty demo values", a
     "הדביקו כאן במלואה את ההודעה שקיבלתם ב-SMS או במייל, כולל קוד וקישור. ההודעה שמורה בצורה מאובטחת ורק מי שאוסף יוכל לראות אותה.",
   );
 
-  await app(page).getByRole("button", { name: /שמור/ }).click();
-  await expect(page.getByRole("status")).toContainText("יש להזין את שם מקבל החבילה");
+  const addButton = app(page).getByRole("button", { name: /הוסף חבילה/ });
+  await expect(addButton).toBeDisabled();
   await expect(ownerInput).toBeVisible();
 
   await ownerInput.fill("עוז כרמל בדיקה");
-  await app(page).getByRole("button", { name: /שמור/ }).click();
-  await expect(page.getByRole("status")).toContainText("יש להדביק את הודעת חברת המשלוחים");
+  await expect(addButton).toBeDisabled();
   await expect(messageInput).toBeVisible();
 
   await messageInput.fill(
     "שלום עוז, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0",
   );
-  await app(page).getByRole("button", { name: /שמור/ }).click();
+  await expect(addButton).toBeEnabled();
+  await addButton.click();
+  await expect(page.getByRole("status")).toContainText("החבילה נוספה");
 
   await expect(app(page).getByRole("heading", { name: "חבילות שהוספת" })).toBeVisible();
   await expect(
@@ -264,12 +265,14 @@ test("add package uses example placeholders without saving empty demo values", a
     ),
   ).toBeVisible();
   const addedPackage = app(page).locator(".added-package-row").filter({ hasText: "עוז כרמל בדיקה" });
+  await expect(addedPackage).toContainText("נוספה עכשיו");
   await expect(addedPackage).toContainText("פיצוץ להבים");
   await expect(addedPackage).toContainText("https://u.cheetahint.com/vknpgt0");
   await addedPackage.getByRole("button", { name: "ערוך" }).click();
+  await expect(app(page).getByText("עריכת חבילה קיימת")).toBeVisible();
   await expect(ownerInput).toHaveValue("עוז כרמל בדיקה");
   await ownerInput.fill("עוז כרמל עריכה");
-  await app(page).getByRole("button", { name: /עדכן חבילה/ }).click();
+  await app(page).getByRole("button", { name: /עדכן פרטים/ }).click();
   await expect(page.getByRole("status")).toContainText("החבילה עודכנה");
   await expect(app(page).locator(".added-package-row").filter({ hasText: "עוז כרמל עריכה" })).toBeVisible();
 });
@@ -290,7 +293,7 @@ test("new package appears on home under its pickup location and package status w
     .fill(
       "שלום בדיקה, משלוח SYNC-001 ממתין לאיסוף בפיצוץ להבים. קוד 123456. לאישור איסוף: https://example.com/sync-001",
     );
-  await app(page).getByRole("button", { name: /שמור/ }).click();
+  await app(page).getByRole("button", { name: /הוסף חבילה/ }).click();
 
   await expect(app(page).locator(".added-package-row").filter({ hasText: "בדיקת סנכרון מיידי" })).toBeVisible();
   await clickPhoneNav(page, "בית");
@@ -337,7 +340,7 @@ test("packages added to each pickup location increase only that location count",
     await app(page)
       .getByLabel("הודעת המשלוח המקורית")
       .fill(`Package for ${locationId}. Approval link: https://example.com/${locationId}`);
-    await app(page).getByRole("button", { name: /שמור/ }).click();
+    await app(page).getByRole("button", { name: /הוסף חבילה/ }).click();
 
     await clickPhoneNav(page, "בית");
     await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
@@ -360,7 +363,7 @@ test("saving two kibbutz delivery rows updates home status and shows both packag
   await app(page)
     .getByLabel("הודעת המשלוח המקורית")
     .fill("משלוח ESH-001 ממתין לאיסוף באשכולות. קוד 111222.");
-  await app(page).getByRole("button", { name: /שמור/ }).click();
+  await app(page).getByRole("button", { name: /הוסף חבילה/ }).click();
   await clickPhoneNav(page, "בית");
   await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
 

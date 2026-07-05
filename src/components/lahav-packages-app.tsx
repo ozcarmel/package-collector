@@ -483,6 +483,7 @@ export function LahavPackagesApp() {
   const [isSubmittingJoinRequest, setIsSubmittingJoinRequest] = useState(false);
   const [isSavingPackage, setIsSavingPackage] = useState(false);
   const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
+  const [highlightedPackageId, setHighlightedPackageId] = useState<string | null>(null);
   const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [isStartingPickupRun, setIsStartingPickupRun] = useState(false);
   const [collectingPackageId, setCollectingPackageId] = useState<string | null>(null);
@@ -518,6 +519,8 @@ export function LahavPackagesApp() {
   );
   const pickupLocationStripRef = useRef<HTMLDivElement | null>(null);
   const pickupLocationArrowRef = useRef<HTMLButtonElement | null>(null);
+  const addPackageFormRef = useRef<HTMLFormElement | null>(null);
+  const packageOwnerInputRef = useRef<HTMLInputElement | null>(null);
   const ozPendingRecoveryRef = useRef<string | null>(null);
   const pendingCreatedPackageIdsRef = useRef<Set<string>>(new Set());
   const firebaseEnabled = hasFirebaseConfig();
@@ -553,6 +556,13 @@ export function LahavPackagesApp() {
 
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    if (!highlightedPackageId) return undefined;
+
+    const timeoutId = window.setTimeout(() => setHighlightedPackageId(null), 5000);
+    return () => window.clearTimeout(timeoutId);
+  }, [highlightedPackageId]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -695,6 +705,12 @@ export function LahavPackagesApp() {
     ? draft.pickupLocationId
     : state.pickupLocations[0]?.id ?? "";
   const draftMessageUrls = extractMessageUrls(draft.sensitiveDeliveryMessage);
+  const isPackageDraftReady =
+    Boolean(draft.ownerName.trim()) &&
+    Boolean(draft.sensitiveDeliveryMessage.trim()) &&
+    Boolean(effectiveDraftPickupLocationId) &&
+    Boolean(state.pickupLocations.length);
+  const packageActionLabel = editingPackageId ? "עדכן פרטים" : "הוסף חבילה";
   const userAddedPackages = getUserAddedPackages(state.packages, currentUserId);
   const activeRun = state.pickupRuns.find((run) => run.id === activeRunId);
   const activeRunItems = state.pickupRunItems.filter(
@@ -1133,7 +1149,8 @@ export function LahavPackagesApp() {
         );
         pendingCreatedPackageIdsRef.current.add(result.packageId);
         applyRepositoryState(result.state);
-        notify("החבילה נשמרה והפרטים הרגישים מוגנים.");
+        setHighlightedPackageId(result.packageId);
+        notify("החבילה נוספה.");
       }
       setDraft(emptyDraft);
     } catch {
@@ -1159,6 +1176,10 @@ export function LahavPackagesApp() {
       pickupLocationId: pkg.pickupLocationId,
       sensitiveDeliveryMessage: pkg.sensitiveDeliveryMessage ?? "",
     });
+    window.setTimeout(() => {
+      addPackageFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      packageOwnerInputRef.current?.focus();
+    }, 0);
   }
 
   function cancelPackageEdit() {
@@ -2112,12 +2133,19 @@ export function LahavPackagesApp() {
           הזן/י את פרטי החבילה כמו שמופיעים בהודעה מחברת המשלוחים
         </div>
 
-        <form className="stack" onSubmit={(event) => event.preventDefault()}>
+        <form className="stack" onSubmit={(event) => event.preventDefault()} ref={addPackageFormRef}>
+          {editingPackageId ? (
+            <div className="edit-mode-banner" role="status">
+              <strong>עריכת חבילה קיימת</strong>
+              <span>עדכון פרטים זמין רק כל עוד החבילה ממתינה לאיסוף.</span>
+            </div>
+          ) : null}
           <div className="field">
             <label htmlFor="owner">שם מקבל החבילה</label>
             <input
               id="owner"
               placeholder={packageOwnerExample}
+              ref={packageOwnerInputRef}
               value={draft.ownerName}
               onChange={(event) =>
                 setDraft((current) => ({ ...current, ownerName: event.target.value }))
@@ -2174,12 +2202,12 @@ export function LahavPackagesApp() {
           </div>
           <button
             className="button primary full"
-            disabled={isSavingPackage || !state.pickupLocations.length}
+            disabled={isSavingPackage || !isPackageDraftReady}
             onClick={saveDraftPackage}
             type="button"
           >
             <Save />
-            {isSavingPackage ? "שומר..." : editingPackageId ? "עדכן חבילה" : "שמור"}
+            {isSavingPackage ? "שומר..." : packageActionLabel}
           </button>
           {editingPackageId ? (
             <button className="button full" onClick={cancelPackageEdit} type="button">
@@ -2201,11 +2229,18 @@ export function LahavPackagesApp() {
               userAddedPackages.map((pkg) => {
                 const canEditPackage = pkg.status === "waiting";
                 return (
-                  <article className="added-package-row" key={pkg.id}>
+                  <article
+                    className={`added-package-row ${
+                      highlightedPackageId === pkg.id ? "recently-added" : ""
+                    }`}
+                    key={pkg.id}
+                  >
                     <div className="added-package-main">
                       <div className="added-package-head">
                         <strong>{pkg.ownerName}</strong>
-                        <span>{statusLabel(pkg.status)}</span>
+                        <span>
+                          {highlightedPackageId === pkg.id ? "נוספה עכשיו" : statusLabel(pkg.status)}
+                        </span>
                       </div>
                       <div className="added-package-meta">
                         {formatHebrewDateTime(pkg.createdAt ?? pkg.updatedAt)} ·{" "}

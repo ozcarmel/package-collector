@@ -1331,6 +1331,13 @@ form.stack,
   box-shadow: 0 12px 22px rgb(31 112 74 / 18%);
 }
 
+.button.primary:disabled {
+  background: #9eaa9f;
+  border-color: #8f9b90;
+  box-shadow: none;
+  color: #f8f4ea;
+}
+
 .button.collect-button {
   min-height: 36px;
   border-color: #b8c9b0;
@@ -1409,6 +1416,34 @@ form.stack,
   white-space: nowrap;
 }
 
+.edit-mode-banner {
+  border: 1px solid #b7d0a4;
+  border-radius: var(--radius);
+  background: #e8f1dd;
+  padding: 11px 12px;
+  color: #244b35;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 60%);
+}
+
+.edit-mode-banner strong,
+.edit-mode-banner span {
+  display: block;
+}
+
+.edit-mode-banner strong {
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 900;
+}
+
+.edit-mode-banner span {
+  margin-top: 3px;
+  color: #51624f;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
 .added-packages-panel {
   margin-top: 18px;
 }
@@ -1426,15 +1461,27 @@ form.stack,
 }
 
 .added-package-row {
-  border: 1px solid var(--line);
+  border: 1px solid #ded1bd;
   border-radius: var(--radius);
-  background: #fbf3e4;
+  background: #f8efe0;
   padding: 10px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  box-shadow: var(--card-shadow);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 56%);
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.added-package-row.recently-added {
+  border-color: #a6c995;
+  background: #e8f2dd;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 70%),
+    0 6px 14px rgb(58 109 67 / 12%);
 }
 
 .added-package-main {
