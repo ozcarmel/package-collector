@@ -2091,6 +2091,12 @@ form.stack,
   font-weight: 900;
 }
 
+.danger-statement {
+  border-color: #e2b8b2;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .modal-backdrop.anchored .confirm-statement {
   padding: 10px;
   font-size: 13px;

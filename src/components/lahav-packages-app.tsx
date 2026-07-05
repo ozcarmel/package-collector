@@ -497,6 +497,8 @@ export function LahavPackagesApp() {
   const [adminListView, setAdminListView] = useState<AdminListView>("pending");
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
+  const [pendingDeleteLocationId, setPendingDeleteLocationId] = useState<string | null>(null);
+  const [pendingDeletePackageId, setPendingDeletePackageId] = useState<string | null>(null);
   const [screen, setScreen] = useState<Screen>(() => (hasJoinPreviewParam() ? "join" : "home"));
   const [toast, setToast] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftPackage>(emptyDraft);
@@ -736,6 +738,12 @@ export function LahavPackagesApp() {
     : null;
   const hoursLocation = hoursLocationId
     ? state.pickupLocations.find((location) => location.id === hoursLocationId)
+    : null;
+  const pendingDeleteLocation = pendingDeleteLocationId
+    ? state.pickupLocations.find((location) => location.id === pendingDeleteLocationId)
+    : null;
+  const pendingDeletePackage = pendingDeletePackageId
+    ? state.packages.find((pkg) => pkg.id === pendingDeletePackageId)
     : null;
   const editingLocation = editingLocationId
     ? state.pickupLocations.find((location) => location.id === editingLocationId)
@@ -1402,26 +1410,27 @@ export function LahavPackagesApp() {
 
   async function deletePickupLocation(locationId: string) {
     if (isSavingLocation) return;
+    setPendingDeleteLocationId(locationId);
+  }
 
-    const location = state.pickupLocations.find((item) => item.id === locationId);
-    const confirmed = window.confirm(
-      `למחוק את נקודת האיסוף ${location?.name ?? ""}? חבילות קיימות לא יימחקו.`,
-    );
-
-    if (!confirmed) return;
+  async function confirmDeletePickupLocation() {
+    if (isSavingLocation || !pendingDeleteLocationId) return;
 
     setIsSavingLocation(true);
     try {
       const result = await operationsRepository.deletePickupLocation(
         state,
-        locationId,
+        pendingDeleteLocationId,
         actionDeps,
       );
       applyRepositoryState(result.state);
-      setHomeLocationFilterId((current) => (current === locationId ? null : current));
-      if (editingLocationId === locationId) {
+      setHomeLocationFilterId((current) =>
+        current === pendingDeleteLocationId ? null : current,
+      );
+      if (editingLocationId === pendingDeleteLocationId) {
         closeLocationModal();
       }
+      setPendingDeleteLocationId(null);
       notify("נקודת האיסוף נמחקה.");
     } catch {
       notify("לא הצלחנו למחוק את נקודת האיסוף. נסה/י שוב בעוד רגע.");
@@ -1510,18 +1519,21 @@ export function LahavPackagesApp() {
 
   async function deletePackage(packageId: string) {
     if (adminActionId) return;
+    setPendingDeletePackageId(packageId);
+  }
 
-    const pkg = state.packages.find((item) => item.id === packageId);
-    const confirmed = window.confirm(
-      `למחוק את החבילה של ${pkg?.ownerName ?? "המשתמש"}? הפעולה תסיר אותה מהאפליקציה.`,
-    );
+  async function confirmDeletePackage() {
+    if (adminActionId || !pendingDeletePackageId) return;
 
-    if (!confirmed) return;
-
-    setAdminActionId(`delete-package-${packageId}`);
+    setAdminActionId(`delete-package-${pendingDeletePackageId}`);
     try {
-      const nextState = await operationsRepository.deletePackage(state, packageId, actionDeps);
+      const nextState = await operationsRepository.deletePackage(
+        state,
+        pendingDeletePackageId,
+        actionDeps,
+      );
       applyRepositoryState(nextState);
+      setPendingDeletePackageId(null);
       notify("החבילה נמחקה.");
     } catch {
       notify("לא הצלחנו למחוק את החבילה. נסה/י שוב בעוד רגע.");
@@ -1723,6 +1735,82 @@ export function LahavPackagesApp() {
                 type="button"
               >
                 {isStartingPickupRun ? "פותח איסוף..." : "אשר"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {pendingDeletePackage ? (
+        <div className="modal-backdrop" role="presentation">
+          <section
+            aria-labelledby="delete-package-title"
+            aria-modal="true"
+            className="confirm-modal"
+            role="dialog"
+          >
+            <h2 id="delete-package-title">למחוק את החבילה?</h2>
+            <p>
+              החבילה של {pendingDeletePackage.ownerName} תוסר מהאפליקציה ולא תופיע יותר
+              ברשימות הפעילות.
+            </p>
+            <div className="confirm-statement danger-statement">
+              הפעולה תשפיע מיד על כל המשתמשים.
+            </div>
+            <div className="card-actions">
+              <button
+                className="button"
+                disabled={adminActionId !== null}
+                onClick={() => setPendingDeletePackageId(null)}
+                type="button"
+              >
+                ביטול
+              </button>
+              <button
+                className="button warn"
+                disabled={adminActionId !== null}
+                onClick={confirmDeletePackage}
+                type="button"
+              >
+                {adminActionId === `delete-package-${pendingDeletePackage.id}`
+                  ? "מוחק..."
+                  : "מחק חבילה"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {pendingDeleteLocation ? (
+        <div className="modal-backdrop" role="presentation">
+          <section
+            aria-labelledby="delete-location-title"
+            aria-modal="true"
+            className="confirm-modal"
+            role="dialog"
+          >
+            <h2 id="delete-location-title">למחוק נקודת איסוף?</h2>
+            <p>
+              נקודת האיסוף {pendingDeleteLocation.name} תוסר מרשימת נקודות האיסוף.
+              חבילות קיימות לא יימחקו.
+            </p>
+            <div className="confirm-statement danger-statement">
+              כדאי למחוק רק נקודה שכבר לא פעילה.
+            </div>
+            <div className="card-actions">
+              <button
+                className="button"
+                disabled={isSavingLocation}
+                onClick={() => setPendingDeleteLocationId(null)}
+                type="button"
+              >
+                ביטול
+              </button>
+              <button
+                className="button warn"
+                disabled={isSavingLocation}
+                onClick={confirmDeletePickupLocation}
+                type="button"
+              >
+                {isSavingLocation ? "מוחק..." : "מחק נקודה"}
               </button>
             </div>
           </section>
