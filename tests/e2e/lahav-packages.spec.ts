@@ -1,4 +1,4 @@
-import { expect, test as base, type Locator, type Page } from "@playwright/test";
+import { expect, test as base, type BrowserContext, type Locator, type Page } from "@playwright/test";
 
 const runtimeErrorPatterns = [
   /A tree hydrated/i,
@@ -75,6 +75,21 @@ async function readPickupCount(page: Page, locationId: string) {
     .locator(`.pickup-card[data-pickup-location-id="${locationId}"] strong`)
     .textContent();
   return Number(text?.trim() ?? "0");
+}
+
+async function readHomeStatusCount(page: Page, statusClass: string) {
+  const text = await app(page).locator(`.${statusClass} strong`).textContent();
+  return Number(text?.trim() ?? "0");
+}
+
+async function openPickupApprovalLinkIfPresent(context: BrowserContext, card: Locator) {
+  const pickupLink = card.locator(".pickup-link-button");
+  if ((await pickupLink.count()) === 0) return;
+
+  const popupPromise = context.waitForEvent("page");
+  await pickupLink.click();
+  const popup = await popupPromise;
+  await popup.close();
 }
 
 async function expectNoVerticalOverlap(container: Locator, selector: string) {
@@ -246,6 +261,42 @@ test("add package uses example placeholders without saving empty demo values", a
   await expect(app(page).locator(".package-list").first()).toContainText("עוז כרמל");
 });
 
+test("new package appears on home under its pickup location and package status within five seconds", async ({
+  page,
+}) => {
+  await gotoAdmin(page);
+
+  const beforeLocationCount = await readPickupCount(page, "pitzutz");
+  const beforeWaitingCount = await readHomeStatusCount(page, "home-status-waiting");
+
+  await clickPhoneNav(page, "הוספה");
+  await app(page).getByLabel("שם מקבל החבילה").fill("בדיקת סנכרון מיידי");
+  await app(page).locator("#pickup-location").selectOption("pitzutz");
+  await app(page)
+    .getByLabel("הודעת המשלוח המקורית")
+    .fill(
+      "שלום בדיקה, משלוח SYNC-001 ממתין לאיסוף בפיצוץ להבים. קוד 123456. לאישור איסוף: https://example.com/sync-001",
+    );
+  await app(page).getByRole("button", { name: /שמור/ }).click();
+
+  await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
+  await expect(app(page).locator(".home-status-waiting strong")).toHaveText(
+    String(beforeWaitingCount + 1),
+    { timeout: 5000 },
+  );
+  await expect(app(page).locator('.pickup-card[data-pickup-location-id="pitzutz"] strong')).toHaveText(
+    String(beforeLocationCount + 1),
+    { timeout: 5000 },
+  );
+
+  const newPackageCard = app(page).locator(".package-card").filter({
+    hasText: "בדיקת סנכרון מיידי",
+  });
+  await expect(newPackageCard).toBeVisible({ timeout: 5000 });
+  await expect(newPackageCard).toContainText("פיצוץ להבים", { timeout: 5000 });
+  await expect(newPackageCard).toContainText("ממתינה לאיסוף", { timeout: 5000 });
+});
+
 test("packages added to each pickup location increase only that location count", async ({ page }) => {
   const locationIds = [
     "home-paami",
@@ -275,6 +326,86 @@ test("packages added to each pickup location increase only that location count",
     ).toHaveText(String(beforeCount + 1));
     await expect(app(page).locator(".package-list").first()).toContainText(`בדיקה ${locationId}`);
   }
+});
+
+test("saving two kibbutz delivery rows updates home status and shows both packages", async ({
+  context,
+  page,
+}) => {
+  await gotoAdmin(page);
+
+  const beforeArrivedCount = await readHomeStatusCount(page, "home-status-arrived");
+
+  await clickPhoneNav(page, "איסוף");
+  await app(page).locator('.location-button[data-pickup-location-id="pitzutz"]').click();
+  await page
+    .getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })
+    .getByRole("button", { name: "אשר" })
+    .click();
+  await expect(app(page).getByText("איסוף בחנות")).toBeVisible();
+
+  const catalogCards = app(page).locator(".catalog-card");
+  await expect(catalogCards).toHaveCount(3);
+
+  const collectedNames: string[] = [];
+  for (const cardIndex of [0, 1]) {
+    const catalogCard = catalogCards.nth(cardIndex);
+    collectedNames.push(
+      ((await catalogCard.locator(".package-name").textContent()) ?? "").trim(),
+    );
+    await openPickupApprovalLinkIfPresent(context, catalogCard);
+    await catalogCard.getByRole("button", { name: "סמן נאספה" }).click();
+    await expect(catalogCard.getByRole("button", { name: "נאספה" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  }
+
+  await clickPhoneNav(page, "מסירה");
+  await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();
+
+  const arrivalCards = app(page).locator(".arrival-package-card");
+  await expect(arrivalCards).toHaveCount(2);
+
+  await arrivalCards.nth(0).locator(".arrival-package-toggle").click();
+  await arrivalCards.nth(1).locator(".arrival-package-toggle").click();
+  await arrivalCards.nth(0).locator("select[id^='drop-location-']").selectOption("gate-crate");
+  await arrivalCards.nth(1).locator("select[id^='drop-location-']").selectOption("kolbo");
+  await app(page).getByRole("button", { name: /עדכן מיקום/ }).click();
+
+  await expect(page.getByRole("status")).toContainText("מיקום החבילות בקיבוץ עודכן");
+  await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
+  await expect(app(page).locator(".home-status-arrived strong")).toHaveText(
+    String(beforeArrivedCount + 2),
+    { timeout: 5000 },
+  );
+
+  await expect
+    .poll(
+      async () =>
+        app(page).locator(".package-card").evaluateAll(
+          (cards, expectedNames) =>
+            expectedNames.every((expectedName) =>
+              cards.some((card) => {
+                const packageName =
+                  card.querySelector(".package-name")?.textContent?.trim() ?? "";
+                return (
+                  packageName === expectedName &&
+                  (card.textContent ?? "").includes("ממתינה למסירה בקיבוץ")
+                );
+              }),
+            ),
+          collectedNames,
+        ),
+      { timeout: 5000 },
+    )
+    .toBe(true);
+  await expect(app(page).locator(".package-list")).toContainText("שמתי בדולב", {
+    timeout: 5000,
+  });
+  await expect(app(page).locator(".package-list")).toContainText("שמתי בארון הכלבו למעלה", {
+    timeout: 5000,
+  });
 });
 
 test("home waiting package shortcuts open pickup screen with the location selected", async ({
