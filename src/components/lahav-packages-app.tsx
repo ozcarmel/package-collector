@@ -634,9 +634,13 @@ export function LahavPackagesApp() {
         (currentUser.role === "admin" || currentUser.role === "owner")
       ),
   );
+  const ownPendingJoinRequest = pendingJoinRequests.find(
+    (request) => request.userId === currentUserId,
+  );
   const submittedJoinRequest =
-    state.joinRequests.find((request) => request.id === submittedJoinRequestId) ??
-    pendingJoinRequests[0];
+    state.joinRequests.find(
+      (request) => request.id === submittedJoinRequestId && request.userId === currentUserId,
+    ) ?? ownPendingJoinRequest;
   const isApprovedUser =
     !joinPreviewMode && currentUser.verificationStatus === "approved";
   const canManageCommunity =
@@ -692,6 +696,8 @@ export function LahavPackagesApp() {
   useEffect(() => {
     if (!repositoryReady || canManageCommunity || !submittedJoinRequest) return;
     if (!isOzAdminShortcut(submittedJoinRequest)) return;
+    if (submittedJoinRequest.status !== "pending") return;
+    if (submittedJoinRequest.userId !== currentUserId) return;
 
     const recoveryKey = `${currentUserId}:${submittedJoinRequest.id}`;
     if (ozPendingRecoveryRef.current === recoveryKey) return;
@@ -711,7 +717,7 @@ export function LahavPackagesApp() {
         if (result.state) {
           setState(normalizePickupLocationSchedules(result.state));
         }
-        setSubmittedJoinRequestId(result.requestId);
+        setSubmittedJoinRequestId(null);
         setJoinPreviewMode(false);
         setScreen("home");
         notify("זוהית כמנהל. הרשאת הניהול פעילה.");
@@ -985,11 +991,11 @@ export function LahavPackagesApp() {
       if (result.state) {
         setState(normalizePickupLocationSchedules(result.state));
       }
-      setSubmittedJoinRequestId(result.requestId);
       const isRecognizedApprovedUser = result.recognizedApprovedUser === true;
       if (isOzAdmin || isRecognizedApprovedUser) {
         setJoinPreviewMode(false);
       }
+      setSubmittedJoinRequestId(isOzAdmin || isRecognizedApprovedUser ? null : result.requestId);
       setScreen(isOzAdmin || isRecognizedApprovedUser ? "home" : "pending");
       notify(
         isOzAdmin
