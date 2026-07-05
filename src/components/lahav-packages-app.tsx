@@ -44,6 +44,7 @@ import { hasFirebaseConfig } from "@/lib/firebase/client";
 import {
   isOzAdminShortcut,
   isOzSuperAdminUser,
+  normalizePhone,
 } from "@/lib/oz-admin-shortcut";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import { normalizePickupLocationSchedules } from "@/lib/pickup-location-schedule-defaults";
@@ -372,6 +373,22 @@ function getLocationName(locations: PickupLocation[], id: string) {
 
 function getUserName(users: AppState["users"], id?: string) {
   return id ? users.find((user) => user.id === id)?.fullName : undefined;
+}
+
+function dedupeUsersByPhone(users: AppState["users"], preferredUserId: string) {
+  const grouped = new Map<string, AppState["users"][number]>();
+
+  for (const user of users) {
+    const normalizedPhone = normalizePhone(user.phone);
+    const key = normalizedPhone || user.id;
+    const existing = grouped.get(key);
+
+    if (!existing || user.id === preferredUserId) {
+      grouped.set(key, user);
+    }
+  }
+
+  return [...grouped.values()];
 }
 
 function unapprovedAccessMessage(screen: Screen) {
@@ -2104,13 +2121,19 @@ export function LahavPackagesApp() {
 
   function AdminScreen() {
     const isSuperAdmin = isOzSuperAdminUser(currentUser);
-    const approvedUsers = state.users.filter(
-      (user) => user.role === "member" && user.verificationStatus === "approved",
+    const approvedUsers = dedupeUsersByPhone(
+      state.users.filter(
+        (user) => user.role === "member" && user.verificationStatus === "approved",
+      ),
+      currentUserId,
     );
-    const managerUsers = state.users.filter(
-      (user) =>
-        (user.role === "admin" || user.role === "owner") &&
-        user.verificationStatus === "approved",
+    const managerUsers = dedupeUsersByPhone(
+      state.users.filter(
+        (user) =>
+          (user.role === "admin" || user.role === "owner") &&
+          user.verificationStatus === "approved",
+      ),
+      currentUserId,
     );
     const adminPackages = state.packages;
 
