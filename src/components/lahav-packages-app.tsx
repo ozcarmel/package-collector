@@ -354,7 +354,7 @@ function homePackageStatusLabel(pkg: DeliveryPackage) {
     case "collected":
       return "נאספה";
     case "arrived":
-      return "ממתינה למסירה בקיבוץ";
+      return "נמסרו";
     case "delivered":
       return "נמסרה";
     case null:

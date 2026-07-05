@@ -411,7 +411,7 @@ test("saving two kibbutz delivery rows updates home status and shows both packag
                   card.querySelector(".package-name")?.textContent?.trim() ?? "";
                 return (
                   packageName === expectedName &&
-                  (card.textContent ?? "").includes("ממתינה למסירה בקיבוץ")
+                  (card.textContent ?? "").includes("נמסרו")
                 );
               }),
             ),
