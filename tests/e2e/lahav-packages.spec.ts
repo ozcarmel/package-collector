@@ -368,6 +368,50 @@ test("pickup flow reveals original messages only after confirmation and records 
   await expect(app(page).getByText("שמתי בדולב").first()).toBeVisible();
 });
 
+test("multiple kibbutz delivery rows are collapsed until a package name is opened", async ({
+  context,
+  page,
+}) => {
+  await gotoAdmin(page);
+  await clickPhoneNav(page, "איסוף");
+
+  await app(page).locator('.location-button[data-pickup-location-id="pitzutz"]').click();
+  await page.getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" }).getByRole("button", { name: "אשר" }).click();
+  await expect(app(page).getByText("איסוף בחנות")).toBeVisible();
+
+  const catalogCards = app(page).locator(".catalog-card");
+  await expect(catalogCards).toHaveCount(3);
+
+  const popupPromise = context.waitForEvent("page");
+  await catalogCards.nth(0).getByRole("link", { name: /https:\/\/u\.cheetahint\.com/ }).click();
+  const popup = await popupPromise;
+  await popup.close();
+  await catalogCards.nth(0).getByRole("button", { name: "סמן נאספה" }).click();
+  await catalogCards.nth(1).getByRole("button", { name: "סמן נאספה" }).click();
+
+  await clickPhoneNav(page, "מסירה");
+  await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();
+
+  const arrivalCards = app(page).locator(".arrival-package-card");
+  await expect(arrivalCards).toHaveCount(2);
+  await expect(arrivalCards.nth(0).locator(".arrival-package-toggle")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(arrivalCards.nth(1).locator(".arrival-package-toggle")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(app(page).locator("select[id^='drop-location-']")).toHaveCount(0);
+
+  await arrivalCards.nth(0).locator(".arrival-package-toggle").click();
+  await expect(arrivalCards.nth(0).locator("select[id^='drop-location-']")).toBeVisible();
+  await expect(arrivalCards.nth(1).locator("select[id^='drop-location-']")).toHaveCount(0);
+
+  await arrivalCards.nth(1).locator(".arrival-package-toggle").click();
+  await expect(arrivalCards.nth(1).locator("select[id^='drop-location-']")).toBeVisible();
+});
+
 test("home and form UI avoid the known layout regressions", async ({ page }) => {
   await gotoFreshUser(page);
   await expectNoVerticalOverlap(app(page), ".join-stack .field");

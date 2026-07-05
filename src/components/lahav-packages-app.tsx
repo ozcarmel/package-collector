@@ -519,6 +519,9 @@ export function LahavPackagesApp() {
   const [arrivalDraftsByPackageId, setArrivalDraftsByPackageId] = useState<
     Record<string, ArrivalPackageDraft>
   >({});
+  const [expandedArrivalPackageIds, setExpandedArrivalPackageIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [openedPickupLinkPackageIds, setOpenedPickupLinkPackageIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -1396,6 +1399,7 @@ export function LahavPackagesApp() {
       );
       applyRepositoryState(nextState);
       setArrivalDraftsByPackageId({});
+      setExpandedArrivalPackageIds(new Set());
       setScreen("home");
       notify("מיקום החבילות בקיבוץ עודכן.");
     } catch {
@@ -2198,6 +2202,20 @@ export function LahavPackagesApp() {
       }));
     }
 
+    function toggleArrivalPackage(packageId: string) {
+      setExpandedArrivalPackageIds((current) => {
+        const next = new Set(current);
+        if (next.has(packageId)) {
+          next.delete(packageId);
+        } else {
+          next.add(packageId);
+        }
+        return next;
+      });
+    }
+
+    const shouldCollapsePackageRows = packagesCollectedByCurrentUser.length > 1;
+
     return (
       <>
         <h1 className="screen-title">החבילות הגיעו</h1>
@@ -2219,48 +2237,64 @@ export function LahavPackagesApp() {
 
           {packagesCollectedByCurrentUser.map((pkg, index) => {
             const arrivalDraft = arrivalDraftForPackage(pkg.id);
+            const isExpanded =
+              !shouldCollapsePackageRows || expandedArrivalPackageIds.has(pkg.id);
             return (
               <div className="card arrival-package-card" key={pkg.id}>
-                <div className="package-top">
-                  <div>
-                    <div className="package-name">{pkg.ownerName}</div>
-                    <div className="package-meta">
-                      {getLocationName(state.pickupLocations, pkg.pickupLocationId)}
+                <button
+                  aria-expanded={isExpanded}
+                  className="arrival-package-toggle"
+                  onClick={() => toggleArrivalPackage(pkg.id)}
+                  type="button"
+                >
+                  <span className="package-top arrival-package-toggle-content">
+                    <span>
+                      <span className="package-name">{pkg.ownerName}</span>
+                      <span className="package-meta">
+                        {getLocationName(state.pickupLocations, pkg.pickupLocationId)}
+                      </span>
+                    </span>
+                    <span className="arrival-toggle-meta">
+                      <span className="badge waiting">{index + 1}</span>
+                      <ChevronLeft />
+                    </span>
+                  </span>
+                </button>
+
+                {isExpanded ? (
+                  <div className="arrival-package-details">
+                    <div className="field">
+                      <label htmlFor={`drop-location-${pkg.id}`}>איפה השארת את החבילה?</label>
+                      <select
+                        id={`drop-location-${pkg.id}`}
+                        value={arrivalDraft.dropLocation}
+                        onChange={(event) =>
+                          updateArrivalDraft(pkg.id, {
+                            dropLocation: event.target.value as KibbutzDropLocation,
+                          })
+                        }
+                      >
+                        <option value="gate-crate">בדולב בש.ג</option>
+                        <option value="kolbo">בכלבו</option>
+                        <option value="collector-home">אצלי בבית</option>
+                        <option value="direct-home">נמסרה ישירות לבית המקבל</option>
+                        <option value="other">אחר</option>
+                      </select>
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor={`drop-note-${pkg.id}`}>הערה למסירה</label>
+                      <textarea
+                        id={`drop-note-${pkg.id}`}
+                        placeholder={dropNoteExamples[arrivalDraft.dropLocation]}
+                        value={arrivalDraft.dropNote}
+                        onChange={(event) =>
+                          updateArrivalDraft(pkg.id, { dropNote: event.target.value })
+                        }
+                      />
                     </div>
                   </div>
-                  <span className="badge waiting">{index + 1}</span>
-                </div>
-
-                <div className="field">
-                  <label htmlFor={`drop-location-${pkg.id}`}>איפה השארת את החבילה?</label>
-                  <select
-                    id={`drop-location-${pkg.id}`}
-                    value={arrivalDraft.dropLocation}
-                    onChange={(event) =>
-                      updateArrivalDraft(pkg.id, {
-                        dropLocation: event.target.value as KibbutzDropLocation,
-                      })
-                    }
-                  >
-                    <option value="gate-crate">בדולב בש.ג</option>
-                    <option value="kolbo">בכלבו</option>
-                    <option value="collector-home">אצלי בבית</option>
-                    <option value="direct-home">נמסרה ישירות לבית המקבל</option>
-                    <option value="other">אחר</option>
-                  </select>
-                </div>
-
-                <div className="field">
-                  <label htmlFor={`drop-note-${pkg.id}`}>הערה למסירה</label>
-                  <textarea
-                    id={`drop-note-${pkg.id}`}
-                    placeholder={dropNoteExamples[arrivalDraft.dropLocation]}
-                    value={arrivalDraft.dropNote}
-                    onChange={(event) =>
-                      updateArrivalDraft(pkg.id, { dropNote: event.target.value })
-                    }
-                  />
-                </div>
+                ) : null}
               </div>
             );
           })}
