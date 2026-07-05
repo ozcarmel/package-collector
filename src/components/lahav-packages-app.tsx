@@ -1439,6 +1439,7 @@ export function LahavPackagesApp() {
       applyRepositoryState(nextState);
       setArrivalDraftsByPackageId({});
       setExpandedArrivalPackageIds(new Set());
+      setHomeLocationFilterId(null);
       setScreen("home");
       notify("מיקום החבילות בקיבוץ עודכן.");
     } catch {

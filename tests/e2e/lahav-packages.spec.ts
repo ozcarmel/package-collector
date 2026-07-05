@@ -334,32 +334,40 @@ test("saving two kibbutz delivery rows updates home status and shows both packag
 }) => {
   await gotoAdmin(page);
 
+  await clickPhoneNav(page, "הוספה");
+  await app(page).getByLabel("שם מקבל החבילה").fill("בדיקת מסירה אשכולות");
+  await app(page).locator("#pickup-location").selectOption("eshkolot");
+  await app(page)
+    .getByLabel("הודעת המשלוח המקורית")
+    .fill("משלוח ESH-001 ממתין לאיסוף באשכולות. קוד 111222.");
+  await app(page).getByRole("button", { name: /שמור/ }).click();
+  await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
+
   const beforeArrivedCount = await readHomeStatusCount(page, "home-status-arrived");
-
-  await clickPhoneNav(page, "איסוף");
-  await app(page).locator('.location-button[data-pickup-location-id="pitzutz"]').click();
-  await page
-    .getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })
-    .getByRole("button", { name: "אשר" })
-    .click();
-  await expect(app(page).getByText("איסוף בחנות")).toBeVisible();
-
-  const catalogCards = app(page).locator(".catalog-card");
-  await expect(catalogCards).toHaveCount(3);
-
   const collectedNames: string[] = [];
-  for (const cardIndex of [0, 1]) {
-    const catalogCard = catalogCards.nth(cardIndex);
-    collectedNames.push(
-      ((await catalogCard.locator(".package-name").textContent()) ?? "").trim(),
-    );
+
+  async function collectFirstPackageAtLocation(locationId: string) {
+    await clickPhoneNav(page, "איסוף");
+    await app(page).locator(`.location-button[data-pickup-location-id="${locationId}"]`).click();
+    await page
+      .getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })
+      .getByRole("button", { name: "אשר" })
+      .click();
+    await expect(app(page).getByText("איסוף בחנות")).toBeVisible();
+
+    const catalogCard = app(page).locator(".catalog-card").first();
+    const packageName = ((await catalogCard.locator(".package-name").textContent()) ?? "").trim();
     await openPickupApprovalLinkIfPresent(context, catalogCard);
     await catalogCard.getByRole("button", { name: "סמן נאספה" }).click();
     await expect(catalogCard.getByRole("button", { name: "נאספה" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
+    return packageName;
   }
+
+  collectedNames.push(await collectFirstPackageAtLocation("pitzutz"));
+  collectedNames.push(await collectFirstPackageAtLocation("eshkolot"));
 
   await clickPhoneNav(page, "מסירה");
   await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();
