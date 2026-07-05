@@ -82,6 +82,19 @@ async function readHomeStatusCount(page: Page, statusClass: string) {
   return Number(text?.trim() ?? "0");
 }
 
+async function addPackageForPickupLocation(page: Page, ownerName: string, locationId: string) {
+  await clickPhoneNav(page, "הוספה");
+  await app(page).locator("#owner").fill(ownerName);
+  await app(page).locator("#pickup-location").selectOption(locationId);
+  await app(page)
+    .locator("#message")
+    .fill(`בדיקת סנכרון עבור ${ownerName}. קוד 123456. קישור https://example.com/${locationId}`);
+  await app(page).getByRole("button", { name: /הוסף חבילה/ }).click();
+  await expect(app(page).locator(".added-package-row").filter({ hasText: ownerName })).toBeVisible({
+    timeout: 5000,
+  });
+}
+
 async function openPickupApprovalLinkIfPresent(context: BrowserContext, card: Locator) {
   const pickupLink = card.locator(".pickup-link-button");
   if ((await pickupLink.count()) === 0) return;
@@ -351,6 +364,43 @@ test("packages added to each pickup location increase only that location count",
     ).toHaveText(String(beforeCount + 1));
     await expect(app(page).locator(".package-list").first()).toContainText(`בדיקה ${locationId}`);
   }
+});
+
+test("collecting one location does not hide active packages from other locations on home", async ({
+  context,
+  page,
+}) => {
+  await gotoAdmin(page);
+
+  await addPackageForPickupLocation(page, "משה בדואר", "post-office");
+  await addPackageForPickupLocation(page, "בונו בפיצוץ", "pitzutz");
+
+  await clickPhoneNav(page, "איסוף");
+  await app(page).locator('.location-button[data-pickup-location-id="post-office"]').click();
+  await page
+    .getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })
+    .getByRole("button", { name: "אשר" })
+    .click();
+
+  const mosheCard = app(page).locator(".catalog-card").filter({ hasText: "משה בדואר" });
+  await expect(mosheCard).toBeVisible();
+  await openPickupApprovalLinkIfPresent(context, mosheCard);
+  await mosheCard.getByRole("button", { name: "סמן נאספה" }).click();
+  await expect(mosheCard.getByRole("button", { name: "נאספה" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await clickPhoneNav(page, "בית");
+  await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
+  await expect(app(page).locator(".package-list")).toContainText("משה בדואר", {
+    timeout: 5000,
+  });
+  await expect(app(page).locator(".package-list")).toContainText("בונו בפיצוץ", {
+    timeout: 5000,
+  });
+  await expect(app(page).locator(".package-list")).toContainText("נאספה");
+  await expect(app(page).locator(".package-list")).toContainText("ממתינה לאיסוף");
 });
 
 test("saving two kibbutz delivery rows updates home status and shows both packages", async ({

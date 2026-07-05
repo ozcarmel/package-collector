@@ -700,10 +700,7 @@ export function LahavPackagesApp() {
   const deliveredPackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) === "delivered",
   );
-  const homePackages = homeLocationFilterId
-    ? activeHomePackages.filter((pkg) => pkg.pickupLocationId === homeLocationFilterId)
-    : activeHomePackages;
-  const visibleHomePackages = homePackages.filter(
+  const visibleHomePackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) !== null,
   );
   const effectiveDraftPickupLocationId = state.pickupLocations.some(
@@ -2161,7 +2158,6 @@ export function LahavPackagesApp() {
                 const openState = getPickupLocationOpenState(location);
                 const displayName = pickupLocationDisplayName(location);
                 const selectLocation = () => {
-                  setHomeLocationFilterId(location.id);
                   if (locationPackageCount > 0) {
                     openPickupScreenForLocation(location.id);
                   }
@@ -2180,7 +2176,6 @@ export function LahavPackagesApp() {
                         ) {
                           return;
                         }
-                        setHomeLocationFilterId(location.id);
                         if (locationPackageCount > 0) {
                           openPickupScreenForLocation(location.id);
                         }
@@ -2232,7 +2227,7 @@ export function LahavPackagesApp() {
             {visibleHomePackages.length ? (
               visibleHomePackages.map((pkg) => <PackageCard key={pkg.id} pkg={pkg} />)
             ) : (
-              <div className="card empty-state">אין חבילות להצגה בנקודת האיסוף הזאת.</div>
+              <div className="card empty-state">אין חבילות להצגה כרגע.</div>
             )}
           </div>
         </section>
