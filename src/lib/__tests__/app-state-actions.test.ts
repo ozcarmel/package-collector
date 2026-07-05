@@ -8,6 +8,7 @@ import {
   deletePackage,
   deletePickupLocation,
   getWaitingPackageCount,
+  kibbutzDropLocationDefaultNotes,
   logSensitiveAccess,
   markPackageCollected,
   markPackageReceived,
@@ -440,8 +441,13 @@ describe("app state actions", () => {
     const arrived = updateCollectedPackagesArrival(
       collected,
       {
-        dropLocation: "gate-crate",
-        dropNote: "In the gate crate",
+        updates: [
+          {
+            packageId,
+            dropLocation: "gate-crate",
+            dropNote: "In the gate crate",
+          },
+        ],
       },
       deps,
     );
@@ -451,6 +457,106 @@ describe("app state actions", () => {
       currentKibbutzLocation: "gate-crate",
       currentKibbutzLocationText: "In the gate crate",
     });
+  });
+
+  it("updates collected packages to separate kibbutz locations with row-specific default notes", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const [firstPackage, secondPackage, untouchedPackage] = state.packages.filter(
+      (pkg) => pkg.status === "waiting" && pkg.pickupLocationId === "pitzutz",
+    );
+    expect(firstPackage).toBeTruthy();
+    expect(secondPackage).toBeTruthy();
+    expect(untouchedPackage).toBeTruthy();
+
+    const collectedState: AppState = {
+      ...state,
+      packages: state.packages.map((pkg) =>
+        [firstPackage.id, secondPackage.id, untouchedPackage.id].includes(pkg.id)
+          ? {
+              ...pkg,
+              status: "collected",
+              collectorUserId: state.currentUser.id,
+            }
+          : pkg,
+      ),
+    };
+
+    const arrived = updateCollectedPackagesArrival(
+      collectedState,
+      {
+        updates: [
+          {
+            packageId: firstPackage.id,
+            dropLocation: "gate-crate",
+            dropNote: "Custom gate note",
+          },
+          {
+            packageId: secondPackage.id,
+            dropLocation: "kolbo",
+            dropNote: "",
+          },
+        ],
+      },
+      deps,
+    );
+
+    expect(arrived.packages.find((pkg) => pkg.id === firstPackage.id)).toMatchObject({
+      status: "arrived",
+      currentKibbutzLocation: "gate-crate",
+      currentKibbutzLocationText: "Custom gate note",
+    });
+    expect(arrived.packages.find((pkg) => pkg.id === secondPackage.id)).toMatchObject({
+      status: "arrived",
+      currentKibbutzLocation: "kolbo",
+      currentKibbutzLocationText: kibbutzDropLocationDefaultNotes.kolbo,
+    });
+    expect(arrived.packages.find((pkg) => pkg.id === untouchedPackage.id)).toMatchObject({
+      status: "collected",
+      collectorUserId: state.currentUser.id,
+    });
+  });
+
+  it("does not update packages collected by another user", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const waitingPackage = state.packages.find((pkg) => pkg.status === "waiting");
+    expect(waitingPackage).toBeTruthy();
+
+    const collectedByAnotherUser: AppState = {
+      ...state,
+      packages: state.packages.map((pkg) =>
+        pkg.id === waitingPackage?.id
+          ? {
+              ...pkg,
+              status: "collected",
+              collectorUserId: "u-other-collector",
+            }
+          : pkg,
+      ),
+    };
+
+    const arrived = updateCollectedPackagesArrival(
+      collectedByAnotherUser,
+      {
+        updates: [
+          {
+            packageId: waitingPackage?.id ?? "",
+            dropLocation: "gate-crate",
+            dropNote: "Wrong collector update",
+          },
+        ],
+      },
+      deps,
+    );
+
+    const unchangedPackage = arrived.packages.find((pkg) => pkg.id === waitingPackage?.id);
+    expect(unchangedPackage).toMatchObject({
+      status: "collected",
+      collectorUserId: "u-other-collector",
+    });
+    expect(unchangedPackage).not.toHaveProperty("currentKibbutzLocation");
+    expect(unchangedPackage).not.toHaveProperty("currentKibbutzLocationText");
   });
 
   it("lets the package recipient mark an arrived package as delivered", () => {

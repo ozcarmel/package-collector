@@ -35,6 +35,8 @@ import {
   approveJoinRequest as approveJoinRequestAction,
   createPickupLocation as createPickupLocationAction,
   deletePickupLocation as deletePickupLocationAction,
+  resolveKibbutzDropNote,
+  updateCollectedPackagesArrival as updateCollectedPackagesArrivalAction,
   updatePickupLocation as updatePickupLocationAction,
 } from "@/lib/app-state-actions";
 import type {
@@ -589,6 +591,7 @@ export const firestoreRepository: AppOperationsRepository = {
     deps: ActionDeps,
   ) {
     const db = requireFirestore();
+    const updatesByPackageId = new Map(input.updates.map((update) => [update.packageId, update]));
     const packagesSnapshot = await getDocs(
       query(
         collection(db, "packages"),
@@ -598,15 +601,22 @@ export const firestoreRepository: AppOperationsRepository = {
     );
     const batch = writeBatch(db);
     packagesSnapshot.docs.forEach((packageDoc) => {
+      const update = updatesByPackageId.get(packageDoc.id);
+      if (!update) return;
+
       batch.update(packageDoc.ref, {
         status: "arrived",
-        currentKibbutzLocation: input.dropLocation,
-        currentKibbutzLocationText: input.dropNote,
+        currentKibbutzLocation: update.dropLocation,
+        currentKibbutzLocationText: resolveKibbutzDropNote(
+          update.dropLocation,
+          update.dropNote,
+        ),
         updatedAt: deps.now(),
       });
     });
 
     await batch.commit();
+    return updateCollectedPackagesArrivalAction(state, input, deps);
   },
 
   async approveJoinRequest(state: AppState, requestId: string, deps: ActionDeps) {

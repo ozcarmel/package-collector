@@ -202,7 +202,7 @@ test("admin-created pickup locations appear across home, add, pickup, and hours 
   await clickPhoneNav(page, "בית");
   await expect(app(page).locator(".location-strip")).toContainText("נקודת בדיקה");
   await app(page).getByLabel("שעות פתיחה - נקודת בדיקה").click();
-  await expect(page.getByRole("dialog", { name: "שעות פתיחה" })).toContainText("א-ה 08:00-13:00");
+  await expect(page.getByRole("dialog", { name: "שעות פתיחה" })).toContainText("08:00-13:00");
   await page.getByRole("dialog", { name: "שעות פתיחה" }).getByRole("button", { name: "סגור" }).click();
 
   await clickPhoneNav(page, "הוספה");
@@ -223,7 +223,10 @@ test("add package uses example placeholders without saving empty demo values", a
   await expect(ownerInput).toHaveAttribute("placeholder", "עוז כרמל");
   await expect(app(page).locator("#pickup-location")).toHaveValue("pitzutz");
   await expect(messageInput).toHaveValue("");
-  await expect(messageInput).toHaveAttribute("placeholder", /שלום עוז/);
+  await expect(messageInput).toHaveAttribute(
+    "placeholder",
+    "הדביקו כאן במלואה את ההודעה שקיבלתם ב-SMS או במייל, כולל קוד וקישור",
+  );
 
   await app(page).getByRole("button", { name: /שמור/ }).click();
   await expect(page.getByRole("status")).toContainText("יש להזין את שם מקבל החבילה");
@@ -262,7 +265,7 @@ test("packages added to each pickup location increase only that location count",
     await app(page).getByLabel("שם מקבל החבילה").fill(`בדיקה ${locationId}`);
     await app(page).locator("#pickup-location").selectOption(locationId);
     await app(page)
-      .getByLabel("הודעת חברת משלוחים מקורית")
+      .getByLabel("הודעת המשלוח המקורית")
       .fill(`Package for ${locationId}. Approval link: https://example.com/${locationId}`);
     await app(page).getByRole("button", { name: /שמור/ }).click();
 
@@ -317,8 +320,10 @@ test("pickup flow reveals original messages only after confirmation and records 
   await clickPhoneNav(page, "מסירה");
   await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();
   await expect(app(page).getByText("אלה החבילות שמחכות לעדכון מיקום בקיבוץ")).toBeVisible();
-  const dropNote = app(page).locator("#drop-note");
-  const dropLocation = app(page).locator("#drop-location");
+  const arrivalCard = app(page).locator(".arrival-package-card").first();
+  await expect(arrivalCard).toBeVisible();
+  const dropNote = arrivalCard.locator("textarea[id^='drop-note-']");
+  const dropLocation = arrivalCard.locator("select[id^='drop-location-']");
   await expect(dropNote).toHaveValue("");
   await expect(dropNote).toHaveAttribute("placeholder", "שמתי בדולב");
   await dropLocation.selectOption("kolbo");

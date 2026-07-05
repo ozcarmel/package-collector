@@ -47,9 +47,26 @@ export interface UpdatePickupLocationInput extends CreatePickupLocationInput {
   locationId: string;
 }
 
-export interface UpdateArrivalInput {
+export const kibbutzDropLocationDefaultNotes: Record<KibbutzDropLocation, string> = {
+  "gate-crate": "שמתי בדולב",
+  kolbo: "שמתי בארון הכלבו למעלה",
+  "collector-home": "מוזמנים לקחת ממני, שמתי ליד הדלת",
+  "direct-home": "",
+  other: "",
+};
+
+export interface ArrivalPackageUpdateInput {
+  packageId: string;
   dropLocation: KibbutzDropLocation;
   dropNote: string;
+}
+
+export interface UpdateArrivalInput {
+  updates: ArrivalPackageUpdateInput[];
+}
+
+export function resolveKibbutzDropNote(dropLocation: KibbutzDropLocation, dropNote: string) {
+  return dropNote.trim() || kibbutzDropLocationDefaultNotes[dropLocation];
 }
 
 export function createId(prefix: string) {
@@ -435,19 +452,30 @@ export function updateCollectedPackagesArrival(
   input: UpdateArrivalInput,
   deps: ActionDeps,
 ) {
+  const updatesByPackageId = new Map(
+    input.updates.map((update) => [
+      update.packageId,
+      {
+        dropLocation: update.dropLocation,
+        dropNote: resolveKibbutzDropNote(update.dropLocation, update.dropNote),
+      },
+    ]),
+  );
+
   return {
     ...state,
-    packages: state.packages.map((pkg) =>
-      pkg.status === "collected" && pkg.collectorUserId === state.currentUser.id
+    packages: state.packages.map((pkg) => {
+      const update = updatesByPackageId.get(pkg.id);
+      return update && pkg.status === "collected" && pkg.collectorUserId === state.currentUser.id
         ? {
             ...pkg,
             status: "arrived" as const,
-            currentKibbutzLocation: input.dropLocation,
-            currentKibbutzLocationText: input.dropNote,
+            currentKibbutzLocation: update.dropLocation,
+            currentKibbutzLocationText: update.dropNote,
             updatedAt: deps.now(),
           }
-        : pkg,
-    ),
+        : pkg;
+    }),
   };
 }
 

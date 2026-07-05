@@ -35,7 +35,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { getConfiguredOperationsRepository } from "@/lib/app-repository";
 import type { RevealedSensitivePackageDetails } from "@/lib/app-repository-contract";
-import { createId } from "@/lib/app-state-actions";
+import { createId, kibbutzDropLocationDefaultNotes } from "@/lib/app-state-actions";
 import { localDemoRepository } from "@/lib/app-state-repository";
 import { initialAppState } from "@/lib/demo-data";
 import { subscribeFirestoreAppState } from "@/lib/firebase/app-state-subscriptions";
@@ -99,6 +99,11 @@ interface LocationDraft {
   weeklyHours: Record<Weekday, LocationDayDraft>;
 }
 
+interface ArrivalPackageDraft {
+  dropLocation: KibbutzDropLocation;
+  dropNote: string;
+}
+
 interface UnlockAnchor {
   top: number;
   left: number;
@@ -126,13 +131,7 @@ const deliveryMessageExample =
   "הדביקו כאן במלואה את ההודעה שקיבלתם ב-SMS או במייל, כולל קוד וקישור";
 const urlPattern = /(https?:\/\/[^\s]+)/g;
 const fullUrlPattern = /^https?:\/\/[^\s]+$/;
-const dropNoteExamples: Record<KibbutzDropLocation, string> = {
-  "gate-crate": "שמתי בדולב",
-  kolbo: "שמתי בארון הכלבו למעלה",
-  "collector-home": "מוזמנים לקחת ממני, שמתי ליד הדלת",
-  "direct-home": "",
-  other: "",
-};
+const dropNoteExamples = kibbutzDropLocationDefaultNotes;
 
 const initialJoinDraft: JoinDraft = {
   fullName: "",
@@ -518,8 +517,9 @@ export function LahavPackagesApp() {
   const [pendingUnlockAnchor, setPendingUnlockAnchor] = useState<UnlockAnchor | null>(null);
   const [homeLocationFilterId, setHomeLocationFilterId] = useState<string | null>(null);
   const [joinPreviewMode, setJoinPreviewMode] = useState(() => hasJoinPreviewParam());
-  const [dropLocation, setDropLocation] = useState<KibbutzDropLocation>("gate-crate");
-  const [dropNote, setDropNote] = useState("");
+  const [arrivalDraftsByPackageId, setArrivalDraftsByPackageId] = useState<
+    Record<string, ArrivalPackageDraft>
+  >({});
   const [openedPickupLinkPackageIds, setOpenedPickupLinkPackageIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -1360,19 +1360,30 @@ export function LahavPackagesApp() {
   }
 
   async function updateArrival() {
-    const effectiveDropNote = dropNote.trim() || dropNoteExamples[dropLocation];
+    const packagesCollectedByCurrentUser = state.packages.filter(
+      (pkg) => pkg.status === "collected" && pkg.collectorUserId === state.currentUser.id,
+    );
 
     try {
       const nextState = await operationsRepository.updateCollectedPackagesArrival(
         state,
         {
-          dropLocation,
-          dropNote: effectiveDropNote,
+          updates: packagesCollectedByCurrentUser.map((pkg) => {
+            const draft = arrivalDraftsByPackageId[pkg.id] ?? {
+              dropLocation: "gate-crate" as const,
+              dropNote: "",
+            };
+            return {
+              packageId: pkg.id,
+              dropLocation: draft.dropLocation,
+              dropNote: draft.dropNote,
+            };
+          }),
         },
         actionDeps,
       );
       applyRepositoryState(nextState);
-      setDropNote("");
+      setArrivalDraftsByPackageId({});
       setScreen("home");
       notify("מיקום החבילות בקיבוץ עודכן.");
     } catch {
@@ -2157,6 +2168,28 @@ export function LahavPackagesApp() {
       (pkg) => pkg.status === "collected" && pkg.collectorUserId === state.currentUser.id,
     );
 
+    function arrivalDraftForPackage(packageId: string): ArrivalPackageDraft {
+      return (
+        arrivalDraftsByPackageId[packageId] ?? {
+          dropLocation: "gate-crate",
+          dropNote: "",
+        }
+      );
+    }
+
+    function updateArrivalDraft(packageId: string, patch: Partial<ArrivalPackageDraft>) {
+      setArrivalDraftsByPackageId((current) => ({
+        ...current,
+        [packageId]: {
+          ...(current[packageId] ?? {
+            dropLocation: "gate-crate" as const,
+            dropNote: "",
+          }),
+          ...patch,
+        },
+      }));
+    }
+
     return (
       <>
         <h1 className="screen-title">החבילות הגיעו</h1>
@@ -2174,42 +2207,62 @@ export function LahavPackagesApp() {
               </div>
               <span className="badge waiting">{packagesCollectedByCurrentUser.length}</span>
             </div>
-            {packagesCollectedByCurrentUser.length ? (
-              <div className="collected-list">
-                {packagesCollectedByCurrentUser.map((pkg) => (
-                  <div className="collected-row" key={pkg.id}>
-                    <strong>{pkg.ownerName}</strong>
-                    <span>{getLocationName(state.pickupLocations, pkg.pickupLocationId)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
           </div>
 
-          <div className="field">
-            <label htmlFor="drop-location">איפה השארת את החבילות?</label>
-            <select
-              id="drop-location"
-              value={dropLocation}
-              onChange={(event) => setDropLocation(event.target.value as KibbutzDropLocation)}
-            >
-              <option value="gate-crate">בדולב בש.ג</option>
-              <option value="kolbo">בכלבו</option>
-              <option value="collector-home">אצלי בבית</option>
-              <option value="direct-home">נמסרה ישירות לבית המקבל</option>
-              <option value="other">אחר</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="drop-note">הערה למסירה</label>
-            <textarea
-              id="drop-note"
-              placeholder={dropNoteExamples[dropLocation]}
-              value={dropNote}
-              onChange={(event) => setDropNote(event.target.value)}
-            />
-          </div>
-          <button className="button primary full" onClick={updateArrival} type="button">
+          {packagesCollectedByCurrentUser.map((pkg, index) => {
+            const arrivalDraft = arrivalDraftForPackage(pkg.id);
+            return (
+              <div className="card arrival-package-card" key={pkg.id}>
+                <div className="package-top">
+                  <div>
+                    <div className="package-name">{pkg.ownerName}</div>
+                    <div className="package-meta">
+                      {getLocationName(state.pickupLocations, pkg.pickupLocationId)}
+                    </div>
+                  </div>
+                  <span className="badge waiting">{index + 1}</span>
+                </div>
+
+                <div className="field">
+                  <label htmlFor={`drop-location-${pkg.id}`}>איפה השארת את החבילה?</label>
+                  <select
+                    id={`drop-location-${pkg.id}`}
+                    value={arrivalDraft.dropLocation}
+                    onChange={(event) =>
+                      updateArrivalDraft(pkg.id, {
+                        dropLocation: event.target.value as KibbutzDropLocation,
+                      })
+                    }
+                  >
+                    <option value="gate-crate">בדולב בש.ג</option>
+                    <option value="kolbo">בכלבו</option>
+                    <option value="collector-home">אצלי בבית</option>
+                    <option value="direct-home">נמסרה ישירות לבית המקבל</option>
+                    <option value="other">אחר</option>
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label htmlFor={`drop-note-${pkg.id}`}>הערה למסירה</label>
+                  <textarea
+                    id={`drop-note-${pkg.id}`}
+                    placeholder={dropNoteExamples[arrivalDraft.dropLocation]}
+                    value={arrivalDraft.dropNote}
+                    onChange={(event) =>
+                      updateArrivalDraft(pkg.id, { dropNote: event.target.value })
+                    }
+                  />
+                </div>
+              </div>
+            );
+          })}
+
+          <button
+            className="button primary full"
+            disabled={!packagesCollectedByCurrentUser.length}
+            onClick={updateArrival}
+            type="button"
+          >
             <MapPinCheck />
             עדכן מיקום ושלח התראות
           </button>
