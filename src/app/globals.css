@@ -1186,6 +1186,17 @@ form.stack,
   font-size: 12px;
 }
 
+.message-link-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.message-link-status-found {
+  color: var(--primary-strong);
+}
+
 .security-note,
 .info-note,
 .callout {
@@ -1269,6 +1280,23 @@ form.stack,
   border-color: #8ab292;
   background: #e1efdf;
   color: var(--primary-strong);
+}
+
+.button.pickup-link-button {
+  min-height: 36px;
+  border-color: #9fc7a6;
+  background: #e6f1df;
+  color: var(--primary-strong);
+  padding: 7px 12px;
+  font-size: 13px;
+  text-decoration: none;
+  box-shadow: none;
+}
+
+.button.pickup-link-button.opened {
+  border-color: #c9d6c1;
+  background: #f5eddc;
+  color: #566253;
 }
 
 .collect-checkbox-mark {
@@ -1424,7 +1452,7 @@ form.stack,
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  user-select: text;
+  user-select: none;
   font-size: 14px;
   line-height: 1.65;
 }
@@ -1438,6 +1466,8 @@ form.stack,
 
 .catalog-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-end;
   margin-top: 12px;
 }

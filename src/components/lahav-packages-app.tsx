@@ -123,7 +123,9 @@ const emptyDraft: DraftPackage = {
 
 const packageOwnerExample = "עוז כרמל";
 const deliveryMessageExample =
-  "שלום עוז, משלוח AE04062389 ממתין לאיסוף בפיצוץ להבים. לאישור איסוף לחצו: https://u.cheetahint.com/vknpgt0";
+  "לחיצה ארוכה > הדבק";
+const urlPattern = /(https?:\/\/[^\s]+)/g;
+const fullUrlPattern = /^https?:\/\/[^\s]+$/;
 const dropNoteExamples: Record<KibbutzDropLocation, string> = {
   "gate-crate": "שמתי בדולב",
   kolbo: "שמתי בארון הכלבו למעלה",
@@ -482,6 +484,10 @@ function shouldShowPackageOnHome(pkg: DeliveryPackage, currentTimeMs: number | n
   return currentTimeMs - deliveredAtMs < deliveredHomeGracePeriodMs;
 }
 
+function extractMessageUrls(message: string) {
+  return [...message.matchAll(urlPattern)].map((match) => match[0].replace(/[.,;:!?]+$/u, ""));
+}
+
 export function LahavPackagesApp() {
   const [state, setState] = useState<AppState>(() => getInitialRuntimeState());
   const [currentTimeMs, setCurrentTimeMs] = useState<number | null>(null);
@@ -514,6 +520,9 @@ export function LahavPackagesApp() {
   const [joinPreviewMode, setJoinPreviewMode] = useState(() => hasJoinPreviewParam());
   const [dropLocation, setDropLocation] = useState<KibbutzDropLocation>("gate-crate");
   const [dropNote, setDropNote] = useState("");
+  const [openedPickupLinkPackageIds, setOpenedPickupLinkPackageIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const pickupLocationStripRef = useRef<HTMLDivElement | null>(null);
   const pickupLocationArrowRef = useRef<HTMLButtonElement | null>(null);
   const ozPendingRecoveryRef = useRef<string | null>(null);
@@ -682,6 +691,7 @@ export function LahavPackagesApp() {
   )
     ? draft.pickupLocationId
     : state.pickupLocations[0]?.id ?? "";
+  const draftMessageUrls = extractMessageUrls(draft.sensitiveDeliveryMessage);
   const activeRun = state.pickupRuns.find((run) => run.id === activeRunId);
   const activeRunItems = state.pickupRunItems.filter(
     (item) => item.pickupRunId === activeRunId,
@@ -1146,8 +1156,22 @@ export function LahavPackagesApp() {
   }
 
   function handleOriginalMessageLinkClick(packageId: string) {
+    setOpenedPickupLinkPackageIds((current) => {
+      const next = new Set(current);
+      next.add(packageId);
+      return next;
+    });
     void logSensitiveAccess(packageId, "open_pickup_link");
     notify("קישור האישור נפתח והפעולה נרשמה בלוג.");
+  }
+
+  function hasPickupLink(pkg: DeliveryPackage) {
+    return extractMessageUrls(pkg.sensitiveDeliveryMessage ?? "").length > 0;
+  }
+
+  function wasPickupLinkOpened(packageId: string) {
+    const runItem = activeRunItems.find((item) => item.packageId === packageId);
+    return Boolean(runItem?.sensitivePickupLinkOpenedAt || openedPickupLinkPackageIds.has(packageId));
   }
 
   function applyRepositoryState(nextState: AppState | void) {
@@ -1293,6 +1317,12 @@ export function LahavPackagesApp() {
 
   async function markCollected(packageId: string) {
     if (collectingPackageId) return;
+
+    const targetPackage = catalogPackages.find((pkg) => pkg.id === packageId);
+    if (targetPackage && hasPickupLink(targetPackage) && !wasPickupLinkOpened(packageId)) {
+      notify("פתח/י קודם את קישור האישור מתוך הודעת המשלוח.");
+      return;
+    }
 
     setCollectingPackageId(packageId);
     try {
@@ -2021,7 +2051,8 @@ export function LahavPackagesApp() {
             )}
           </div>
           <div className="field">
-            <label htmlFor="message">הודעת חברת משלוחים מקורית</label>
+            <label htmlFor="message">הודעת המשלוח המקורית</label>
+            <p className="help">הדביקו כאן את ההודעה שקיבלתם, כולל קוד וקישור</p>
             <textarea
               id="message"
               placeholder={deliveryMessageExample}
@@ -2033,6 +2064,17 @@ export function LahavPackagesApp() {
                 }))
               }
             />
+            {draft.sensitiveDeliveryMessage ? (
+              <p
+                className={`message-link-status ${
+                  draftMessageUrls.length ? "message-link-status-found" : ""
+                }`}
+              >
+                {draftMessageUrls.length
+                  ? "זוהה קישור איסוף"
+                  : "לא זוהה קישור. אפשר לשמור אם אין קישור בהודעה."}
+              </p>
+            ) : null}
           </div>
           <div className="security-note">
             <Lock />
@@ -2496,8 +2538,6 @@ export function LahavPackagesApp() {
   }
 
   function OriginalMessageText({ pkg }: { pkg: DeliveryPackage }) {
-    const urlPattern = /(https?:\/\/[^\s]+)/g;
-    const fullUrlPattern = /^https?:\/\/[^\s]+$/;
     const message = pkg.sensitiveDeliveryMessage ?? "ההודעה המקורית עדיין לא נפתחה.";
     const parts = message.split(urlPattern);
 
@@ -2534,6 +2574,11 @@ export function LahavPackagesApp() {
     const runItem = activeRunItems.find((item) => item.packageId === pkg.id);
     const isCollected = runItem?.itemStatus === "collected" || pkg.status === "collected";
     const isCollecting = collectingPackageId === pkg.id;
+    const pickupUrls = extractMessageUrls(pkg.sensitiveDeliveryMessage ?? "");
+    const pickupUrl = pickupUrls[0];
+    const requiresPickupLink = Boolean(pickupUrl);
+    const pickupLinkOpened = !requiresPickupLink || wasPickupLinkOpened(pkg.id);
+    const canMarkCollected = !isCollected && collectingPackageId === null && pickupLinkOpened;
     return (
       <div className="card catalog-card">
         <div className="catalog-card-head">
@@ -2565,17 +2610,29 @@ export function LahavPackagesApp() {
         </div>
 
         <div className="catalog-actions">
+          {pickupUrl ? (
+            <a
+              className={`button pickup-link-button ${pickupLinkOpened ? "opened" : ""}`}
+              dir="rtl"
+              href={pickupUrl}
+              onClick={() => handleOriginalMessageLinkClick(pkg.id)}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              {pickupLinkOpened ? "קישור נפתח" : "פתח קישור אישור"}
+            </a>
+          ) : null}
           <button
             aria-pressed={isCollected}
             className={`button collect-button ${isCollected ? "checked" : ""}`}
-            disabled={isCollected || collectingPackageId !== null}
+            disabled={!canMarkCollected}
             onClick={() => markCollected(pkg.id)}
             type="button"
           >
             <span className="collect-checkbox-mark" aria-hidden="true">
               {isCollected ? <Check /> : null}
             </span>
-            {isCollecting ? "מסמן..." : "נאספה"}
+            {isCollecting ? "מסמן..." : isCollected ? "נאספה" : pickupLinkOpened ? "סמן נאספה" : "פתח קישור קודם"}
           </button>
         </div>
       </div>
