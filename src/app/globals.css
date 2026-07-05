@@ -1011,6 +1011,13 @@ form.stack,
   gap: 10px;
 }
 
+.package-top > .badge,
+.package-top > .status-action-badge {
+  width: 96px;
+  min-width: 96px;
+  justify-content: center;
+}
+
 .package-icon {
   width: 44px;
   height: 44px;
