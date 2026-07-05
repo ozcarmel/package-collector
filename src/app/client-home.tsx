@@ -3,7 +3,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { LahavPackagesApp } from "@/components/lahav-packages-app";
 
-const staleServiceWorkerCleanupKey = "lahav-package-collector-sw-cleanup-20260705";
+const staleServiceWorkerCleanupKey = "lahav-package-collector-sw-cleanup-20260705-status-labels";
 
 function subscribe() {
   return () => {};
