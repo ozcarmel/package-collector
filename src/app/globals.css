@@ -310,50 +310,50 @@ select:focus-visible {
 .home-status-band {
   position: relative;
   min-height: 58px;
-  margin-top: -4px;
+  margin-top: -2px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-items: start;
+  gap: 5px;
+  align-items: center;
   overflow: visible;
 }
 
 .home-status-band::before {
   position: absolute;
-  inset-inline: 10px;
-  top: 5px;
-  height: 46px;
-  border-radius: 999px;
+  inset-inline: 18px;
+  top: 50%;
+  z-index: 0;
+  height: 4px;
+  border-radius: 99px;
   content: "";
-  background:
-    linear-gradient(180deg, rgb(255 247 232 / 98%) 0%, rgb(245 230 204 / 96%) 100%);
-  border: 1px solid #e3cda9;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 82%),
-    0 8px 18px rgb(82 63 35 / 12%);
+  background: #115d3f;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 58%);
+  transform: translateY(-50%);
 }
 
 .home-status-band::after {
-  position: absolute;
-  inset-inline: 54px;
-  top: 29px;
-  z-index: 1;
-  height: 3px;
-  border-radius: 999px;
   content: "";
-  background: #125b3e;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 55%);
+  display: none;
 }
 
 .home-status-item {
   position: relative;
   z-index: 2;
   min-width: 0;
-  padding: 5px 4px 0;
+  min-height: 42px;
+  padding: 5px 6px;
+  border: 1px solid #dfc8a2;
+  border-radius: 999px;
   display: grid;
-  grid-template-rows: 48px;
+  grid-template-columns: 28px 1px minmax(18px, 1fr);
+  gap: 6px;
+  direction: ltr;
   justify-items: center;
-  align-items: start;
+  align-items: center;
   text-align: center;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 74%),
+    0 8px 18px rgb(82 63 35 / 12%);
 }
 
 .home-status-item:not(:last-child) {
@@ -363,9 +363,10 @@ select:focus-visible {
 .home-status-icon {
   position: relative;
   z-index: 2;
+  grid-column: 1;
   grid-row: 1;
-  width: 42px;
-  height: 42px;
+  width: 28px;
+  height: 28px;
   border: 1px solid #dfc8a2;
   border-radius: 999px;
   display: grid;
@@ -375,12 +376,12 @@ select:focus-visible {
     linear-gradient(180deg, rgb(255 250 238 / 100%) 0%, rgb(246 232 206 / 100%) 100%);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 84%),
-    0 7px 13px rgb(88 66 36 / 16%);
+    0 4px 9px rgb(88 66 36 / 12%);
 }
 
 .home-status-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   stroke-width: 2.35;
 }
 
@@ -389,24 +390,34 @@ select:focus-visible {
 }
 
 .home-status-item strong {
-  position: absolute;
-  top: 30px;
-  right: calc(50% - 35px);
+  position: static;
   z-index: 4;
-  min-width: 22px;
-  height: 22px;
-  border: 1px solid #cfae77;
-  border-radius: 999px;
+  grid-column: 3;
+  grid-row: 1;
+  width: 100%;
+  min-width: 18px;
+  height: auto;
+  border: 0;
+  border-radius: 0;
   display: inline-grid;
   place-items: center;
-  color: #194432;
-  background: #fff6e8;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 78%),
-    0 4px 9px rgb(83 62 33 / 15%);
-  font-size: 12px;
+  color: inherit;
+  background: transparent;
+  box-shadow: none;
+  font-size: 22px;
   line-height: 1;
   font-weight: 900;
+}
+
+.home-status-item::after {
+  grid-column: 2;
+  grid-row: 1;
+  width: 1px;
+  height: 25px;
+  border-radius: 99px;
+  content: "";
+  background: currentColor;
+  opacity: 0.28;
 }
 
 .home-status-label {
@@ -422,36 +433,48 @@ select:focus-visible {
   white-space: nowrap;
 }
 
-.home-status-waiting .home-status-icon,
-.home-status-waiting strong,
-.home-status-waiting .home-status-label {
+.home-status-waiting {
   border-color: var(--status-waiting-border);
   color: var(--status-waiting-text);
   background: var(--status-waiting-bg);
 }
 
-.home-status-collected .home-status-icon,
-.home-status-collected strong,
-.home-status-collected .home-status-label {
+.home-status-waiting .home-status-icon {
+  border-color: color-mix(in srgb, var(--status-waiting-border) 70%, #ffffff);
+  color: var(--status-waiting-text);
+}
+
+.home-status-collected {
   border-color: var(--status-collected-border);
   color: var(--status-collected-text);
   background: var(--status-collected-bg);
 }
 
-.home-status-arrived .home-status-icon,
-.home-status-arrived strong,
-.home-status-arrived .home-status-label {
+.home-status-collected .home-status-icon {
+  border-color: color-mix(in srgb, var(--status-collected-border) 70%, #ffffff);
+  color: var(--status-collected-text);
+}
+
+.home-status-arrived {
   border-color: var(--status-arrived-border);
   color: var(--status-arrived-text);
   background: var(--status-arrived-bg);
 }
 
-.home-status-delivered .home-status-icon,
-.home-status-delivered strong,
-.home-status-delivered .home-status-label {
+.home-status-arrived .home-status-icon {
+  border-color: color-mix(in srgb, var(--status-arrived-border) 70%, #ffffff);
+  color: var(--status-arrived-text);
+}
+
+.home-status-delivered {
   border-color: var(--status-delivered-border);
   color: var(--status-delivered-text);
   background: var(--status-delivered-bg);
+}
+
+.home-status-delivered .home-status-icon {
+  border-color: color-mix(in srgb, var(--status-delivered-border) 70%, #ffffff);
+  color: var(--status-delivered-text);
 }
 
 .metric,
