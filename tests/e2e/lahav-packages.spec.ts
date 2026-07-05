@@ -616,6 +616,7 @@ test("home and form UI avoid the known layout regressions", async ({ page }) => 
   await expect(app(page).locator(".content-home")).toHaveCSS("overflow-y", "hidden");
   await expect(app(page).locator(".home-list")).toHaveCSS("overflow-y", "auto");
   await expect.poll(async () => app(page).locator(".pickup-card-open").count()).toBeGreaterThan(0);
+  await expect(app(page).locator(".pickup-card-open").first()).toHaveCSS("cursor", "pointer");
   await expect(app(page).locator(".package-card").filter({ hasText: "הגיעה לקיבוץ" })).toBeVisible();
 
   const statusColors = await app(page).locator(".content-home").evaluate((home) => {
