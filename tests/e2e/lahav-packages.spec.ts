@@ -653,22 +653,25 @@ test("home and form UI avoid the known layout regressions", async ({ page }) => 
   expect(homeStatusLabelBox.width).toBeLessThanOrEqual(1);
   expect(homeStatusLabelBox.height).toBeLessThanOrEqual(1);
 
-  const packageStatusBadgeSizes = await app(page).locator(".content-home").evaluate((home) => {
-    const size = (selector: string) => {
+  const packageStatusBadgeStyles = await app(page).locator(".content-home").evaluate((home) => {
+    const style = (selector: string) => {
+      const element = home.querySelector(selector) as HTMLElement;
+      const styles = getComputedStyle(element);
       const rect = (home.querySelector(selector) as HTMLElement).getBoundingClientRect();
 
       return {
+        fontSize: styles.fontSize,
         height: Math.round(rect.height),
         width: Math.round(rect.width),
       };
     };
 
     return {
-      waiting: size(".package-card .status-action-badge"),
-      arrived: size(".package-card .badge.arrived"),
+      waiting: style(".package-card .status-action-badge"),
+      arrived: style(".package-card .badge.arrived"),
     };
   });
-  expect(packageStatusBadgeSizes.waiting).toEqual(packageStatusBadgeSizes.arrived);
+  expect(packageStatusBadgeStyles.waiting).toEqual(packageStatusBadgeStyles.arrived);
 
   await openAdmin(page);
   await app(page).getByRole("button", { name: /הוסף נקודת איסוף/ }).click();
