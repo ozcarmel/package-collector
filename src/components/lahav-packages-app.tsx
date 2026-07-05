@@ -674,6 +674,12 @@ export function LahavPackagesApp() {
   const waitingPackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) === "waiting",
   );
+  const firstWaitingPickupLocationId =
+    state.pickupLocations.find((location) =>
+      state.packages.some(
+        (pkg) => pkg.pickupLocationId === location.id && pkg.status === "waiting",
+      ),
+    )?.id ?? null;
   const collectedPackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) === "collected",
   );
@@ -858,6 +864,12 @@ export function LahavPackagesApp() {
       return;
     }
 
+    if (nextScreen === "pickup") {
+      setPendingUnlockLocationId(null);
+      setPendingUnlockAnchor(null);
+      setHomeLocationFilterId(firstWaitingPickupLocationId);
+    }
+
     setScreen(nextScreen);
   }
 
@@ -993,6 +1005,7 @@ export function LahavPackagesApp() {
         return;
       }
 
+      setHomeLocationFilterId(locationId);
       setPendingUnlockAnchor(target ? getUnlockAnchor(target) : null);
       setPendingUnlockLocationId(locationId);
     } catch {
@@ -2154,10 +2167,11 @@ export function LahavPackagesApp() {
             const count = state.packages.filter(
               (pkg) => pkg.pickupLocationId === location.id && pkg.status === "waiting",
             ).length;
+            const isSelectedWaitingLocation = homeLocationFilterId === location.id && count > 0;
             return (
               <button
-                aria-pressed={homeLocationFilterId === location.id}
-                className={`location-button ${homeLocationFilterId === location.id ? "selected" : ""}`}
+                aria-pressed={isSelectedWaitingLocation}
+                className={`location-button ${isSelectedWaitingLocation ? "selected" : ""}`}
                 data-pickup-location-id={location.id}
                 key={location.id}
                 onClick={(event) => void requestPickupUnlock(location.id, event.currentTarget)}

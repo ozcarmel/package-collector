@@ -431,6 +431,37 @@ test("home waiting package shortcuts open pickup screen with the location select
   );
 });
 
+test("direct pickup navigation selects the first location with waiting packages only", async ({
+  page,
+}) => {
+  await gotoAdmin(page);
+
+  await clickPhoneNav(page, "איסוף");
+  await expect(app(page).getByRole("heading", { name: "אני נוסע לאסוף" })).toBeVisible();
+
+  await expect(app(page).locator('.location-button[data-pickup-location-id="pitzutz"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(app(page).locator('.location-button[data-pickup-location-id="eshkolot"]')).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+
+  await app(page).locator('.location-button[data-pickup-location-id="eshkolot"]').click();
+  await expect(page.getByRole("status")).toContainText(
+    "אין כרגע חבילות שממתינות לאיסוף בנקודה הזאת.",
+  );
+  await expect(app(page).locator('.location-button[data-pickup-location-id="eshkolot"]')).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(app(page).locator('.location-button[data-pickup-location-id="pitzutz"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
 test("pickup flow reveals original messages only after confirmation and records collection", async ({
   context,
   page,
