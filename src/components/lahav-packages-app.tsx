@@ -1006,6 +1006,19 @@ export function LahavPackagesApp() {
     setPendingUnlockAnchor(null);
   }
 
+  function openPickupScreenForLocation(locationId: string) {
+    if (!isApprovedUser) {
+      notify("לא ניתן לאסוף חבילה לפני אישור משתמש חדש");
+      setScreen(submittedJoinRequest ? "pending" : "join");
+      return;
+    }
+
+    setPendingUnlockLocationId(null);
+    setPendingUnlockAnchor(null);
+    setHomeLocationFilterId(locationId);
+    setScreen("pickup");
+  }
+
   async function submitJoinRequest() {
     const fullName = joinDraft.fullName.trim();
     const phone = joinDraft.phone.trim();
@@ -1941,7 +1954,7 @@ export function LahavPackagesApp() {
                 const selectLocation = () => {
                   setHomeLocationFilterId(location.id);
                   if (locationPackageCount > 0) {
-                    void requestPickupUnlock(location.id);
+                    openPickupScreenForLocation(location.id);
                   }
                 };
                 return (
@@ -1960,7 +1973,7 @@ export function LahavPackagesApp() {
                         }
                         setHomeLocationFilterId(location.id);
                         if (locationPackageCount > 0) {
-                          void requestPickupUnlock(location.id, event.currentTarget);
+                          openPickupScreenForLocation(location.id);
                         }
                       }}
                       onKeyDown={(event) => {
@@ -2113,7 +2126,8 @@ export function LahavPackagesApp() {
             ).length;
             return (
               <button
-                className="location-button"
+                aria-pressed={homeLocationFilterId === location.id}
+                className={`location-button ${homeLocationFilterId === location.id ? "selected" : ""}`}
                 data-pickup-location-id={location.id}
                 key={location.id}
                 onClick={(event) => void requestPickupUnlock(location.id, event.currentTarget)}
@@ -2547,9 +2561,19 @@ export function LahavPackagesApp() {
                 {getLocationName(state.pickupLocations, pkg.pickupLocationId)}
               </div>
             </div>
-            <span className={homePackageStatusBadgeClass(pkg)}>
-              {homePackageStatusLabel(pkg)}
-            </span>
+            {getHomePackageStatusBucket(pkg.status) === "waiting" ? (
+              <button
+                className={`${homePackageStatusBadgeClass(pkg)} status-action-badge`}
+                onClick={() => openPickupScreenForLocation(pkg.pickupLocationId)}
+                type="button"
+              >
+                {homePackageStatusLabel(pkg)}
+              </button>
+            ) : (
+              <span className={homePackageStatusBadgeClass(pkg)}>
+                {homePackageStatusLabel(pkg)}
+              </span>
+            )}
           </div>
           {detailBadge ? (
             <span className={detailBadge.className}>

@@ -277,6 +277,29 @@ test("packages added to each pickup location increase only that location count",
   }
 });
 
+test("home waiting package shortcuts open pickup screen with the location selected", async ({
+  page,
+}) => {
+  await gotoAdmin(page);
+
+  await app(page).locator('.pickup-card[data-pickup-location-id="pitzutz"]').click();
+  await expect(app(page).getByRole("heading", { name: "אני נוסע לאסוף" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })).toHaveCount(0);
+  await expect(app(page).locator('.location-button[data-pickup-location-id="pitzutz"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await clickPhoneNav(page, "בית");
+  await app(page).locator(".status-action-badge").first().click();
+  await expect(app(page).getByRole("heading", { name: "אני נוסע לאסוף" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })).toHaveCount(0);
+  await expect(app(page).locator('.location-button[data-pickup-location-id="pitzutz"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
 test("pickup flow reveals original messages only after confirmation and records collection", async ({
   context,
   page,

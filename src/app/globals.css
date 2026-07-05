@@ -1145,6 +1145,15 @@ form.stack,
   border-color: #e2b8b2;
 }
 
+.status-action-badge {
+  cursor: pointer;
+  font: inherit;
+}
+
+.status-action-badge:active {
+  transform: translateY(1px);
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -1364,6 +1373,15 @@ form.stack,
   margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.location-button.selected {
+  border-color: #78a56f;
+  background: #edf6e5;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 70%),
+    0 0 0 2px rgb(36 118 79 / 12%),
+    var(--card-shadow);
 }
 
 .catalog-header {
