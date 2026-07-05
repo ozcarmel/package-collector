@@ -634,6 +634,17 @@ test("home and form UI avoid the known layout regressions", async ({ page }) => 
   expect(statusColors.topArrived).toBe(statusColors.packageArrived);
   expect(statusColors.topDelivered).not.toBe(statusColors.topArrived);
 
+  const packageStatusBadgeHeights = await app(page).locator(".content-home").evaluate((home) => {
+    const height = (selector: string) =>
+      Math.round((home.querySelector(selector) as HTMLElement).getBoundingClientRect().height);
+
+    return {
+      waiting: height(".package-card .status-action-badge"),
+      arrived: height(".package-card .badge.arrived"),
+    };
+  });
+  expect(packageStatusBadgeHeights.waiting).toBe(packageStatusBadgeHeights.arrived);
+
   await openAdmin(page);
   await app(page).getByRole("button", { name: /הוסף נקודת איסוף/ }).click();
   const closedLocationDialog = page.getByRole("dialog", { name: "הוסף נקודת איסוף" });

@@ -1225,8 +1225,13 @@ form.stack,
 }
 
 .status-action-badge {
+  appearance: none;
   cursor: pointer;
   font: inherit;
+  min-height: 26px;
+  margin: 0;
+  padding: 4px 9px;
+  line-height: 1;
 }
 
 .status-action-badge:active {
