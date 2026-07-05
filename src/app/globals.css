@@ -529,6 +529,11 @@ select:focus-visible {
   margin-top: -2px;
 }
 
+.home-list-title {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
 .location-strip-wrap {
   position: relative;
   min-width: 0;
