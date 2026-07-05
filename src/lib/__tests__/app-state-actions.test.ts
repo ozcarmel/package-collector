@@ -579,7 +579,7 @@ describe("app state actions", () => {
     });
   });
 
-  it("allows Oz super admin to block duplicate Oz owner records", () => {
+  it("prevents blocking Oz owner sessions on other devices", () => {
     const deps = createTestDeps();
     const state: AppState = {
       ...cloneState(),
@@ -597,11 +597,11 @@ describe("app state actions", () => {
       ],
     };
 
-    const blocked = blockUser(state, "duplicate-oz-owner", deps);
+    const attempted = blockUser(state, "duplicate-oz-owner", deps);
 
-    expect(blocked.users.find((user) => user.id === "duplicate-oz-owner")).toMatchObject({
-      verificationStatus: "blocked",
-      blockedByUserId: state.currentUser.id,
+    expect(attempted.users.find((user) => user.id === "duplicate-oz-owner")).toMatchObject({
+      verificationStatus: "approved",
+      role: "owner",
     });
   });
 

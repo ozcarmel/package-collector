@@ -704,6 +704,7 @@ export const firestoreRepository: AppOperationsRepository = {
     const userSnapshot = await getDoc(doc(db, "users", userId));
     const target = userSnapshot.data() as AppState["users"][number] | undefined;
     if (!target) return;
+    if (isOzSuperAdminUser(target)) return;
 
     const canBlockRegularMember =
       (state.currentUser.role === "admin" || state.currentUser.role === "owner") &&

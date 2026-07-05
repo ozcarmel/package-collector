@@ -40,6 +40,11 @@ service cloud.firestore {
         userDoc().data.phone == "0584411883";
     }
 
+    function ozOwnerRecord() {
+      return resource.data.role == "owner" &&
+        resource.data.phone == "0584411883";
+    }
+
     function validNewSelfUser(userId) {
       return signedIn() &&
         request.auth.uid == userId &&
@@ -127,6 +132,7 @@ service cloud.firestore {
       return admin() &&
         request.auth.uid != userId &&
         resource.data.role == "member" &&
+        resource.data.phone != "0584411883" &&
         resource.data.verificationStatus == "approved" &&
         request.resource.data.verificationStatus == "blocked" &&
         request.resource.data.blockedByUserId == request.auth.uid &&
@@ -138,6 +144,7 @@ service cloud.firestore {
       return owner() &&
         request.auth.uid != userId &&
         resource.data.role in ["admin", "owner"] &&
+        !ozOwnerRecord() &&
         resource.data.verificationStatus == "approved" &&
         request.resource.data.verificationStatus == "blocked" &&
         request.resource.data.blockedByUserId == request.auth.uid &&

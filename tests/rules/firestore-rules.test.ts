@@ -354,7 +354,7 @@ describe("firestore security rules", () => {
         blockedByUserId: "u-oz",
       }),
     );
-    await assertSucceeds(
+    await assertFails(
       ownerDb.doc("users/u-duplicate-oz").update({
         verificationStatus: "blocked",
         blockedAt: now,

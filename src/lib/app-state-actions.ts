@@ -548,6 +548,7 @@ export function blockUser(state: AppState, userId: string, deps: ActionDeps) {
 
   const target = state.users.find((user) => user.id === userId);
   if (!target) return state;
+  if (isOzSuperAdminUser(target)) return state;
 
   const canBlockRegularMember =
     (state.currentUser.role === "admin" || state.currentUser.role === "owner") &&
