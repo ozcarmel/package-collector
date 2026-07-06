@@ -24,18 +24,19 @@ const scheduleDefaults: Record<string, ScheduleDefault> = {
       location.openingHours.includes("צריך לאמת"),
   },
   "post-office": {
-    openingHours: "א', ה' 13:00-18:00, ב'-ד' 11:00-15:00, ו' סגור",
+    openingHours: "א', ה' 13:00-18:00, ב'-ד' 11:00-15:00, ו' 09:00-12:00",
     weeklyHours: {
       0: [{ open: "13:00", close: "18:00" }],
       1: [{ open: "11:00", close: "15:00" }],
       2: [{ open: "11:00", close: "15:00" }],
       3: [{ open: "11:00", close: "15:00" }],
       4: [{ open: "13:00", close: "18:00" }],
-      5: [],
+      5: [{ open: "09:00", close: "12:00" }],
     },
     shouldApply: (location) =>
       !location.weeklyHours ||
       location.openingHours.includes("צריך לאמת") ||
+      location.openingHours.includes("ו' סגור") ||
       !location.openingHours.includes("ה'") ||
       !location.openingHours.includes("ו'"),
   },

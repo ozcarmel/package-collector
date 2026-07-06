@@ -17,7 +17,7 @@ const fallbackWeeklyHoursByLocationId: Record<string, PickupLocation["weeklyHour
     2: [{ open: "11:00", close: "15:00" }],
     3: [{ open: "11:00", close: "15:00" }],
     4: [{ open: "13:00", close: "18:00" }],
-    5: [],
+    5: [{ open: "09:00", close: "12:00" }],
   },
   pitzutz: {
     0: [{ open: "08:00", close: "00:00" }],
