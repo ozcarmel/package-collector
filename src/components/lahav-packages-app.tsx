@@ -412,11 +412,7 @@ function homePackageDetailBadge(pkg: DeliveryPackage) {
           "מיקום בקיבוץ לא צוין",
       };
     case "delivered":
-      return {
-        className: "badge delivered",
-        icon: null,
-        text: "נתקבלה על ידי בעל החבילה",
-      };
+      return null;
     case null:
       return {
         className: statusBadgeClass(pkg.status),
@@ -906,7 +902,7 @@ export function LahavPackagesApp() {
       case "arrived":
         return pkg.currentKibbutzLocationText?.trim() || "נמסרה בקיבוץ";
       case "delivered":
-        return "נתקבלה על ידי בעל החבילה";
+        return pickupLocation;
       case null:
         return pickupLocation;
     }
@@ -2955,7 +2951,6 @@ export function LahavPackagesApp() {
     const canConfirmReceived =
       pkg.ownerUserId === currentUserId &&
       (pkg.status === "arrived" || pkg.status === "ready_for_handoff");
-    const hasConfirmedReceived = pkg.ownerUserId === currentUserId && pkg.status === "delivered";
     const isReceiving = receivingPackageId === pkg.id;
     const wasCollected =
       pkg.status === "collected" ||
@@ -2999,23 +2994,16 @@ export function LahavPackagesApp() {
           {collectorName && wasCollected ? (
             <div className="package-note">נאספה על ידי {collectorName}</div>
           ) : null}
-          {canConfirmReceived || hasConfirmedReceived ? (
+          {canConfirmReceived ? (
             <div className="receive-action-row">
-              {canConfirmReceived ? (
-                <button
-                  className="button receive-button"
-                  disabled={receivingPackageId !== null}
-                  onClick={() => markReceived(pkg.id)}
-                  type="button"
-                >
-                  {isReceiving ? "מאשר..." : "אשר קבלה"}
-                </button>
-              ) : (
-                <button className="button receive-confirmed-button" disabled type="button">
-                  <Check />
-                  התקבלה
-                </button>
-              )}
+              <button
+                className="button receive-button"
+                disabled={receivingPackageId !== null}
+                onClick={() => markReceived(pkg.id)}
+                type="button"
+              >
+                {isReceiving ? "מאשר..." : "אשר קבלה"}
+              </button>
             </div>
           ) : null}
         </div>

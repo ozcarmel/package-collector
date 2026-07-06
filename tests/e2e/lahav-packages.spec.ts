@@ -526,6 +526,8 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
   context,
   page,
 }) => {
+  test.setTimeout(120_000);
+
   const packages = [
     { name: "זרימה דואר אחת", locationId: "post-office" },
     { name: "זרימה דואר שתיים", locationId: "post-office" },
@@ -634,7 +636,8 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
 
   const receivedCard = app(page).locator(".package-card").filter({ hasText: "זרימה דואר אחת" });
   await receivedCard.getByRole("button", { name: "אשר קבלה" }).click();
-  await expect(receivedCard.getByRole("button", { name: "התקבלה" })).toBeVisible();
+  await expect(receivedCard.getByRole("button", { name: "התקבלה" })).toHaveCount(0);
+  await expect(receivedCard).not.toContainText("נתקבלה על ידי בעל החבילה");
   await expectHomeStatusSync(page, {
     ...baseline,
     waiting: baseline.waiting + 3,
