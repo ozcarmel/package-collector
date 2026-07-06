@@ -115,8 +115,8 @@ async function readPackageListStatusCounts(page: Page): Promise<StatusCounts> {
 
       if (text.includes("ממתינה לאיסוף")) counts.waiting += 1;
       if (text.includes("נאספה")) counts.collected += 1;
-      if (text.includes("הגיעה לקיבוץ")) counts.arrived += 1;
-      if (text.includes("נמסרה")) counts.delivered += 1;
+      if (text.includes("נמסרה בקיבוץ")) counts.arrived += 1;
+      if (text.includes("נתקבלה")) counts.delivered += 1;
     });
 
     return counts;
@@ -407,8 +407,8 @@ test("new package appears on home under its pickup location and package status w
   await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
   await expect(app(page).locator(".home-status-band")).toContainText("ממתינות לאיסוף");
   await expect(app(page).locator(".home-status-band")).toContainText("נאספו");
-  await expect(app(page).locator(".home-status-band")).toContainText("הגיעו לקיבוץ");
-  await expect(app(page).locator(".home-status-band")).toContainText("נמסרו");
+  await expect(app(page).locator(".home-status-band")).toContainText("נמסרו בקיבוץ");
+  await expect(app(page).locator(".home-status-band")).toContainText("נתקבלו");
   await expect(app(page).locator(".home-status-waiting strong")).toHaveText(
     String(beforeWaitingCount + 1),
     { timeout: 5000 },
@@ -469,12 +469,12 @@ test("top package status capsules open a bottom sheet with matching packages", a
   await expect(page.getByRole("dialog", { name: "ממתינות לאיסוף" })).toHaveCount(0);
 
   await app(page).locator(".home-status-arrived").click();
-  await expect(page.getByRole("dialog", { name: "הגיעו לקיבוץ" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "נמסרו בקיבוץ" })).toBeVisible();
   await expect(page.locator(".status-bottom-sheet")).toContainText("נעה אמבולוס");
   await page.getByRole("button", { name: "סגור" }).click();
 
   await app(page).locator(".home-status-delivered").click();
-  await expect(page.getByRole("dialog", { name: "נמסרו" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "נתקבלו" })).toBeVisible();
   await expect(page.locator(".status-bottom-sheet")).toContainText(
     "אין חבילות בסטטוס הזה כרגע.",
   );
@@ -621,7 +621,7 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
     arrived: baseline.arrived + 3,
   });
   for (const target of deliveryTargets) {
-    await expectPackageCardStatus(page, target.name, "הגיעה לקיבוץ");
+    await expectPackageCardStatus(page, target.name, "נמסרה בקיבוץ");
     await expect(app(page).locator(".package-card").filter({ hasText: target.name })).toContainText(
       target.note,
     );
@@ -637,7 +637,7 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
     arrived: baseline.arrived + 2,
     delivered: baseline.delivered + 1,
   });
-  await expectPackageCardStatus(page, "זרימה דואר אחת", "נמסרה");
+  await expectPackageCardStatus(page, "זרימה דואר אחת", "נתקבלה");
 
   await collectPackageAtLocation(context, page, "post-office", "זרימה דואר שתיים");
 
@@ -655,9 +655,9 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
   await expectPackageCardStatus(page, "זרימה דואר שתיים", "נאספה");
   await expectPackageCardStatus(page, "זרימה פיצוץ שתיים", "ממתינה לאיסוף");
   await expectPackageCardStatus(page, "זרימה אשכולות", "ממתינה לאיסוף");
-  await expectPackageCardStatus(page, "זרימה פיצוץ אחת", "הגיעה לקיבוץ");
-  await expectPackageCardStatus(page, "זרימה דלי", "הגיעה לקיבוץ");
-  await expectPackageCardStatus(page, "זרימה דואר אחת", "נמסרה");
+  await expectPackageCardStatus(page, "זרימה פיצוץ אחת", "נמסרה בקיבוץ");
+  await expectPackageCardStatus(page, "זרימה דלי", "נמסרה בקיבוץ");
+  await expectPackageCardStatus(page, "זרימה דואר אחת", "נתקבלה");
 });
 
 test("saving two kibbutz delivery rows updates home status and shows both packages", async ({
@@ -736,7 +736,7 @@ test("saving two kibbutz delivery rows updates home status and shows both packag
                   card.querySelector(".package-name")?.textContent?.trim() ?? "";
                 return (
                   packageName === expectedName &&
-                  (card.textContent ?? "").includes("הגיעה לקיבוץ")
+                  (card.textContent ?? "").includes("נמסרה בקיבוץ")
                 );
               }),
             ),
@@ -931,7 +931,7 @@ test("home and form UI avoid the known layout regressions", async ({ page }) => 
   await expect(app(page).locator(".home-list")).toHaveCSS("overflow-y", "auto");
   await expect.poll(async () => app(page).locator(".pickup-card").count()).toBeGreaterThan(0);
   await expect(app(page).locator(".pickup-card").first()).toHaveCSS("cursor", "pointer");
-  await expect(app(page).locator(".package-card").filter({ hasText: "הגיעה לקיבוץ" })).toBeVisible();
+  await expect(app(page).locator(".package-card").filter({ hasText: "נמסרה בקיבוץ" })).toBeVisible();
 
   const statusColors = await app(page).locator(".content-home").evaluate((home) => {
     const style = (selector: string) =>

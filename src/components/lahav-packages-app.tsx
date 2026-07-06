@@ -81,8 +81,8 @@ type HomePackageStatusBucket = "waiting" | "collected" | "arrived" | "delivered"
 const homeStatusBucketLabels: Record<HomePackageStatusBucket, string> = {
   waiting: "ממתינות לאיסוף",
   collected: "נאספו",
-  arrived: "הגיעו לקיבוץ",
-  delivered: "נמסרו",
+  arrived: "נמסרו בקיבוץ",
+  delivered: "נתקבלו",
 };
 
 interface DraftPackage {
@@ -254,11 +254,11 @@ function statusLabel(status: PackageStatus) {
     case "collected":
       return "נאספה";
     case "arrived":
-      return "הגיעה לקיבוץ";
+      return "נמסרה בקיבוץ";
     case "ready_for_handoff":
-      return "הגיעה לקיבוץ";
+      return "נמסרה בקיבוץ";
     case "delivered":
-      return "נמסרה";
+      return "נתקבלה";
     case "cancelled":
       return "בוטלה";
   }
@@ -369,9 +369,9 @@ function homePackageStatusLabel(pkg: DeliveryPackage) {
     case "collected":
       return "נאספה";
     case "arrived":
-      return "הגיעה לקיבוץ";
+      return "נמסרה בקיבוץ";
     case "delivered":
-      return "נמסרה";
+      return "נתקבלה";
     case null:
       return statusLabel(pkg.status);
   }
@@ -415,7 +415,7 @@ function homePackageDetailBadge(pkg: DeliveryPackage) {
       return {
         className: "badge delivered",
         icon: null,
-        text: "נמסרה לבעל החבילה",
+        text: "נתקבלה על ידי בעל החבילה",
       };
     case null:
       return {
@@ -904,9 +904,9 @@ export function LahavPackagesApp() {
       case "collected":
         return collectorName ? `נאספה על ידי ${collectorName}` : pickupLocation;
       case "arrived":
-        return pkg.currentKibbutzLocationText?.trim() || "הגיעה לקיבוץ";
+        return pkg.currentKibbutzLocationText?.trim() || "נמסרה בקיבוץ";
       case "delivered":
-        return "נמסרה לבעל החבילה";
+        return "נתקבלה על ידי בעל החבילה";
       case null:
         return pickupLocation;
     }
@@ -1515,9 +1515,9 @@ export function LahavPackagesApp() {
         actionDeps,
       );
       applyRepositoryState(nextState);
-      notify("החבילה סומנה כנמסרה.");
+      notify("החבילה סומנה כנתקבלה.");
     } catch {
-      notify("לא הצלחנו לסמן את החבילה כנמסרה. נסה/י שוב בעוד רגע.");
+      notify("לא הצלחנו לסמן את החבילה כנתקבלה. נסה/י שוב בעוד רגע.");
     } finally {
       setReceivingPackageId(null);
     }
@@ -2225,29 +2225,29 @@ export function LahavPackagesApp() {
             </button>
             <button
               className="home-status-item home-status-arrived"
-              aria-label={`הגיעו לקיבוץ: ${arrivedPackages.length}`}
+              aria-label={`${homeStatusBucketLabels.arrived}: ${arrivedPackages.length}`}
               onClick={() => setActiveStatusSheet("arrived")}
-              title={`הגיעו לקיבוץ: ${arrivedPackages.length}`}
+              title={`${homeStatusBucketLabels.arrived}: ${arrivedPackages.length}`}
               type="button"
             >
               <span className="home-status-icon">
                 <ClipboardList />
               </span>
               <strong>{arrivedPackages.length}</strong>
-              <span className="home-status-label">הגיעו לקיבוץ</span>
+              <span className="home-status-label">{homeStatusBucketLabels.arrived}</span>
             </button>
             <button
               className="home-status-item home-status-delivered"
-              aria-label={`נמסרו: ${deliveredPackages.length}`}
+              aria-label={`${homeStatusBucketLabels.delivered}: ${deliveredPackages.length}`}
               onClick={() => setActiveStatusSheet("delivered")}
-              title={`נמסרו: ${deliveredPackages.length}`}
+              title={`${homeStatusBucketLabels.delivered}: ${deliveredPackages.length}`}
               type="button"
             >
               <span className="home-status-icon">
                 <Check />
               </span>
               <strong>{deliveredPackages.length}</strong>
-              <span className="home-status-label">נמסרו</span>
+              <span className="home-status-label">{homeStatusBucketLabels.delivered}</span>
             </button>
           </div>
 

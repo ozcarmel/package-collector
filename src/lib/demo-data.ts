@@ -220,7 +220,7 @@ export const initialAppState: AppState = {
       ownerUserId: "u-noa",
       ownerName: "נעה אמבולוס",
       pickupLocationId: "home-paami",
-      publicSummary: "כבר הגיעה לקיבוץ",
+      publicSummary: "כבר נמסרה בקיבוץ",
       status: "arrived",
       sensitiveDeliveryMessage: "הודעה מקורית שמורה.",
       currentKibbutzLocation: "gate-crate",
