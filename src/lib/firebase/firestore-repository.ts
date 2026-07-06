@@ -37,6 +37,7 @@ import {
   approveJoinRequest as approveJoinRequestAction,
   createPickupLocation as createPickupLocationAction,
   deletePickupLocation as deletePickupLocationAction,
+  getEquivalentUserIdsForCurrentUser,
   resolveKibbutzDropNote,
   updatePackage as updatePackageAction,
   updateCollectedPackagesArrival as updateCollectedPackagesArrivalAction,
@@ -665,19 +666,25 @@ export const firestoreRepository: AppOperationsRepository = {
   ) {
     const db = requireFirestore();
     const updatesByPackageId = new Map(input.updates.map((update) => [update.packageId, update]));
-    const packagesSnapshot = await getDocs(
-      query(
-        collection(db, "packages"),
-        where("collectorUserId", "==", state.currentUser.id),
-        where("status", "==", "collected"),
-      ),
+    const equivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
+    const packageSnapshots = await Promise.all(
+      input.updates.map((update) => getDoc(doc(db, "packages", update.packageId))),
     );
     const batch = writeBatch(db);
-    packagesSnapshot.docs.forEach((packageDoc) => {
-      const update = updatesByPackageId.get(packageDoc.id);
+    packageSnapshots.forEach((packageSnapshot) => {
+      if (!packageSnapshot.exists()) return;
+      const pkg = packageSnapshot.data() as DeliveryPackage;
+      const update = updatesByPackageId.get(packageSnapshot.id);
       if (!update) return;
+      if (
+        pkg.status !== "collected" ||
+        !pkg.collectorUserId ||
+        !equivalentUserIds.has(pkg.collectorUserId)
+      ) {
+        return;
+      }
 
-      batch.update(packageDoc.ref, {
+      batch.update(packageSnapshot.ref, {
         status: "arrived",
         currentKibbutzLocation: update.dropLocation,
         currentKibbutzLocationText: resolveKibbutzDropNote(

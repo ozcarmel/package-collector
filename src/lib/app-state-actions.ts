@@ -69,6 +69,24 @@ export interface UpdateArrivalInput {
   updates: ArrivalPackageUpdateInput[];
 }
 
+export function getEquivalentUserIdsForCurrentUser(state: AppState) {
+  const equivalentUserIds = new Set([state.currentUser.id]);
+  const currentPhone = normalizePhone(state.currentUser.phone);
+
+  if (!currentPhone) return equivalentUserIds;
+
+  for (const user of state.users) {
+    if (
+      user.verificationStatus === "approved" &&
+      normalizePhone(user.phone) === currentPhone
+    ) {
+      equivalentUserIds.add(user.id);
+    }
+  }
+
+  return equivalentUserIds;
+}
+
 export function resolveKibbutzDropNote(dropLocation: KibbutzDropLocation, dropNote: string) {
   return dropNote.trim() || kibbutzDropLocationDefaultNotes[dropLocation];
 }
@@ -511,6 +529,7 @@ export function updateCollectedPackagesArrival(
   input: UpdateArrivalInput,
   deps: ActionDeps,
 ) {
+  const equivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
   const updatesByPackageId = new Map(
     input.updates.map((update) => [
       update.packageId,
@@ -525,7 +544,10 @@ export function updateCollectedPackagesArrival(
     ...state,
     packages: state.packages.map((pkg) => {
       const update = updatesByPackageId.get(pkg.id);
-      return update && pkg.status === "collected" && pkg.collectorUserId === state.currentUser.id
+      return update &&
+        pkg.status === "collected" &&
+        pkg.collectorUserId &&
+        equivalentUserIds.has(pkg.collectorUserId)
         ? {
             ...pkg,
             status: "arrived" as const,

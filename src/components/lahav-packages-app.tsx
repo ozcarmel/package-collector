@@ -35,7 +35,11 @@ import type { CSSProperties, ReactNode } from "react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { getConfiguredOperationsRepository } from "@/lib/app-repository";
 import type { RevealedSensitivePackageDetails } from "@/lib/app-repository-contract";
-import { createId, kibbutzDropLocationDefaultNotes } from "@/lib/app-state-actions";
+import {
+  createId,
+  getEquivalentUserIdsForCurrentUser,
+  kibbutzDropLocationDefaultNotes,
+} from "@/lib/app-state-actions";
 import { localDemoRepository } from "@/lib/app-state-repository";
 import { initialAppState } from "@/lib/demo-data";
 import { subscribeFirestoreAppState } from "@/lib/firebase/app-state-subscriptions";
@@ -701,8 +705,9 @@ export function LahavPackagesApp() {
   const collectedPackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) === "collected",
   );
+  const currentEquivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
   const currentUserCollectedPackages = collectedPackages.filter(
-    (pkg) => pkg.collectorUserId === currentUserId,
+    (pkg) => pkg.collectorUserId && currentEquivalentUserIds.has(pkg.collectorUserId),
   );
   const arrivedPackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) === "arrived",
@@ -1523,7 +1528,10 @@ export function LahavPackagesApp() {
     if (savingArrivalPackageId) return;
 
     const packagesCollectedByCurrentUser = state.packages.filter(
-      (pkg) => pkg.status === "collected" && pkg.collectorUserId === state.currentUser.id,
+      (pkg) =>
+        pkg.status === "collected" &&
+        pkg.collectorUserId &&
+        currentEquivalentUserIds.has(pkg.collectorUserId),
     );
     const packageToUpdate = packagesCollectedByCurrentUser.find((pkg) => pkg.id === packageId);
     if (!packageToUpdate) return;
@@ -2552,7 +2560,10 @@ export function LahavPackagesApp() {
 
   function ArrivalScreen() {
     const packagesCollectedByCurrentUser = state.packages.filter(
-      (pkg) => pkg.status === "collected" && pkg.collectorUserId === state.currentUser.id,
+      (pkg) =>
+        pkg.status === "collected" &&
+        pkg.collectorUserId &&
+        currentEquivalentUserIds.has(pkg.collectorUserId),
     );
 
     function arrivalDraftForPackage(packageId: string): ArrivalPackageDraft {

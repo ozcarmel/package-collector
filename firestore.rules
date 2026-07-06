@@ -162,12 +162,26 @@ service cloud.firestore {
         request.resource.data.verificationStatus == "approved";
     }
 
+    function sameApprovedPhoneAsCurrent(userId) {
+      let currentUser = userDoc();
+      let otherUser = get(/databases/$(database)/documents/users/$(userId));
+      return signedIn() &&
+        currentUser.data.verificationStatus == "approved" &&
+        otherUser.data.verificationStatus == "approved" &&
+        otherUser.data.phone == currentUser.data.phone &&
+        otherUser.data.phone != "";
+    }
+
+    function currentUserCanActAsCollector(collectorId) {
+      return collectorId == request.auth.uid || sameApprovedPhoneAsCurrent(collectorId);
+    }
+
     function validCollectorArrivalUpdate() {
       return approved() &&
         resource.data.status == "collected" &&
-        resource.data.collectorUserId == request.auth.uid &&
+        currentUserCanActAsCollector(resource.data.collectorUserId) &&
         request.resource.data.status == "arrived" &&
-        request.resource.data.collectorUserId == request.auth.uid &&
+        request.resource.data.collectorUserId == resource.data.collectorUserId &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["status", "currentKibbutzLocation", "currentKibbutzLocationText", "updatedAt"]);
     }

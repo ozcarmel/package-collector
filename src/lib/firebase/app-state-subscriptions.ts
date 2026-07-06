@@ -99,6 +99,7 @@ export function subscribeFirestoreAppState(
           packagesSnapshot,
           pickupRunsSnapshot,
           ownSensitiveDetailsSnapshot,
+          approvedUsersSnapshot,
         ] = await Promise.all([
           getDocs(collection(firestoreDb, "pickupLocations")),
           getDocs(collection(firestoreDb, "packages")),
@@ -111,6 +112,7 @@ export function subscribeFirestoreAppState(
               where("ownerUserId", "==", user.id),
             ),
           ),
+          getDocs(collection(firestoreDb, "users")),
         ]);
         const remoteLocations = locationsSnapshot.docs.map(
           (item) => ({ id: item.id, ...item.data() }) as PickupLocation,
@@ -129,6 +131,7 @@ export function subscribeFirestoreAppState(
         ).flatMap((snapshot) => snapshot.docs.map((item) => item.data() as PickupRunItem));
 
         nextState.pickupLocations = mergePickupLocations(remoteLocations);
+        nextState.users = approvedUsersSnapshot.docs.map((item) => item.data() as AppUser);
         const sensitiveDetailsByPackageId = new Map(
           ownSensitiveDetailsSnapshot.docs.map((item) => [
             item.id,

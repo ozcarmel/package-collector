@@ -588,6 +588,60 @@ describe("app state actions", () => {
     expect(unchangedPackage).not.toHaveProperty("currentKibbutzLocationText");
   });
 
+  it("updates arrival for packages collected by another approved session with the same phone", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const waitingPackage = state.packages.find((pkg) => pkg.status === "waiting");
+    expect(waitingPackage).toBeTruthy();
+
+    const oldSessionCollectorId = "u-oz-old-device";
+    const collectedByEquivalentSession: AppState = {
+      ...state,
+      users: [
+        ...state.users,
+        {
+          id: oldSessionCollectorId,
+          fullName: state.currentUser.fullName,
+          phone: state.currentUser.phone,
+          role: "owner",
+          verificationStatus: "approved",
+          createdAt: "2026-06-28T10:00:00.000Z",
+          approvedAt: "2026-06-28T10:00:00.000Z",
+        },
+      ],
+      packages: state.packages.map((pkg) =>
+        pkg.id === waitingPackage?.id
+          ? {
+              ...pkg,
+              status: "collected",
+              collectorUserId: oldSessionCollectorId,
+            }
+          : pkg,
+      ),
+    };
+
+    const arrived = updateCollectedPackagesArrival(
+      collectedByEquivalentSession,
+      {
+        updates: [
+          {
+            packageId: waitingPackage?.id ?? "",
+            dropLocation: "kolbo",
+            dropNote: "",
+          },
+        ],
+      },
+      deps,
+    );
+
+    expect(arrived.packages.find((pkg) => pkg.id === waitingPackage?.id)).toMatchObject({
+      status: "arrived",
+      collectorUserId: oldSessionCollectorId,
+      currentKibbutzLocation: "kolbo",
+      currentKibbutzLocationText: kibbutzDropLocationDefaultNotes.kolbo,
+    });
+  });
+
   it("lets the package recipient mark an arrived package as delivered", () => {
     const deps = createTestDeps();
     const state = cloneState();

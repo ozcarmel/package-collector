@@ -5,6 +5,7 @@ export default defineConfig({
     environment: "node",
     globals: false,
     include: ["tests/rules/**/*.test.ts"],
+    hookTimeout: 30000,
     maxConcurrency: 1,
   },
 });

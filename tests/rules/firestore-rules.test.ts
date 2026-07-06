@@ -435,6 +435,48 @@ describe("firestore security rules", () => {
     );
   });
 
+  it("allows an approved same-phone session to update collected packages to arrived", async () => {
+    await seedDoc("users/u-old-session", userDoc("u-old-session", { phone: "050-444-4444" }));
+    await seedDoc("users/u-new-session", userDoc("u-new-session", { phone: "050-444-4444" }));
+    await seedDoc(
+      "packages/pkg-collected",
+      packageDoc("pkg-collected", "u-owner", "pitzutz", {
+        status: "collected",
+        collectorUserId: "u-old-session",
+      }),
+    );
+
+    await assertSucceeds(
+      dbFor("u-new-session").doc("packages/pkg-collected").update({
+        status: "arrived",
+        currentKibbutzLocation: "kolbo",
+        currentKibbutzLocationText: "At the kolbo",
+        updatedAt: now,
+      }),
+    );
+  });
+
+  it("prevents a different phone session from updating another collector's package arrival", async () => {
+    await seedDoc("users/u-old-session", userDoc("u-old-session", { phone: "050-444-4444" }));
+    await seedDoc("users/u-different-phone", userDoc("u-different-phone", { phone: "050-555-5555" }));
+    await seedDoc(
+      "packages/pkg-collected",
+      packageDoc("pkg-collected", "u-owner", "pitzutz", {
+        status: "collected",
+        collectorUserId: "u-old-session",
+      }),
+    );
+
+    await assertFails(
+      dbFor("u-different-phone").doc("packages/pkg-collected").update({
+        status: "arrived",
+        currentKibbutzLocation: "kolbo",
+        currentKibbutzLocationText: "At the kolbo",
+        updatedAt: now,
+      }),
+    );
+  });
+
   it("allows admins to delete packages in any status", async () => {
     await seedDoc("users/u-admin", userDoc("u-admin", { role: "admin" }));
     await seedDoc(
