@@ -789,7 +789,6 @@ export function LahavPackagesApp() {
     !joinPreviewMode && currentUser.verificationStatus === "approved";
   const canManageCommunity =
     isApprovedUser && (currentUser.role === "admin" || currentUser.role === "owner");
-  const hasPackagesForDelivery = currentUserCollectedPackages.length > 0;
   const canOpenArrivalScreen = isApprovedUser;
   const isResolvingFirebaseSession = firebaseEnabled && !repositoryReady && !joinPreviewMode;
   const requestedScreenAccessMessage = isApprovedUser ? null : unapprovedAccessMessage(screen);
@@ -917,12 +916,6 @@ export function LahavPackagesApp() {
     if (accessMessage) {
       notify(accessMessage);
       setScreen(submittedJoinRequest ? "pending" : "join");
-      return;
-    }
-
-    if (nextScreen === "arrival" && !hasPackagesForDelivery) {
-      notify("אין חבילות למסירה כרגע");
-      setScreen("home");
       return;
     }
 

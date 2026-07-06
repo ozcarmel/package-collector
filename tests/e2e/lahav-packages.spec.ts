@@ -273,7 +273,9 @@ test("admin can approve pending users and approved users appear as regular membe
   await expect(app(page).locator(".bottom-nav button")).toHaveCount(4);
   await expect(app(page).locator(".bottom-nav").getByRole("button", { name: "מסירה" })).toBeEnabled();
   await clickPhoneNav(page, "מסירה");
-  await expect(page.getByRole("status")).toContainText("אין חבילות למסירה כרגע");
+  await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();
+  await expect(app(page)).toContainText("אין כרגע חבילות שסומנו כנאספו על ידך.");
+  await expect(app(page).getByRole("button", { name: /עדכן מיקום/ })).toBeDisabled();
   await openAdmin(page);
 
   const pendingCard = app(page).locator(".admin-card").filter({ hasText: "050-203-4475" });
