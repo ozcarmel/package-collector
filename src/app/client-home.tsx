@@ -3,7 +3,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { LahavPackagesApp } from "@/components/lahav-packages-app";
 
-const staleServiceWorkerCleanupKey = "lahav-package-collector-sw-cleanup-20260706-firebase-cache-bump";
+const staleServiceWorkerCleanupKey = "lahav-package-collector-sw-cleanup-20260706-static-asset-bump";
 
 function subscribe() {
   return () => {};

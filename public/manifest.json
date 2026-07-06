@@ -2,7 +2,7 @@
   "name": "חבילות להב",
   "short_name": "חבילות להב",
   "description": "ניהול איסוף ומסירת חבילות בקיבוץ להב",
-  "start_url": "./?v=20260706-firebase-cache-bump",
+  "start_url": "./?v=20260706-static-asset-bump",
   "display": "standalone",
   "dir": "rtl",
   "lang": "he",
