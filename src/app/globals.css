@@ -282,6 +282,42 @@ select:focus-visible {
   text-align: center;
 }
 
+.home-title-row {
+  position: relative;
+  display: grid;
+  align-items: center;
+  min-height: 34px;
+}
+
+.home-title-row .screen-title {
+  padding-inline: 44px;
+}
+
+.home-help-button {
+  position: absolute;
+  inset-inline-start: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d8c5a8;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--primary-strong);
+  background: rgb(255 248 236 / 82%);
+  box-shadow: 0 7px 14px rgb(64 43 20 / 9%);
+  cursor: pointer;
+}
+
+.home-help-button svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
+}
+
+.home-help-button:active {
+  transform: translateY(1px);
+}
+
 .screen-kicker,
 .screen-intro {
   margin: 0 0 14px;
@@ -2256,6 +2292,75 @@ form.stack,
 .status-bottom-sheet-delivered .status-sheet-row {
   border-color: var(--status-delivered-border);
   background: color-mix(in srgb, var(--status-delivered-bg) 48%, #fffaf0);
+}
+
+.home-help-sheet {
+  max-height: min(78dvh, 620px);
+}
+
+.home-help-flow-list {
+  max-height: calc(min(78dvh, 620px) - 96px);
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.home-help-flow-card {
+  border: 1px solid rgb(220 201 169 / 82%);
+  border-radius: var(--radius);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  background: rgb(255 252 244 / 78%);
+  padding: 12px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 65%);
+}
+
+.home-help-flow-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--primary-strong);
+  background: #e3eddb;
+}
+
+.home-help-flow-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.5;
+}
+
+.home-help-flow-card h3 {
+  margin: 0 0 7px;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.home-help-flow-card ol {
+  margin: 0;
+  padding-inline-start: 19px;
+  color: #35423a;
+  font-size: 13px;
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+.home-help-flow-card li::marker {
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.home-help-flow-card p {
+  margin: 8px 0 0;
+  color: var(--primary-strong);
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 800;
 }
 
 .modal-backdrop.anchored .confirm-modal {

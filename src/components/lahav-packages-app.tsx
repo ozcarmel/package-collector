@@ -507,6 +507,7 @@ export function LahavPackagesApp() {
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
   const [adminListView, setAdminListView] = useState<AdminListView>("pending");
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
+  const [isHomeHelpOpen, setIsHomeHelpOpen] = useState(false);
   const [activeStatusSheet, setActiveStatusSheet] = useState<HomePackageStatusBucket | null>(
     null,
   );
@@ -1758,6 +1759,70 @@ export function LahavPackagesApp() {
           {toast}
         </div>
       ) : null}
+      {isHomeHelpOpen ? (
+        <div
+          className="modal-backdrop status-sheet-backdrop home-help-backdrop"
+          onClick={() => setIsHomeHelpOpen(false)}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="home-help-title"
+            aria-modal="true"
+            className="status-bottom-sheet home-help-sheet"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="status-sheet-grip" aria-hidden="true" />
+            <header className="status-sheet-header home-help-header">
+              <div>
+                <h2 id="home-help-title">איך משתמשים?</h2>
+                <span>שני הדברים העיקריים שעושים באפליקציה</span>
+              </div>
+              <button
+                aria-label="סגור"
+                className="status-sheet-close"
+                onClick={() => setIsHomeHelpOpen(false)}
+                type="button"
+              >
+                <X />
+              </button>
+            </header>
+            <div className="home-help-flow-list">
+              <article className="home-help-flow-card">
+                <div className="home-help-flow-icon" aria-hidden="true">
+                  <Package />
+                </div>
+                <div>
+                  <h3>יש לי חבילה</h3>
+                  <ol>
+                    <li>לוחצים על הוספה.</li>
+                    <li>בוחרים נקודת איסוף.</li>
+                    <li>מדביקים את הודעת המשלוח המקורית, כולל קוד וקישור.</li>
+                    <li>לוחצים שמור.</li>
+                  </ol>
+                  <p>החבילה תופיע בבית, ומי שנוסע לאסוף יראה אותה.</p>
+                </div>
+              </article>
+              <article className="home-help-flow-card">
+                <div className="home-help-flow-icon" aria-hidden="true">
+                  <Truck />
+                </div>
+                <div>
+                  <h3>אני אוסף/ת חבילות</h3>
+                  <ol>
+                    <li>לוחצים על איסוף.</li>
+                    <li>בוחרים את נקודת האיסוף.</li>
+                    <li>מאשרים שנמצאים בנקודה.</li>
+                    <li>מציגים בחנות את הודעת המשלוח המקורית.</li>
+                    <li>מסמנים נאספה.</li>
+                    <li>בקיבוץ לוחצים מסירה ומעדכנים איפה כל חבילה הושארה.</li>
+                  </ol>
+                </div>
+              </article>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {activeStatusSheet ? (
         <div
           className="modal-backdrop status-sheet-backdrop"
@@ -2198,7 +2263,18 @@ export function LahavPackagesApp() {
     return (
       <>
         <section className="home-top">
-          <h1 className="screen-title">מה מצב החבילות?</h1>
+          <div className="home-title-row">
+            <h1 className="screen-title">מה מצב החבילות?</h1>
+            <button
+              aria-label="איך משתמשים באפליקציה"
+              className="home-help-button"
+              onClick={() => setIsHomeHelpOpen(true)}
+              title="איך משתמשים"
+              type="button"
+            >
+              <Info />
+            </button>
+          </div>
 
           <div className="home-status-band" aria-label="סיכום מצב החבילות">
             <button
