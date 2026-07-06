@@ -29,12 +29,17 @@ export function shouldShowPackageInAdminList(
   return currentTimeMs - deliveredAtMs < deliveredAdminRetentionMs;
 }
 
-export function getUserAddedPackages(
-  packages: DeliveryPackage[],
-  currentUserId: string,
-) {
+type UserIdMatcher = string | Iterable<string>;
+
+function toUserIdSet(userIds: UserIdMatcher) {
+  return typeof userIds === "string" ? new Set([userIds]) : new Set(userIds);
+}
+
+export function getUserAddedPackages(packages: DeliveryPackage[], currentUserIds: UserIdMatcher) {
+  const ownerUserIds = toUserIdSet(currentUserIds);
+
   return [...packages]
-    .filter((pkg) => pkg.ownerUserId === currentUserId)
+    .filter((pkg) => ownerUserIds.has(pkg.ownerUserId))
     .sort((a, b) =>
       (b.createdAt ?? b.updatedAt ?? "").localeCompare(a.createdAt ?? a.updatedAt ?? ""),
     );

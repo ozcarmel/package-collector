@@ -742,7 +742,7 @@ export function LahavPackagesApp() {
     Boolean(effectiveDraftPickupLocationId) &&
     Boolean(state.pickupLocations.length);
   const packageActionLabel = editingPackageId ? "עדכן פרטים" : "הוסף חבילה";
-  const userAddedPackages = getUserAddedPackages(state.packages, currentUserId);
+  const userAddedPackages = getUserAddedPackages(state.packages, currentEquivalentUserIds);
   const activeRun = state.pickupRuns.find((run) => run.id === activeRunId);
   const activeRunItems = state.pickupRunItems.filter(
     (item) => item.pickupRunId === activeRunId,

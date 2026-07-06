@@ -103,6 +103,20 @@ describe("home package visibility", () => {
     ]);
   });
 
+  it("returns packages added by equivalent current-user records", () => {
+    const packages = [
+      makePackage("own-current", "u-current", "waiting", "2026-06-28T10:00:00.000Z"),
+      makePackage("own-previous-session", "u-previous", "waiting", "2026-06-28T12:00:00.000Z", {
+        createdAt: "2026-06-28T12:00:00.000Z",
+      }),
+      makePackage("other", "u-other", "waiting", "2026-06-28T13:00:00.000Z"),
+    ];
+
+    expect(
+      getUserAddedPackages(packages, new Set(["u-current", "u-previous"])).map((pkg) => pkg.id),
+    ).toEqual(["own-previous-session", "own-current"]);
+  });
+
   it("sorts home packages by status and newest update inside each status", () => {
     const packages = [
       makePackage("delivered-old", "u-current", "delivered", "2026-06-28T09:00:00.000Z"),
