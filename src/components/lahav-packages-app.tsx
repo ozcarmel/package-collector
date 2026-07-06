@@ -3155,18 +3155,6 @@ function JoinScreen({
       <div className="screen-intro join-intro">
         אימות טלפון ואז בקשת אישור ממנהל הקהילה.
       </div>
-      <div className="join-help-card" aria-label="עזרה להצטרפות">
-        <div className="join-help-title">
-          <Info />
-          <span>איך מצטרפים?</span>
-        </div>
-        <ol>
-          <li>ממלאים שם מלא ומספר נייד.</li>
-          <li>המנהל בודק שמדובר בחבר/ת להב ומאשר.</li>
-          <li>אחרי האישור אפשר להוסיף חבילה או לאסוף לחברים.</li>
-        </ol>
-        <p>כבר אושרת בעבר? הזן/י את אותו מספר נייד ותיכנס/י מיד.</p>
-      </div>
       <div className="stack join-stack">
         <div className="field">
           <label htmlFor="join-phone">מספר טלפון נייד</label>
