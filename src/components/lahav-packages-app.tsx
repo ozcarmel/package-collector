@@ -1684,9 +1684,6 @@ export function LahavPackagesApp() {
       <section className="phone-frame" aria-label={`אפליקציית ${appName}`}>
         <div className="app-view">
           <div>
-            <div className="statusbar">
-              <span>14:28</span>
-            </div>
             <header className="app-header">
               <div className="header-row">
                 <div className="header-side header-left">
