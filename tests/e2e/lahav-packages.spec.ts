@@ -242,6 +242,11 @@ test("fresh users can request access but cannot add or pick up before approval",
 test("join screen uses placeholders instead of demo name and phone values", async ({ page }) => {
   await gotoFreshUser(page);
 
+  await expect(app(page).getByLabel("עזרה להצטרפות")).toContainText("איך מצטרפים?");
+  await expect(app(page).getByLabel("עזרה להצטרפות")).toContainText(
+    "כבר אושרת בעבר? הזן/י את אותו מספר נייד ותיכנס/י מיד.",
+  );
+
   const phoneInput = app(page).locator("#join-phone");
   const nameInput = app(page).locator("#join-name");
 

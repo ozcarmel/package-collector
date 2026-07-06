@@ -301,6 +301,53 @@ select:focus-visible {
   margin-top: 4px;
 }
 
+.join-help-card {
+  margin: -6px 0 18px;
+  border: 1px solid #d8c9ad;
+  border-radius: var(--radius);
+  background: rgb(248 239 222 / 82%);
+  padding: 12px 14px;
+  color: #29322c;
+  box-shadow: 0 10px 22px rgb(70 48 20 / 7%);
+}
+
+.join-help-title {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  margin-bottom: 8px;
+  color: var(--green-dark);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.join-help-title svg {
+  width: 17px;
+  height: 17px;
+}
+
+.join-help-card ol {
+  margin: 0;
+  padding-inline-start: 20px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.join-help-card li::marker {
+  color: var(--green);
+  font-weight: 900;
+}
+
+.join-help-card p {
+  margin: 8px 0 0;
+  border-top: 1px solid rgb(198 178 143 / 58%);
+  padding-top: 8px;
+  color: #5d5549;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
