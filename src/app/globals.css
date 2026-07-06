@@ -1282,6 +1282,13 @@ form.stack,
   border-color: var(--status-delivered-border);
 }
 
+.package-detail-note {
+  color: #365043;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
 .badge.danger {
   color: var(--danger);
   background: var(--danger-soft);

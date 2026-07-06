@@ -408,7 +408,7 @@ function homePackageDetailBadge(pkg: DeliveryPackage) {
       return null;
     case "arrived":
       return {
-        className: "badge arrived",
+        className: "package-detail-note",
         icon: null,
         text:
           pkg.currentKibbutzLocationText?.trim() ||
