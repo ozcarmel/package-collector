@@ -3,7 +3,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { LahavPackagesApp } from "@/components/lahav-packages-app";
 
-const staleServiceWorkerCleanupKey = "lahav-package-collector-sw-cleanup-20260706-mobile-shell-bump";
+const staleServiceWorkerCleanupKey = "lahav-package-collector-sw-cleanup-20260706-firebase-cache-bump";
 
 function subscribe() {
   return () => {};
@@ -20,7 +20,7 @@ function getServerSnapshot() {
 function isPackageCollectorRegistration(registration: ServiceWorkerRegistration) {
   try {
     const scopeUrl = new URL(registration.scope);
-    return scopeUrl.origin === window.location.origin && scopeUrl.pathname.includes("/package-collector");
+    return scopeUrl.origin === window.location.origin;
   } catch {
     return false;
   }
@@ -54,7 +54,9 @@ function useStaleServiceWorkerCleanup() {
       const registrations = await navigator.serviceWorker.getRegistrations();
       const appRegistrations = registrations.filter(isPackageCollectorRegistration);
       const controllerScriptUrl = navigator.serviceWorker.controller?.scriptURL ?? "";
-      const hasRelevantController = controllerScriptUrl.includes("/package-collector/");
+      const hasRelevantController =
+        controllerScriptUrl.startsWith(window.location.origin) ||
+        controllerScriptUrl.includes("/package-collector/");
 
       if (!hasRelevantController && !appRegistrations.length) return;
 
