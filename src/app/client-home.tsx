@@ -80,7 +80,42 @@ function useStaleServiceWorkerCleanup() {
   }, []);
 }
 
+function useVisualViewportSizing() {
+  useEffect(() => {
+    let animationFrame = 0;
+
+    function updateAppViewport() {
+      cancelAnimationFrame(animationFrame);
+
+      animationFrame = window.requestAnimationFrame(() => {
+        const visualViewport = window.visualViewport;
+        const viewportHeight = visualViewport?.height ?? window.innerHeight;
+        const viewportTop = visualViewport?.offsetTop ?? 0;
+
+        document.documentElement.style.setProperty("--app-height", `${Math.round(viewportHeight)}px`);
+        document.documentElement.style.setProperty("--app-top", `${Math.round(viewportTop)}px`);
+      });
+    }
+
+    updateAppViewport();
+
+    window.addEventListener("resize", updateAppViewport);
+    window.addEventListener("orientationchange", updateAppViewport);
+    window.visualViewport?.addEventListener("resize", updateAppViewport);
+    window.visualViewport?.addEventListener("scroll", updateAppViewport);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      window.removeEventListener("resize", updateAppViewport);
+      window.removeEventListener("orientationchange", updateAppViewport);
+      window.visualViewport?.removeEventListener("resize", updateAppViewport);
+      window.visualViewport?.removeEventListener("scroll", updateAppViewport);
+    };
+  }, []);
+}
+
 export function ClientHome() {
+  useVisualViewportSizing();
   useStaleServiceWorkerCleanup();
 
   const mounted = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);

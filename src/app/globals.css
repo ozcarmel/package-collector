@@ -33,6 +33,8 @@
   --card-shadow: 0 10px 28px rgb(62 50 34 / 7%);
   --radius: 8px;
   --tap: 48px;
+  --app-height: 100dvh;
+  --app-top: 0px;
 }
 
 * {
@@ -40,7 +42,8 @@
 }
 
 html {
-  height: 100%;
+  height: var(--app-height);
+  min-height: var(--app-height);
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
@@ -53,10 +56,10 @@ html {
 
 body {
   position: fixed;
-  inset: 0;
+  inset: var(--app-top) 0 auto 0;
   width: 100%;
   margin: 0;
-  height: 100%;
+  height: var(--app-height);
   overflow: hidden;
   overscroll-behavior: none;
   direction: rtl;
@@ -86,9 +89,10 @@ select:focus-visible {
 
 .app-shell {
   position: fixed;
-  inset: 0;
-  height: 100dvh;
-  min-height: 100dvh;
+  inset: var(--app-top) 0 auto 0;
+  width: 100%;
+  height: var(--app-height);
+  min-height: var(--app-height);
   overflow: hidden;
   display: grid;
   place-items: center;
@@ -97,7 +101,7 @@ select:focus-visible {
 
 .phone-frame {
   width: min(100%, 410px);
-  height: min(860px, calc(100dvh - 48px));
+  height: min(860px, calc(var(--app-height) - 48px));
   margin-inline: auto;
   direction: rtl;
   border: 1px solid #151b18;
@@ -2535,7 +2539,7 @@ svg {
   .phone-frame {
     position: relative;
     top: 0;
-    height: 780px;
+    height: min(780px, calc(var(--app-height) - 28px));
   }
 
   .flow-grid {
