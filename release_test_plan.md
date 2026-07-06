@@ -110,6 +110,41 @@ Expected:
 - Delivered packages disappear from the home list after the configured delay.
 - Admin can still review who collected the package, from where, and when.
 
+### Two-Device Sync
+
+Risk: one phone/browser shows a package update while another signed-in device for the same user stays stale.
+
+Current logic:
+
+- The app supports the same approved user on more than one device at the same time.
+- There is no SMS/device verification in this pilot.
+- If an approved user enters the same approved phone number on a new device, that new anonymous Firebase session is recognized as approved.
+- Firestore data is refreshed by polling every 5 seconds, not by instant realtime listeners.
+- Therefore, a second device should normally show changes within 5 seconds, and anything still stale after 10 seconds is a blocker.
+
+Functional test:
+
+1. Open the production URL on Device A and Device B.
+2. Sign in on both devices with the same approved regular user.
+3. On Device A, add a package to `פיצוץ להבים`.
+4. Device B should show the new package on Home within 5 seconds.
+5. Device B should show the correct `ממתינות לאיסוף` count and pickup-location count.
+6. On Device B, collect that package.
+7. Device A should show the package as `נאספה` within 5 seconds.
+8. Device A should show the collector name and the top status counter should move from `ממתינות לאיסוף` to `נאספו`.
+9. On Device B, update delivery in `מסירה`.
+10. Device A should show the package as `הגיעה לקיבוץ` within 5 seconds.
+11. On Device A, press `אשר קבלה`.
+12. Device B should show the package as `נמסרה` and the `התקבלה` state within 5 seconds.
+
+Failure conditions:
+
+- Either device is kicked back to the join screen while the other remains active.
+- One device updates and the other remains stale for more than 10 seconds.
+- Home top counters and `סטטוס חבילה` disagree on either device.
+- A package appears on one device but disappears from the other.
+- The same approved user creates duplicate manager/member records by using two devices.
+
 ### Pickup Locations
 
 Risk: admin-created locations do not participate in the full app flow.
