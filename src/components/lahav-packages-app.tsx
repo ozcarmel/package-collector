@@ -2440,12 +2440,12 @@ export function LahavPackagesApp() {
         </form>
 
         <section className="added-packages-panel" aria-label="חבילות שהוספת">
-          <div className="section-title-row">
+          <div className="section-title-row added-packages-title-row">
             <h2>חבילות שהוספת</h2>
             <span>{userAddedPackages.length} פריטים</span>
           </div>
-          <p className="section-help-text">
-            כאן ניתן לצפות בחבילות שהוספו בעבר ולערוך את פרטי החבילה אם עוד לא נאספה
+          <p className="section-help-text added-packages-help">
+            צפה בחבילות שהוספו בעבר וערוך פרטי חבילה
           </p>
           <div className="added-packages-list">
             {userAddedPackages.length ? (
