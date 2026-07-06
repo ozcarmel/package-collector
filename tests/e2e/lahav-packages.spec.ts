@@ -275,7 +275,7 @@ test("admin can approve pending users and approved users appear as regular membe
   await clickPhoneNav(page, "מסירה");
   await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();
   await expect(app(page)).toContainText("אין כרגע חבילות שסומנו כנאספו על ידך.");
-  await expect(app(page).getByRole("button", { name: /עדכן מיקום/ })).toBeDisabled();
+  await expect(app(page).locator(".arrival-package-submit")).toHaveCount(0);
   await openAdmin(page);
 
   const pendingCard = app(page).locator(".admin-card").filter({ hasText: "050-203-4475" });
@@ -608,10 +608,11 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
     await expect(arrivalCard).toBeVisible();
     await arrivalCard.locator(".arrival-package-toggle").click();
     await arrivalCard.locator("select[id^='drop-location-']").selectOption(target.dropLocation);
+    await arrivalCard.locator(".arrival-package-submit").click();
+    await expect(arrivalCard).toHaveCount(0);
   }
-  await app(page).getByRole("button", { name: /עדכן מיקום/ }).click();
 
-  await expect(page.getByRole("status")).toContainText("מיקום החבילות בקיבוץ עודכן");
+  await clickPhoneNav(page, "בית");
   await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
   await expectHomeStatusSync(page, {
     ...baseline,
@@ -708,12 +709,16 @@ test("saving two kibbutz delivery rows updates home status and shows both packag
   await expect(arrivalCards).toHaveCount(2);
 
   await arrivalCards.nth(0).locator(".arrival-package-toggle").click();
-  await arrivalCards.nth(1).locator(".arrival-package-toggle").click();
   await arrivalCards.nth(0).locator("select[id^='drop-location-']").selectOption("gate-crate");
-  await arrivalCards.nth(1).locator("select[id^='drop-location-']").selectOption("kolbo");
-  await app(page).getByRole("button", { name: /עדכן מיקום/ }).click();
+  await arrivalCards.nth(0).locator(".arrival-package-submit").click();
+  await expect(arrivalCards).toHaveCount(1);
 
-  await expect(page.getByRole("status")).toContainText("מיקום החבילות בקיבוץ עודכן");
+  await arrivalCards.nth(0).locator(".arrival-package-toggle").click();
+  await arrivalCards.nth(0).locator("select[id^='drop-location-']").selectOption("kolbo");
+  await arrivalCards.nth(0).locator(".arrival-package-submit").click();
+  await expect(arrivalCards).toHaveCount(0);
+
+  await clickPhoneNav(page, "בית");
   await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
   await expect(app(page).locator(".home-status-arrived strong")).toHaveText(
     String(beforeArrivedCount + 2),
@@ -865,8 +870,9 @@ test("pickup flow reveals original messages only after confirmation and records 
 
   await dropLocation.selectOption("gate-crate");
   await dropNote.fill("");
-  await app(page).getByRole("button", { name: /עדכן מיקום/ }).click();
-  await expect(page.getByRole("status")).toContainText("מיקום החבילות בקיבוץ עודכן");
+  await arrivalCard.locator(".arrival-package-submit").click();
+  await expect(page.getByRole("status")).toContainText("החבילה נמסרה בקיבוץ");
+  await clickPhoneNav(page, "בית");
   await expect(app(page).getByText("שמתי בדולב").first()).toBeVisible();
 });
 
@@ -908,10 +914,12 @@ test("multiple kibbutz delivery rows are collapsed until a package name is opene
 
   await arrivalCards.nth(0).locator(".arrival-package-toggle").click();
   await expect(arrivalCards.nth(0).locator("select[id^='drop-location-']")).toBeVisible();
+  await expect(arrivalCards.nth(0).locator(".arrival-package-submit")).toBeVisible();
   await expect(arrivalCards.nth(1).locator("select[id^='drop-location-']")).toHaveCount(0);
 
   await arrivalCards.nth(1).locator(".arrival-package-toggle").click();
   await expect(arrivalCards.nth(1).locator("select[id^='drop-location-']")).toBeVisible();
+  await expect(arrivalCards.nth(1).locator(".arrival-package-submit")).toBeVisible();
 });
 
 test("home and form UI avoid the known layout regressions", async ({ page }) => {

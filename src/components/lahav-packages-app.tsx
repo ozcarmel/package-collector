@@ -503,6 +503,7 @@ export function LahavPackagesApp() {
   const [isStartingPickupRun, setIsStartingPickupRun] = useState(false);
   const [collectingPackageId, setCollectingPackageId] = useState<string | null>(null);
   const [receivingPackageId, setReceivingPackageId] = useState<string | null>(null);
+  const [savingArrivalPackageId, setSavingArrivalPackageId] = useState<string | null>(null);
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
   const [adminListView, setAdminListView] = useState<AdminListView>("pending");
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
@@ -1522,37 +1523,51 @@ export function LahavPackagesApp() {
     }
   }
 
-  async function updateArrival() {
+  async function updateArrivalPackage(packageId: string) {
+    if (savingArrivalPackageId) return;
+
     const packagesCollectedByCurrentUser = state.packages.filter(
       (pkg) => pkg.status === "collected" && pkg.collectorUserId === state.currentUser.id,
     );
+    const packageToUpdate = packagesCollectedByCurrentUser.find((pkg) => pkg.id === packageId);
+    if (!packageToUpdate) return;
 
+    const draft = arrivalDraftsByPackageId[packageToUpdate.id] ?? {
+      dropLocation: "gate-crate" as const,
+      dropNote: "",
+    };
+
+    setSavingArrivalPackageId(packageId);
     try {
       const nextState = await operationsRepository.updateCollectedPackagesArrival(
         state,
         {
-          updates: packagesCollectedByCurrentUser.map((pkg) => {
-            const draft = arrivalDraftsByPackageId[pkg.id] ?? {
-              dropLocation: "gate-crate" as const,
-              dropNote: "",
-            };
-            return {
-              packageId: pkg.id,
+          updates: [
+            {
+              packageId: packageToUpdate.id,
               dropLocation: draft.dropLocation,
               dropNote: draft.dropNote,
-            };
-          }),
+            },
+          ],
         },
         actionDeps,
       );
       applyRepositoryState(nextState);
-      setArrivalDraftsByPackageId({});
-      setExpandedArrivalPackageIds(new Set());
-      setHomeLocationFilterId(null);
-      setScreen("home");
-      notify("מיקום החבילות בקיבוץ עודכן.");
+      setArrivalDraftsByPackageId((current) => {
+        const next = { ...current };
+        delete next[packageId];
+        return next;
+      });
+      setExpandedArrivalPackageIds((current) => {
+        const next = new Set(current);
+        next.delete(packageId);
+        return next;
+      });
+      notify("החבילה נמסרה בקיבוץ.");
     } catch {
-      notify("לא הצלחנו לעדכן את מיקום החבילות בקיבוץ. נסה/י שוב בעוד רגע.");
+      notify("לא הצלחנו למסור את החבילה. נסה/י שוב בעוד רגע.");
+    } finally {
+      setSavingArrivalPackageId(null);
     }
   }
 
@@ -2657,21 +2672,21 @@ export function LahavPackagesApp() {
                         }
                       />
                     </div>
+
+                    <button
+                      className="button primary full arrival-package-submit"
+                      disabled={savingArrivalPackageId === pkg.id}
+                      onClick={() => updateArrivalPackage(pkg.id)}
+                      type="button"
+                    >
+                      <MapPinCheck />
+                      {savingArrivalPackageId === pkg.id ? "מוסר..." : "מסור חבילה"}
+                    </button>
                   </div>
                 ) : null}
               </div>
             );
           })}
-
-          <button
-            className="button primary full"
-            disabled={!packagesCollectedByCurrentUser.length}
-            onClick={updateArrival}
-            type="button"
-          >
-            <MapPinCheck />
-            עדכן מיקום ושלח התראות
-          </button>
         </div>
       </>
     );
