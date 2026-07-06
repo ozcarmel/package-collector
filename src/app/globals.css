@@ -1122,11 +1122,11 @@ form.stack,
   min-height: 30px;
   align-items: center;
   width: auto;
-  border: 1px solid #b7cfa8;
+  border: 1px solid var(--status-delivered-border);
   border-radius: 999px;
   padding: 5px 13px;
-  background: #e8f1df;
-  color: #315e43;
+  background: var(--status-delivered-bg);
+  color: var(--status-delivered-text);
   font-size: 12px;
   font-weight: 900;
   line-height: 1;
