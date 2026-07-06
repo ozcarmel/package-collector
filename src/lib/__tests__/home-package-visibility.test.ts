@@ -6,6 +6,7 @@ import {
   shouldShowPackageInAdminList,
   shouldShowPackageOnHome,
 } from "@/lib/home-package-visibility";
+import { sortHomePackagesByStatus } from "@/lib/home-package-sort";
 import type { DeliveryPackage, PackageStatus } from "@/lib/types";
 
 function makePackage(
@@ -99,6 +100,28 @@ describe("home package visibility", () => {
     expect(getUserAddedPackages(packages, "u-current").map((pkg) => pkg.id)).toEqual([
       "own-new",
       "own-old",
+    ]);
+  });
+
+  it("sorts home packages by status and newest update inside each status", () => {
+    const packages = [
+      makePackage("delivered-old", "u-current", "delivered", "2026-06-28T09:00:00.000Z"),
+      makePackage("arrived-new", "u-current", "arrived", "2026-06-28T13:00:00.000Z"),
+      makePackage("waiting-old", "u-current", "waiting", "2026-06-28T10:00:00.000Z"),
+      makePackage("collected", "u-current", "collected", "2026-06-28T12:00:00.000Z"),
+      makePackage("delivered-new", "u-current", "delivered", "2026-06-28T14:00:00.000Z"),
+      makePackage("waiting-new", "u-current", "waiting", "2026-06-28T11:00:00.000Z"),
+      makePackage("arrived-old", "u-current", "arrived", "2026-06-28T08:00:00.000Z"),
+    ];
+
+    expect(sortHomePackagesByStatus(packages).map((pkg) => pkg.id)).toEqual([
+      "waiting-new",
+      "waiting-old",
+      "collected",
+      "arrived-new",
+      "arrived-old",
+      "delivered-new",
+      "delivered-old",
     ]);
   });
 });

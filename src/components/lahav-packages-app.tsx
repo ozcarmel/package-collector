@@ -55,6 +55,7 @@ import {
   shouldShowPackageInAdminList,
   shouldShowPackageOnHome,
 } from "@/lib/home-package-visibility";
+import { sortHomePackagesByStatus } from "@/lib/home-package-sort";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import { normalizePickupLocationSchedules } from "@/lib/pickup-location-schedule-defaults";
 import type {
@@ -726,8 +727,8 @@ export function LahavPackagesApp() {
           : activeStatusSheet === "delivered"
             ? deliveredPackages
             : [];
-  const visibleHomePackages = activeHomePackages.filter(
-    (pkg) => getHomePackageStatusBucket(pkg.status) !== null,
+  const visibleHomePackages = sortHomePackagesByStatus(
+    activeHomePackages.filter((pkg) => getHomePackageStatusBucket(pkg.status) !== null),
   );
   const effectiveDraftPickupLocationId = state.pickupLocations.some(
     (location) => location.id === draft.pickupLocationId,
