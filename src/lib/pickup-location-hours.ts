@@ -36,12 +36,27 @@ const fallbackWeeklyHoursByLocationId: Record<string, PickupLocation["weeklyHour
     5: [],
   },
   "deli-place": {
-    0: [{ open: "08:30", close: "14:00" }],
-    1: [{ open: "08:30", close: "14:00" }],
-    2: [{ open: "08:30", close: "14:00" }],
-    3: [{ open: "08:30", close: "14:00" }],
-    4: [{ open: "08:30", close: "14:00" }],
-    5: [{ open: "08:30", close: "14:00" }],
+    0: [
+      { open: "08:30", close: "14:00" },
+      { open: "16:00", close: "20:00" },
+    ],
+    1: [
+      { open: "08:30", close: "14:00" },
+      { open: "16:00", close: "20:00" },
+    ],
+    2: [
+      { open: "08:30", close: "14:00" },
+      { open: "16:00", close: "20:00" },
+    ],
+    3: [
+      { open: "08:30", close: "14:00" },
+      { open: "16:00", close: "20:00" },
+    ],
+    4: [
+      { open: "08:30", close: "14:00" },
+      { open: "16:00", close: "20:00" },
+    ],
+    5: [{ open: "07:30", close: "14:00" }],
   },
   shoval: {
     0: [{ open: "08:00", close: "14:00" }],

@@ -789,6 +789,13 @@ select:focus-visible {
   white-space: normal;
 }
 
+.pickup-card span.pickup-card-name-no-ellipsis {
+  max-height: none;
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
 .pickup-card strong {
   position: absolute;
   left: 7px;

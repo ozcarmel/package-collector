@@ -2353,6 +2353,8 @@ export function LahavPackagesApp() {
                 ).length;
                 const openState = getPickupLocationOpenState(location);
                 const displayName = pickupLocationDisplayName(location);
+                const shouldPreventNameEllipsis =
+                  location.id === "post-office" || location.id === "pitzutz";
                 const selectLocation = () => {
                   if (locationPackageCount > 0) {
                     openPickupScreenForLocation(location.id);
@@ -2385,7 +2387,13 @@ export function LahavPackagesApp() {
                       role="button"
                       tabIndex={0}
                     >
-                      <span>{displayName}</span>
+                      <span
+                        className={
+                          shouldPreventNameEllipsis ? "pickup-card-name-no-ellipsis" : undefined
+                        }
+                      >
+                        {displayName}
+                      </span>
                       <strong>{locationPackageCount}</strong>
                     </div>
                     <button

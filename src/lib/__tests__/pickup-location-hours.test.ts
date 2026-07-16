@@ -117,6 +117,24 @@ describe("getPickupLocationOpenState", () => {
     ).toBe("open");
     expect(
       getPickupLocationOpenState(
+        demoLocation("deli-place"),
+        new Date("2026-07-09T15:00:00+03:00"),
+      ),
+    ).toBe("closed");
+    expect(
+      getPickupLocationOpenState(
+        demoLocation("deli-place"),
+        new Date("2026-07-09T17:00:00+03:00"),
+      ),
+    ).toBe("open");
+    expect(
+      getPickupLocationOpenState(
+        demoLocation("deli-place"),
+        new Date("2026-07-10T14:30:00+03:00"),
+      ),
+    ).toBe("closed");
+    expect(
+      getPickupLocationOpenState(
         demoLocation("shoval"),
         new Date("2026-07-07T10:00:00+03:00"),
       ),

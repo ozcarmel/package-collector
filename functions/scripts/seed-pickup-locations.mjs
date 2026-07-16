@@ -101,14 +101,29 @@ const pickupLocations = [
     address:
       "\u05e9\u05d3\u05e8\u05d5\u05ea \u05e9\u05e2\u05d5\u05e8\u05d4 1, \u05dc\u05d4\u05d1\u05d9\u05dd",
     openingHours:
-      "\u05d0'-\u05d4' 08:30-14:00, \u05d5' 08:30-14:00",
+      "\u05d0'-\u05d4' 08:30-14:00, 16:00-20:00, \u05d5' 07:30-14:00",
     weeklyHours: {
-      0: [{ open: "08:30", close: "14:00" }],
-      1: [{ open: "08:30", close: "14:00" }],
-      2: [{ open: "08:30", close: "14:00" }],
-      3: [{ open: "08:30", close: "14:00" }],
-      4: [{ open: "08:30", close: "14:00" }],
-      5: [{ open: "08:30", close: "14:00" }],
+      0: [
+        { open: "08:30", close: "14:00" },
+        { open: "16:00", close: "20:00" },
+      ],
+      1: [
+        { open: "08:30", close: "14:00" },
+        { open: "16:00", close: "20:00" },
+      ],
+      2: [
+        { open: "08:30", close: "14:00" },
+        { open: "16:00", close: "20:00" },
+      ],
+      3: [
+        { open: "08:30", close: "14:00" },
+        { open: "16:00", close: "20:00" },
+      ],
+      4: [
+        { open: "08:30", close: "14:00" },
+        { open: "16:00", close: "20:00" },
+      ],
+      5: [{ open: "07:30", close: "14:00" }],
     },
     navigationUrl:
       "https://www.google.com/maps/search/?api=1&query=%D7%93%D7%9C%D7%99%20%D7%A4%D7%9C%D7%99%D7%99%D7%A1%20%D7%A9%D7%93%D7%A8%D7%95%D7%AA%20%D7%A9%D7%A2%D7%95%D7%A8%D7%94%201%20%D7%9C%D7%94%D7%91%D7%99%D7%9D",

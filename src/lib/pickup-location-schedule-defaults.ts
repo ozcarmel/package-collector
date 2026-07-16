@@ -53,18 +53,34 @@ const scheduleDefaults: Record<string, ScheduleDefault> = {
     shouldApply: (location) => !location.weeklyHours?.[5] || !location.openingHours.includes("ו'"),
   },
   "deli-place": {
-    openingHours: "א'-ה' 08:30-14:00, ו' 08:30-14:00",
+    openingHours: "א'-ה' 08:30-14:00, 16:00-20:00, ו' 07:30-14:00",
     weeklyHours: {
-      0: [{ open: "08:30", close: "14:00" }],
-      1: [{ open: "08:30", close: "14:00" }],
-      2: [{ open: "08:30", close: "14:00" }],
-      3: [{ open: "08:30", close: "14:00" }],
-      4: [{ open: "08:30", close: "14:00" }],
-      5: [{ open: "08:30", close: "14:00" }],
+      0: [
+        { open: "08:30", close: "14:00" },
+        { open: "16:00", close: "20:00" },
+      ],
+      1: [
+        { open: "08:30", close: "14:00" },
+        { open: "16:00", close: "20:00" },
+      ],
+      2: [
+        { open: "08:30", close: "14:00" },
+        { open: "16:00", close: "20:00" },
+      ],
+      3: [
+        { open: "08:30", close: "14:00" },
+        { open: "16:00", close: "20:00" },
+      ],
+      4: [
+        { open: "08:30", close: "14:00" },
+        { open: "16:00", close: "20:00" },
+      ],
+      5: [{ open: "07:30", close: "14:00" }],
     },
     shouldApply: (location) =>
       !location.weeklyHours ||
-      location.openingHours.includes("16:00-20:00") ||
+      !location.openingHours.includes("16:00-20:00") ||
+      !location.openingHours.includes("07:30-14:00") ||
       location.openingHours.includes("07:30-15:00") ||
       location.openingHours.includes("צריך לאמת"),
   },
