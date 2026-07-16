@@ -1593,14 +1593,19 @@ export function LahavPackagesApp() {
   async function confirmDeletePackage() {
     if (adminActionId || !pendingDeletePackageId) return;
 
-    setAdminActionId(`delete-package-${pendingDeletePackageId}`);
+    const packageId = pendingDeletePackageId;
+    setAdminActionId(`delete-package-${packageId}`);
     try {
       const nextState = await operationsRepository.deletePackage(
         state,
-        pendingDeletePackageId,
+        packageId,
         actionDeps,
       );
       applyRepositoryState(nextState);
+      if (editingPackageId === packageId) {
+        setEditingPackageId(null);
+        setDraft(emptyDraft);
+      }
       setPendingDeletePackageId(null);
       notify("החבילה נמחקה.");
     } catch {
@@ -2563,19 +2568,35 @@ export function LahavPackagesApp() {
                           "הודעת המשלוח המקורית שמורה ומוגנת."}
                       </div>
                     </div>
-                    <button
-                      className="button compact"
-                      disabled={!canEditPackage || isSavingPackage}
-                      onClick={() => startPackageEdit(pkg)}
-                      title={
-                        canEditPackage
-                          ? "עריכת פרטי החבילה"
-                          : "אפשר לערוך רק חבילה שממתינה לאיסוף"
-                      }
-                      type="button"
-                    >
-                      ערוך
-                    </button>
+                    <div className="added-package-actions">
+                      <button
+                        className="button compact"
+                        disabled={!canEditPackage || isSavingPackage}
+                        onClick={() => startPackageEdit(pkg)}
+                        title={
+                          canEditPackage
+                            ? "עריכת פרטי החבילה"
+                            : "אפשר לערוך רק חבילה שממתינה לאיסוף"
+                        }
+                        type="button"
+                      >
+                        ערוך
+                      </button>
+                      <button
+                        className="button compact warn"
+                        disabled={!canEditPackage || adminActionId !== null}
+                        onClick={() => deletePackage(pkg.id)}
+                        title={
+                          canEditPackage
+                            ? "מחיקת חבילה שהוכנסה בטעות"
+                            : "אפשר למחוק רק חבילה שממתינה לאיסוף"
+                        }
+                        type="button"
+                      >
+                        <Trash2 />
+                        מחק
+                      </button>
+                    </div>
                   </article>
                 );
               })

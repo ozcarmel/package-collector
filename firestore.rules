@@ -213,6 +213,15 @@ service cloud.firestore {
           .hasOnly(["status", "deliveredAt", "updatedAt"]);
     }
 
+    function validOwnerPackageDelete() {
+      return approved() &&
+        resource.data.status == "waiting" &&
+        (
+          resource.data.ownerUserId == request.auth.uid ||
+          sameApprovedPhoneAsCurrent(resource.data.ownerUserId)
+        );
+    }
+
     function validPackageCreate(packageId) {
       return approved() &&
         request.resource.data.id == packageId &&
@@ -333,6 +342,18 @@ service cloud.firestore {
           ]);
     }
 
+    function validSensitiveDetailsOwnerDelete(packageId) {
+      let pkg = packageDoc(packageId);
+      return approved() &&
+        resource.data.packageId == packageId &&
+        pkg.data.status == "waiting" &&
+        pkg.data.ownerUserId == resource.data.ownerUserId &&
+        (
+          resource.data.ownerUserId == request.auth.uid ||
+          sameApprovedPhoneAsCurrent(resource.data.ownerUserId)
+        );
+    }
+
     match /users/{userId} {
       allow read: if signedIn();
       allow create: if validNewSelfUser(userId) ||
@@ -377,7 +398,7 @@ service cloud.firestore {
         validOwnerPackageUpdate() ||
         admin()
       );
-      allow delete: if admin();
+      allow delete: if admin() || validOwnerPackageDelete();
     }
 
     match /pickupRuns/{runId} {
@@ -414,7 +435,7 @@ service cloud.firestore {
       );
       allow create: if validSensitiveDetailsCreate(packageId);
       allow update: if validSensitiveDetailsOwnerUpdate(packageId);
-      allow delete: if false;
+      allow delete: if admin() || validSensitiveDetailsOwnerDelete(packageId);
     }
   }
 }

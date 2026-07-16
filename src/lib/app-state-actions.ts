@@ -561,8 +561,16 @@ export function updateCollectedPackagesArrival(
 }
 
 export function deletePackage(state: AppState, packageId: string) {
-  if (state.currentUser.role !== "admin" && state.currentUser.role !== "owner") {
-    throw new Error("Only admins can delete packages.");
+  const targetPackage = state.packages.find((pkg) => pkg.id === packageId);
+  if (!targetPackage) return state;
+
+  const equivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
+  const canAdminDelete = state.currentUser.role === "admin" || state.currentUser.role === "owner";
+  const canOwnerDeleteWaitingPackage =
+    targetPackage.status === "waiting" && equivalentUserIds.has(targetPackage.ownerUserId);
+
+  if (!canAdminDelete && !canOwnerDeleteWaitingPackage) {
+    throw new Error("Only admins or the waiting package owner can delete packages.");
   }
 
   return {

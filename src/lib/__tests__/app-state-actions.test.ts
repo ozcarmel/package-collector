@@ -677,6 +677,44 @@ describe("app state actions", () => {
     expect(result.packages.some((pkg) => pkg.id === arrivedPackage?.id)).toBe(false);
   });
 
+  it("allows a member to delete their own waiting package", () => {
+    const state = cloneState();
+    const member = state.users.find((user) => user.id === "u-hila");
+    const memberPackage = state.packages.find((pkg) => pkg.ownerUserId === member?.id);
+    expect(member).toBeTruthy();
+    expect(memberPackage?.status).toBe("waiting");
+
+    const result = deletePackage(
+      {
+        ...state,
+        currentUser: member!,
+      },
+      memberPackage?.id ?? "",
+    );
+
+    expect(result.packages.some((pkg) => pkg.id === memberPackage?.id)).toBe(false);
+  });
+
+  it("prevents a member from deleting a package after pickup", () => {
+    const state = cloneState();
+    const member = state.users.find((user) => user.id === "u-hila");
+    const memberPackage = state.packages.find((pkg) => pkg.ownerUserId === member?.id);
+    expect(member).toBeTruthy();
+    expect(memberPackage).toBeTruthy();
+
+    const collectedState: AppState = {
+      ...state,
+      currentUser: member!,
+      packages: state.packages.map((pkg) =>
+        pkg.id === memberPackage?.id ? { ...pkg, status: "collected" } : pkg,
+      ),
+    };
+
+    expect(() => deletePackage(collectedState, memberPackage?.id ?? "")).toThrow(
+      "Only admins or the waiting package owner can delete packages.",
+    );
+  });
+
   it("promotes an approved member to admin", () => {
     const state = cloneState();
     const memberId = state.users.find((user) => user.role === "member")?.id;

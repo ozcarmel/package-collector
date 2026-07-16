@@ -1613,6 +1613,21 @@ form.stack,
   min-width: 0;
 }
 
+.added-package-actions {
+  display: grid;
+  gap: 6px;
+  justify-items: stretch;
+}
+
+.added-package-actions .button.compact {
+  min-width: 62px;
+}
+
+.added-package-actions .button.compact svg {
+  width: 13px;
+  height: 13px;
+}
+
 .added-package-head {
   display: flex;
   justify-content: space-between;

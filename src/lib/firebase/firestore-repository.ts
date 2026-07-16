@@ -634,17 +634,31 @@ export const firestoreRepository: AppOperationsRepository = {
   },
 
   async deletePackage(state: AppState, packageId: string) {
-    if (state.currentUser.role !== "admin" && state.currentUser.role !== "owner") {
-      throw new Error("Only admins can delete packages.");
+    const db = requireFirestore();
+    const packageRef = doc(db, "packages", packageId);
+    const packageSnapshot = await getDoc(packageRef);
+    const pkg = packageSnapshot.data() as DeliveryPackage | undefined;
+    if (!pkg) return state;
+
+    const equivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
+    const canAdminDelete = state.currentUser.role === "admin" || state.currentUser.role === "owner";
+    const canOwnerDeleteWaitingPackage =
+      pkg.status === "waiting" && equivalentUserIds.has(pkg.ownerUserId);
+
+    if (!canAdminDelete && !canOwnerDeleteWaitingPackage) {
+      throw new Error("Only admins or the waiting package owner can delete packages.");
     }
 
-    const db = requireFirestore();
     const runItemsSnapshot = await getDocs(
       query(collection(db, "pickupRunItems"), where("packageId", "==", packageId)),
     );
+    const sensitiveDetailsSnapshot = await getDoc(doc(db, "sensitivePackageDetails", packageId));
     const batch = writeBatch(db);
 
-    batch.delete(doc(db, "packages", packageId));
+    batch.delete(packageRef);
+    if (sensitiveDetailsSnapshot.exists()) {
+      batch.delete(sensitiveDetailsSnapshot.ref);
+    }
     runItemsSnapshot.docs.forEach((itemDoc) => {
       batch.delete(itemDoc.ref);
     });

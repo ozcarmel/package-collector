@@ -493,6 +493,44 @@ describe("firestore security rules", () => {
     await assertSucceeds(adminDb.doc("packages/pkg-arrived").delete());
   });
 
+  it("allows package owners to delete their own waiting package and sensitive details", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc("packages/pkg-waiting", packageDoc("pkg-waiting", "u-owner"));
+    await seedDoc("sensitivePackageDetails/pkg-waiting", {
+      packageId: "pkg-waiting",
+      ownerUserId: "u-owner",
+      pickupLocationId: "pitzutz",
+      sensitiveDeliveryMessage: "Original message",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const ownerDb = dbFor("u-owner");
+    const batch = ownerDb.batch();
+
+    batch.delete(ownerDb.doc("sensitivePackageDetails/pkg-waiting"));
+    batch.delete(ownerDb.doc("packages/pkg-waiting"));
+
+    await assertSucceeds(batch.commit());
+  });
+
+  it("prevents package owners from deleting packages after pickup", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc(
+      "packages/pkg-collected",
+      packageDoc("pkg-collected", "u-owner", "pitzutz", { status: "collected" }),
+    );
+
+    await assertFails(dbFor("u-owner").doc("packages/pkg-collected").delete());
+  });
+
+  it("prevents members from deleting another member's waiting package", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc("users/u-other", userDoc("u-other", { phone: "050-222-2222" }));
+    await seedDoc("packages/pkg-waiting", packageDoc("pkg-waiting", "u-owner"));
+
+    await assertFails(dbFor("u-other").doc("packages/pkg-waiting").delete());
+  });
+
   it("blocks inactive users from active app data", async () => {
     await seedDoc("users/u-blocked", {
       ...userDoc("u-blocked"),
