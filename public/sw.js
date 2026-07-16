@@ -1,4 +1,4 @@
-const cacheVersion = "lahav-package-collector-pwa-v20260706";
+const cacheVersion = "lahav-package-collector-pwa-v20260716-1";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
