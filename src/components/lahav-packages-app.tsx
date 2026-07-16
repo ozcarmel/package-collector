@@ -274,6 +274,14 @@ function pickupLocationDisplayName(location: PickupLocation) {
     return "הום פעמי";
   }
 
+  if (location.id === "post-office") {
+    return "דואר להבים";
+  }
+
+  if (location.id === "pitzutz") {
+    return "פיצוץ להבים";
+  }
+
   if (location.id === "deli-place" || location.name === "דלי פלייס להבים") {
     return "דלי פלייס";
   }
