@@ -222,6 +222,19 @@ service cloud.firestore {
         );
     }
 
+    function validOwnerPackageCancel() {
+      return approved() &&
+        resource.data.status in ["collected", "arrived", "ready_for_handoff"] &&
+        request.resource.data.status == "cancelled" &&
+        request.resource.data.cancelledByUserId == request.auth.uid &&
+        (
+          resource.data.ownerUserId == request.auth.uid ||
+          sameApprovedPhoneAsCurrent(resource.data.ownerUserId)
+        ) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "cancelledAt", "cancelledByUserId", "updatedAt"]);
+    }
+
     function validPackageCreate(packageId) {
       return approved() &&
         request.resource.data.id == packageId &&
@@ -396,6 +409,7 @@ service cloud.firestore {
         validCollectorPackageCollectedUpdate(packageId) ||
         validOwnerPackageReceivedUpdate() ||
         validOwnerPackageUpdate() ||
+        validOwnerPackageCancel() ||
         admin()
       );
       allow delete: if admin() || validOwnerPackageDelete();

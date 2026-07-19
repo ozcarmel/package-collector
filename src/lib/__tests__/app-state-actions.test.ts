@@ -12,6 +12,7 @@ import {
   logSensitiveAccess,
   markPackageCollected,
   markPackageReceived,
+  removeOwnPackage,
   promoteUser,
   rejectJoinRequest,
   startPickupRun,
@@ -713,6 +714,68 @@ describe("app state actions", () => {
     expect(() => deletePackage(collectedState, memberPackage?.id ?? "")).toThrow(
       "Only admins or the waiting package owner can delete packages.",
     );
+  });
+
+  it("allows a member to remove their own collected package by cancelling it", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const member = state.users.find((user) => user.id === "u-hila");
+    const memberPackage = state.packages.find((pkg) => pkg.ownerUserId === member?.id);
+    expect(member).toBeTruthy();
+    expect(memberPackage).toBeTruthy();
+
+    const collectedState: AppState = {
+      ...state,
+      currentUser: member!,
+      packages: state.packages.map((pkg) =>
+        pkg.id === memberPackage?.id ? { ...pkg, status: "collected" } : pkg,
+      ),
+    };
+
+    const result = removeOwnPackage(collectedState, memberPackage?.id ?? "", deps);
+    expect(result.packages.find((pkg) => pkg.id === memberPackage?.id)).toMatchObject({
+      status: "cancelled",
+      cancelledByUserId: member?.id,
+      cancelledAt: "2026-06-28T10:00:00.000Z",
+    });
+  });
+
+  it("allows a member to remove their own arrived package by cancelling it", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const member = state.users.find((user) => user.id === "u-hila");
+    const memberPackage = state.packages.find((pkg) => pkg.ownerUserId === member?.id);
+    expect(member).toBeTruthy();
+    expect(memberPackage).toBeTruthy();
+
+    const arrivedState: AppState = {
+      ...state,
+      currentUser: member!,
+      packages: state.packages.map((pkg) =>
+        pkg.id === memberPackage?.id ? { ...pkg, status: "arrived" } : pkg,
+      ),
+    };
+
+    const result = removeOwnPackage(arrivedState, memberPackage?.id ?? "", deps);
+    expect(result.packages.find((pkg) => pkg.id === memberPackage?.id)).toMatchObject({
+      status: "cancelled",
+      cancelledByUserId: member?.id,
+    });
+  });
+
+  it("prevents a member from removing another user's package", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const member = state.users.find((user) => user.id === "u-hila");
+    const anotherPackage = state.packages.find(
+      (pkg) => pkg.ownerUserId !== member?.id && pkg.status === "waiting",
+    );
+    expect(member).toBeTruthy();
+    expect(anotherPackage).toBeTruthy();
+
+    expect(() =>
+      removeOwnPackage({ ...state, currentUser: member! }, anotherPackage?.id ?? "", deps),
+    ).toThrow("Only the package owner can remove this package.");
   });
 
   it("promotes an approved member to admin", () => {

@@ -95,6 +95,8 @@ export interface DeliveryPackage {
   createdAt?: string;
   updatedAt: string;
   deliveredAt?: string;
+  cancelledAt?: string;
+  cancelledByUserId?: string;
 }
 
 export interface PickupRun {

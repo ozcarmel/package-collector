@@ -10,6 +10,7 @@ import {
   logSensitiveAccess,
   markPackageCollected,
   markPackageReceived,
+  removeOwnPackage,
   promoteUser,
   rejectJoinRequest,
   startPickupRun,
@@ -94,6 +95,8 @@ export const localDemoRepository: AppStateRepository = {
   markPackageCollected,
 
   markPackageReceived,
+
+  removeOwnPackage,
 
   deletePackage,
 

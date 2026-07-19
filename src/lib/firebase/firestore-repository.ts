@@ -38,6 +38,7 @@ import {
   createPickupLocation as createPickupLocationAction,
   deletePickupLocation as deletePickupLocationAction,
   getEquivalentUserIdsForCurrentUser,
+  removeOwnPackage as removeOwnPackageAction,
   resolveKibbutzDropNote,
   updatePackage as updatePackageAction,
   updateCollectedPackagesArrival as updateCollectedPackagesArrivalAction,
@@ -631,6 +632,56 @@ export const firestoreRepository: AppOperationsRepository = {
           : item,
       ),
     };
+  },
+
+  async removeOwnPackage(state: AppState, packageId: string, deps: ActionDeps) {
+    if (state.currentUser.verificationStatus !== "approved") {
+      throw new Error("User must be approved to remove packages.");
+    }
+
+    const db = requireFirestore();
+    const packageRef = doc(db, "packages", packageId);
+    const packageSnapshot = await getDoc(packageRef);
+    const pkg = packageSnapshot.data() as DeliveryPackage | undefined;
+    if (!pkg) return state;
+
+    const equivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
+    if (!equivalentUserIds.has(pkg.ownerUserId)) {
+      throw new Error("Only the package owner can remove this package.");
+    }
+
+    if (pkg.status === "waiting") {
+      const runItemsSnapshot = await getDocs(
+        query(collection(db, "pickupRunItems"), where("packageId", "==", packageId)),
+      );
+      const sensitiveDetailsSnapshot = await getDoc(doc(db, "sensitivePackageDetails", packageId));
+      const batch = writeBatch(db);
+
+      batch.delete(packageRef);
+      if (sensitiveDetailsSnapshot.exists()) {
+        batch.delete(sensitiveDetailsSnapshot.ref);
+      }
+      runItemsSnapshot.docs.forEach((itemDoc) => {
+        batch.delete(itemDoc.ref);
+      });
+
+      await batch.commit();
+      return removeOwnPackageAction(state, packageId, deps);
+    }
+
+    if (pkg.status !== "collected" && pkg.status !== "arrived" && pkg.status !== "ready_for_handoff") {
+      throw new Error("Only active owner packages can be removed.");
+    }
+
+    const cancelledAt = deps.now();
+    await updateDoc(packageRef, {
+      status: "cancelled",
+      cancelledAt,
+      cancelledByUserId: state.currentUser.id,
+      updatedAt: cancelledAt,
+    });
+
+    return removeOwnPackageAction(state, packageId, deps);
   },
 
   async deletePackage(state: AppState, packageId: string) {

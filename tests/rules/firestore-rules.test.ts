@@ -523,6 +523,58 @@ describe("firestore security rules", () => {
     await assertFails(dbFor("u-owner").doc("packages/pkg-collected").delete());
   });
 
+  it("allows package owners to cancel their own collected package", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc(
+      "packages/pkg-collected",
+      packageDoc("pkg-collected", "u-owner", "pitzutz", { status: "collected" }),
+    );
+
+    await assertSucceeds(
+      dbFor("u-owner").doc("packages/pkg-collected").update({
+        status: "cancelled",
+        cancelledAt: now,
+        cancelledByUserId: "u-owner",
+        updatedAt: now,
+      }),
+    );
+  });
+
+  it("allows package owners to cancel their own arrived package", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc(
+      "packages/pkg-arrived-owner",
+      packageDoc("pkg-arrived-owner", "u-owner", "pitzutz", { status: "arrived" }),
+    );
+
+    await assertSucceeds(
+      dbFor("u-owner").doc("packages/pkg-arrived-owner").update({
+        status: "cancelled",
+        cancelledAt: now,
+        cancelledByUserId: "u-owner",
+        updatedAt: now,
+      }),
+    );
+  });
+
+  it("prevents members from cancelling another member's package", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc("users/u-other", userDoc("u-other", { phone: "050-222-2222" }));
+    await seedDoc(
+      "packages/pkg-collected",
+      packageDoc("pkg-collected", "u-owner", "pitzutz", { status: "collected" }),
+    );
+
+    await assertFails(
+      dbFor("u-other").doc("packages/pkg-collected").update({
+        status: "cancelled",
+        cancelledAt: now,
+        cancelledByUserId: "u-other",
+        updatedAt: now,
+      }),
+    );
+  });
+
   it("prevents members from deleting another member's waiting package", async () => {
     await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
     await seedDoc("users/u-other", userDoc("u-other", { phone: "050-222-2222" }));

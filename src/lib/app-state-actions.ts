@@ -560,6 +560,53 @@ export function updateCollectedPackagesArrival(
   };
 }
 
+export function removeOwnPackage(state: AppState, packageId: string, deps: ActionDeps) {
+  assertApprovedUser(state, "remove packages");
+
+  const targetPackage = state.packages.find((pkg) => pkg.id === packageId);
+  if (!targetPackage) return state;
+
+  const equivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
+  const isOwner = equivalentUserIds.has(targetPackage.ownerUserId);
+  if (!isOwner) {
+    throw new Error("Only the package owner can remove this package.");
+  }
+
+  if (targetPackage.status === "waiting") {
+    return {
+      ...state,
+      packages: state.packages.filter((pkg) => pkg.id !== packageId),
+      pickupRunItems: state.pickupRunItems.filter((item) => item.packageId !== packageId),
+      accessLogs: state.accessLogs.filter((log) => log.packageId !== packageId),
+    };
+  }
+
+  if (
+    targetPackage.status !== "collected" &&
+    targetPackage.status !== "arrived" &&
+    targetPackage.status !== "ready_for_handoff"
+  ) {
+    throw new Error("Only active owner packages can be removed.");
+  }
+
+  const cancelledAt = deps.now();
+
+  return {
+    ...state,
+    packages: state.packages.map((pkg) =>
+      pkg.id === packageId
+        ? {
+            ...pkg,
+            status: "cancelled" as const,
+            cancelledAt,
+            cancelledByUserId: state.currentUser.id,
+            updatedAt: cancelledAt,
+          }
+        : pkg,
+    ),
+  };
+}
+
 export function deletePackage(state: AppState, packageId: string) {
   const targetPackage = state.packages.find((pkg) => pkg.id === packageId);
   if (!targetPackage) return state;

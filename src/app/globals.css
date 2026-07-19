@@ -1104,10 +1104,51 @@ form.stack,
 }
 
 .package-top > .badge,
-.package-top > .status-action-badge {
+.package-top > .status-action-badge,
+.package-status-slot {
   width: 96px;
   min-width: 96px;
   justify-content: center;
+}
+
+.package-status-actions {
+  direction: ltr;
+  width: 128px;
+  min-width: 128px;
+  display: grid;
+  grid-template-columns: 26px 96px;
+  gap: 6px;
+  align-items: center;
+}
+
+.package-remove-slot {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+}
+
+.package-remove-button {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: #fff;
+  background: var(--danger);
+  box-shadow: 0 4px 9px rgb(183 52 38 / 18%);
+}
+
+.package-remove-button svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 4;
+}
+
+.package-remove-button:disabled {
+  opacity: 0.56;
 }
 
 .package-icon {

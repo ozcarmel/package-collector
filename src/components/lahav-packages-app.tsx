@@ -82,6 +82,7 @@ type EffectiveScreen = Screen | "loading";
 
 type AdminListView = "pending" | "approved" | "managers" | "packages";
 type HomePackageStatusBucket = "waiting" | "collected" | "arrived" | "delivered";
+type PendingPackageRemovalMode = "owner-remove" | "admin-delete";
 
 const homeStatusBucketLabels: Record<HomePackageStatusBucket, string> = {
   waiting: "ממתינות לאיסוף",
@@ -523,6 +524,8 @@ export function LahavPackagesApp() {
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [pendingDeleteLocationId, setPendingDeleteLocationId] = useState<string | null>(null);
   const [pendingDeletePackageId, setPendingDeletePackageId] = useState<string | null>(null);
+  const [pendingDeletePackageMode, setPendingDeletePackageMode] =
+    useState<PendingPackageRemovalMode>("owner-remove");
   const [screen, setScreen] = useState<Screen>(() => (hasJoinPreviewParam() ? "join" : "home"));
   const [toast, setToast] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftPackage>(emptyDraft);
@@ -1585,8 +1588,15 @@ export function LahavPackagesApp() {
     }
   }
 
-  async function deletePackage(packageId: string) {
+  function requestOwnerRemovePackage(packageId: string) {
     if (adminActionId) return;
+    setPendingDeletePackageMode("owner-remove");
+    setPendingDeletePackageId(packageId);
+  }
+
+  function requestAdminDeletePackage(packageId: string) {
+    if (adminActionId) return;
+    setPendingDeletePackageMode("admin-delete");
     setPendingDeletePackageId(packageId);
   }
 
@@ -1596,20 +1606,19 @@ export function LahavPackagesApp() {
     const packageId = pendingDeletePackageId;
     setAdminActionId(`delete-package-${packageId}`);
     try {
-      const nextState = await operationsRepository.deletePackage(
-        state,
-        packageId,
-        actionDeps,
-      );
+      const nextState =
+        pendingDeletePackageMode === "owner-remove"
+          ? await operationsRepository.removeOwnPackage(state, packageId, actionDeps)
+          : await operationsRepository.deletePackage(state, packageId, actionDeps);
       applyRepositoryState(nextState);
       if (editingPackageId === packageId) {
         setEditingPackageId(null);
         setDraft(emptyDraft);
       }
       setPendingDeletePackageId(null);
-      notify("החבילה נמחקה.");
+      notify(pendingDeletePackageMode === "owner-remove" ? "החבילה הוסרה." : "החבילה נמחקה.");
     } catch {
-      notify("לא הצלחנו למחוק את החבילה. נסה/י שוב בעוד רגע.");
+      notify("לא הצלחנו להסיר את החבילה. נסה/י שוב בעוד רגע.");
     } finally {
       setAdminActionId(null);
     }
@@ -1925,13 +1934,17 @@ export function LahavPackagesApp() {
             className="confirm-modal"
             role="dialog"
           >
-            <h2 id="delete-package-title">למחוק את החבילה?</h2>
+            <h2 id="delete-package-title">
+              {pendingDeletePackageMode === "owner-remove" ? "להסיר את החבילה?" : "למחוק את החבילה?"}
+            </h2>
             <p>
               החבילה של {pendingDeletePackage.ownerName} תוסר מהאפליקציה ולא תופיע יותר
               ברשימות הפעילות.
             </p>
             <div className="confirm-statement danger-statement">
-              הפעולה תשפיע מיד על כל המשתמשים.
+              {pendingDeletePackageMode === "owner-remove"
+                ? "אם החבילה כבר נאספה, ההיסטוריה תישמר למנהל."
+                : "הפעולה תשפיע מיד על כל המשתמשים."}
             </div>
             <div className="card-actions">
               <button
@@ -1949,8 +1962,12 @@ export function LahavPackagesApp() {
                 type="button"
               >
                 {adminActionId === `delete-package-${pendingDeletePackage.id}`
-                  ? "מוחק..."
-                  : "מחק חבילה"}
+                  ? pendingDeletePackageMode === "owner-remove"
+                    ? "מסיר..."
+                    : "מוחק..."
+                  : pendingDeletePackageMode === "owner-remove"
+                    ? "הסר חבילה"
+                    : "מחק חבילה"}
               </button>
             </div>
           </section>
@@ -2585,7 +2602,7 @@ export function LahavPackagesApp() {
                       <button
                         className="button compact warn"
                         disabled={!canEditPackage || adminActionId !== null}
-                        onClick={() => deletePackage(pkg.id)}
+                        onClick={() => requestOwnerRemovePackage(pkg.id)}
                         title={
                           canEditPackage
                             ? "מחיקת חבילה שהוכנסה בטעות"
@@ -3051,7 +3068,7 @@ export function LahavPackagesApp() {
                       <button
                         className="button warn full"
                         disabled={adminActionId !== null}
-                        onClick={() => deletePackage(pkg.id)}
+                        onClick={() => requestAdminDeletePackage(pkg.id)}
                         type="button"
                       >
                         <Trash2 />
@@ -3070,7 +3087,14 @@ export function LahavPackagesApp() {
   function PackageCard({ pkg }: { pkg: DeliveryPackage }) {
     const collectorName = getUserName(state.users, pkg.collectorUserId);
     const detailBadge = homePackageDetailBadge(pkg);
+    const canRemoveOwnPackage =
+      currentEquivalentUserIds.has(pkg.ownerUserId) &&
+      (pkg.status === "waiting" ||
+        pkg.status === "collected" ||
+        pkg.status === "arrived" ||
+        pkg.status === "ready_for_handoff");
     const canConfirmReceived =
+      !canRemoveOwnPackage &&
       pkg.ownerUserId === currentUserId &&
       (pkg.status === "arrived" || pkg.status === "ready_for_handoff");
     const isReceiving = receivingPackageId === pkg.id;
@@ -3093,19 +3117,35 @@ export function LahavPackagesApp() {
                 {getLocationName(state.pickupLocations, pkg.pickupLocationId)}
               </div>
             </div>
-            {getHomePackageStatusBucket(pkg.status) === "waiting" ? (
-              <button
-                className={`${homePackageStatusBadgeClass(pkg)} status-action-badge`}
-                onClick={() => openPickupScreenForLocation(pkg.pickupLocationId)}
-                type="button"
-              >
-                {homePackageStatusLabel(pkg)}
-              </button>
-            ) : (
-              <span className={homePackageStatusBadgeClass(pkg)}>
-                {homePackageStatusLabel(pkg)}
+            <div className="package-status-actions">
+              <span className="package-remove-slot">
+                {canRemoveOwnPackage ? (
+                  <button
+                    aria-label="הסר חבילה"
+                    className="package-remove-button"
+                    disabled={adminActionId !== null}
+                    onClick={() => requestOwnerRemovePackage(pkg.id)}
+                    title="הסר חבילה"
+                    type="button"
+                  >
+                    <X />
+                  </button>
+                ) : null}
               </span>
-            )}
+              {getHomePackageStatusBucket(pkg.status) === "waiting" ? (
+                <button
+                  className={`${homePackageStatusBadgeClass(pkg)} status-action-badge package-status-slot`}
+                  onClick={() => openPickupScreenForLocation(pkg.pickupLocationId)}
+                  type="button"
+                >
+                  {homePackageStatusLabel(pkg)}
+                </button>
+              ) : (
+                <span className={`${homePackageStatusBadgeClass(pkg)} package-status-slot`}>
+                  {homePackageStatusLabel(pkg)}
+                </span>
+              )}
+            </div>
           </div>
           {detailBadge ? (
             <span className={detailBadge.className}>
