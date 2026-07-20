@@ -548,9 +548,10 @@ export function LahavPackagesApp() {
   const [expandedArrivalPackageIds, setExpandedArrivalPackageIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [openedPickupLinkPackageIds, setOpenedPickupLinkPackageIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const pendingAutoCollectPackageIdsRef = useRef<Set<string>>(new Set());
+  const catalogPackagesRef = useRef<DeliveryPackage[]>([]);
+  const collectingPackageIdRef = useRef<string | null>(null);
+  const markCollectedRef = useRef<(packageId: string) => void>(() => {});
   const pickupLocationStripRef = useRef<HTMLDivElement | null>(null);
   const pickupLocationArrowRef = useRef<HTMLButtonElement | null>(null);
   const addPackageFormRef = useRef<HTMLFormElement | null>(null);
@@ -764,6 +765,8 @@ export function LahavPackagesApp() {
         .filter((pkg) => activeRunPackageIds.has(pkg.id))
         .map((pkg) => ({ ...pkg, ...revealedSensitiveDetails[pkg.id] }))
     : [];
+  catalogPackagesRef.current = catalogPackages;
+  collectingPackageIdRef.current = collectingPackageId;
 
   const activeLocation = activeRun
     ? state.pickupLocations.find((location) => location.id === activeRun.pickupLocationId)
@@ -1312,22 +1315,8 @@ export function LahavPackagesApp() {
   }
 
   function handleOriginalMessageLinkClick(packageId: string) {
-    setOpenedPickupLinkPackageIds((current) => {
-      const next = new Set(current);
-      next.add(packageId);
-      return next;
-    });
+    pendingAutoCollectPackageIdsRef.current.add(packageId);
     void logSensitiveAccess(packageId, "open_pickup_link");
-    notify("קישור האישור נפתח והפעולה נרשמה בלוג.");
-  }
-
-  function hasPickupLink(pkg: DeliveryPackage) {
-    return extractMessageUrls(pkg.sensitiveDeliveryMessage ?? "").length > 0;
-  }
-
-  function wasPickupLinkOpened(packageId: string) {
-    const runItem = activeRunItems.find((item) => item.packageId === packageId);
-    return Boolean(runItem?.sensitivePickupLinkOpenedAt || openedPickupLinkPackageIds.has(packageId));
   }
 
   function mergePendingCreatedPackages(currentState: AppState, remoteState: AppState) {
@@ -1496,12 +1485,6 @@ export function LahavPackagesApp() {
   async function markCollected(packageId: string) {
     if (collectingPackageId) return;
 
-    const targetPackage = catalogPackages.find((pkg) => pkg.id === packageId);
-    if (targetPackage && hasPickupLink(targetPackage) && !wasPickupLinkOpened(packageId)) {
-      notify("פתח/י קודם את קישור האישור מתוך הודעת המשלוח.");
-      return;
-    }
-
     setCollectingPackageId(packageId);
     try {
       const nextState = await operationsRepository.markPackageCollected(
@@ -1510,13 +1493,74 @@ export function LahavPackagesApp() {
         actionDeps,
       );
       applyRepositoryState(nextState);
-      notify("החבילה סומנה כנאספה.");
     } catch {
       notify("לא הצלחנו לסמן את החבילה כנאספה. נסה/י שוב בעוד רגע.");
     } finally {
       setCollectingPackageId(null);
     }
   }
+  markCollectedRef.current = (packageId: string) => {
+    void markCollected(packageId);
+  };
+
+  async function unmarkCollected(packageId: string) {
+    if (collectingPackageId) return;
+
+    pendingAutoCollectPackageIdsRef.current.delete(packageId);
+    setCollectingPackageId(packageId);
+    try {
+      const nextState = await operationsRepository.unmarkPackageCollected(
+        state,
+        { activeRunId, packageId },
+        actionDeps,
+      );
+      applyRepositoryState(nextState);
+    } catch {
+      notify("לא הצלחנו להחזיר את החבילה לממתינה לאיסוף. נסה/י שוב בעוד רגע.");
+    } finally {
+      setCollectingPackageId(null);
+    }
+  }
+
+  function toggleCollected(packageId: string, isCollected: boolean) {
+    if (isCollected) {
+      void unmarkCollected(packageId);
+      return;
+    }
+
+    void markCollected(packageId);
+  }
+
+  useEffect(() => {
+    function collectOpenedLinksOnReturn() {
+      if (document.visibilityState === "hidden" || collectingPackageIdRef.current) return;
+
+      const pendingPackageIds = Array.from(pendingAutoCollectPackageIdsRef.current);
+      if (!pendingPackageIds.length) return;
+
+      for (const packageId of pendingPackageIds) {
+        const pkg = catalogPackagesRef.current.find((item) => item.id === packageId);
+        const isCollected = pkg?.status === "collected";
+
+        if (!pkg || isCollected) {
+          pendingAutoCollectPackageIdsRef.current.delete(packageId);
+          continue;
+        }
+
+        pendingAutoCollectPackageIdsRef.current.delete(packageId);
+        markCollectedRef.current(packageId);
+        break;
+      }
+    }
+
+    window.addEventListener("focus", collectOpenedLinksOnReturn);
+    document.addEventListener("visibilitychange", collectOpenedLinksOnReturn);
+
+    return () => {
+      window.removeEventListener("focus", collectOpenedLinksOnReturn);
+      document.removeEventListener("visibilitychange", collectOpenedLinksOnReturn);
+    };
+  }, []);
 
   async function markReceived(packageId: string) {
     if (receivingPackageId) return;
@@ -3208,13 +3252,9 @@ export function LahavPackagesApp() {
 
   function CatalogCard({ pkg, index }: { pkg: DeliveryPackage; index: number }) {
     const runItem = activeRunItems.find((item) => item.packageId === pkg.id);
-    const isCollected = runItem?.itemStatus === "collected" || pkg.status === "collected";
+    const isCollected = pkg.status === "collected";
     const isCollecting = collectingPackageId === pkg.id;
-    const pickupUrls = extractMessageUrls(pkg.sensitiveDeliveryMessage ?? "");
-    const pickupUrl = pickupUrls[0];
-    const requiresPickupLink = Boolean(pickupUrl);
-    const pickupLinkOpened = !requiresPickupLink || wasPickupLinkOpened(pkg.id);
-    const canMarkCollected = !isCollected && collectingPackageId === null && pickupLinkOpened;
+    const canToggleCollected = collectingPackageId === null || isCollecting;
     return (
       <div className="card catalog-card">
         <div className="catalog-card-head">
@@ -3246,29 +3286,17 @@ export function LahavPackagesApp() {
         </div>
 
         <div className="catalog-actions">
-          {pickupUrl ? (
-            <a
-              className={`button pickup-link-button ${pickupLinkOpened ? "opened" : ""}`}
-              dir="rtl"
-              href={pickupUrl}
-              onClick={() => handleOriginalMessageLinkClick(pkg.id)}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              {pickupLinkOpened ? "קישור נפתח" : "פתח קישור אישור"}
-            </a>
-          ) : null}
           <button
             aria-pressed={isCollected}
             className={`button collect-button ${isCollected ? "checked" : ""}`}
-            disabled={!canMarkCollected}
-            onClick={() => markCollected(pkg.id)}
+            disabled={!canToggleCollected}
+            onClick={() => toggleCollected(pkg.id, isCollected)}
             type="button"
           >
             <span className="collect-checkbox-mark" aria-hidden="true">
               {isCollected ? <Check /> : null}
             </span>
-            {isCollecting ? "מסמן..." : isCollected ? "נאספה" : pickupLinkOpened ? "סמן נאספה" : "פתח קישור קודם"}
+            {isCollecting ? "מעדכן..." : isCollected ? "נאספה" : "ממתינה לאיסוף"}
           </button>
         </div>
       </div>

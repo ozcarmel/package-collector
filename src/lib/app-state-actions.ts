@@ -524,6 +524,45 @@ export function markPackageReceived(state: AppState, packageId: string, deps: Ac
   };
 }
 
+export function unmarkPackageCollected(
+  state: AppState,
+  input: { activeRunId: string | null; packageId: string },
+  deps: ActionDeps,
+) {
+  const targetPackage = state.packages.find((pkg) => pkg.id === input.packageId);
+
+  if (!targetPackage || targetPackage.status !== "collected") {
+    return state;
+  }
+
+  return {
+    ...state,
+    packages: state.packages.map((pkg) => {
+      if (pkg.id !== input.packageId) return pkg;
+
+      const waitingPackage = { ...pkg };
+      delete waitingPackage.collectorUserId;
+      return {
+        ...waitingPackage,
+        status: "waiting" as const,
+        updatedAt: deps.now(),
+      };
+    }),
+    pickupRunItems: state.pickupRunItems.map((item) => {
+      if (item.packageId !== input.packageId || item.pickupRunId !== input.activeRunId) {
+        return item;
+      }
+
+      const pendingItem = { ...item };
+      delete pendingItem.collectedAt;
+      return {
+        ...pendingItem,
+        itemStatus: "pending" as const,
+      };
+    }),
+  };
+}
+
 export function updateCollectedPackagesArrival(
   state: AppState,
   input: UpdateArrivalInput,

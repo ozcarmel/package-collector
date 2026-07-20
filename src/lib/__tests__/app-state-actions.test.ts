@@ -16,6 +16,7 @@ import {
   promoteUser,
   rejectJoinRequest,
   startPickupRun,
+  unmarkPackageCollected,
   updateCollectedPackagesArrival,
   updatePackage,
   updatePickupLocation,
@@ -487,6 +488,59 @@ describe("app state actions", () => {
       currentKibbutzLocation: "gate-crate",
       currentKibbutzLocationText: "In the gate crate",
     });
+  });
+
+  it("marks a package collected without requiring a pickup link", () => {
+    const deps = createTestDeps();
+    const runResult = startPickupRun(cloneState(), "pitzutz", deps);
+    const packageId = runResult.state.pickupRunItems[0].packageId;
+
+    const collected = markPackageCollected(
+      runResult.state,
+      { activeRunId: runResult.runId, packageId },
+      deps,
+    );
+
+    expect(collected.packages.find((pkg) => pkg.id === packageId)).toMatchObject({
+      status: "collected",
+      collectorUserId: collected.currentUser.id,
+    });
+  });
+
+  it("switches a collected package back to waiting and keeps access logs", () => {
+    const deps = createTestDeps();
+    const runResult = startPickupRun(cloneState(), "pitzutz", deps);
+    const packageId = runResult.state.pickupRunItems[0].packageId;
+    const accessed = logSensitiveAccess(
+      runResult.state,
+      {
+        activeRunId: runResult.runId ?? "",
+        packageId,
+        action: "open_pickup_link",
+      },
+      deps,
+    );
+    const collected = markPackageCollected(
+      accessed,
+      { activeRunId: runResult.runId, packageId },
+      deps,
+    );
+
+    const waiting = unmarkPackageCollected(
+      collected,
+      { activeRunId: runResult.runId, packageId },
+      deps,
+    );
+
+    const pkg = waiting.packages.find((item) => item.id === packageId);
+    const runItem = waiting.pickupRunItems.find(
+      (item) => item.pickupRunId === runResult.runId && item.packageId === packageId,
+    );
+    expect(pkg).toMatchObject({ status: "waiting" });
+    expect(pkg?.collectorUserId).toBeUndefined();
+    expect(runItem).toMatchObject({ itemStatus: "pending" });
+    expect(runItem?.collectedAt).toBeUndefined();
+    expect(waiting.accessLogs).toHaveLength(accessed.accessLogs.length);
   });
 
   it("updates collected packages to separate kibbutz locations with row-specific default notes", () => {

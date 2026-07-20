@@ -178,21 +178,19 @@ async function collectPackageAtLocation(
   const catalogCard = app(page).locator(".catalog-card").filter({ hasText: ownerName });
   await expect(catalogCard).toBeVisible({ timeout: 5000 });
   await openPickupApprovalLinkIfPresent(context, catalogCard);
-  await catalogCard.getByRole("button", { name: "סמן נאספה" }).click();
-  await expect(catalogCard.getByRole("button", { name: "נאספה" })).toHaveAttribute(
+  await catalogCard.locator(".collect-button").click();
+  await expect(catalogCard.locator(".collect-button")).toHaveAttribute(
     "aria-pressed",
     "true",
   );
 }
 
 async function openPickupApprovalLinkIfPresent(context: BrowserContext, card: Locator) {
-  const pickupLink = card.locator(".pickup-link-button");
+  void context;
+  const pickupLink = card.locator(".original-message a").first();
   if ((await pickupLink.count()) === 0) return;
 
-  const popupPromise = context.waitForEvent("page");
-  await pickupLink.click();
-  const popup = await popupPromise;
-  await popup.close();
+  await expect(pickupLink).toHaveAttribute("href", /^https?:\/\//);
 }
 
 async function expectNoVerticalOverlap(container: Locator, selector: string) {
@@ -504,8 +502,8 @@ test("collecting one location does not hide active packages from other locations
   const mosheCard = app(page).locator(".catalog-card").filter({ hasText: "משה בדואר" });
   await expect(mosheCard).toBeVisible();
   await openPickupApprovalLinkIfPresent(context, mosheCard);
-  await mosheCard.getByRole("button", { name: "סמן נאספה" }).click();
-  await expect(mosheCard.getByRole("button", { name: "נאספה" })).toHaveAttribute(
+  await mosheCard.locator(".collect-button").click();
+  await expect(mosheCard.locator(".collect-button")).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -699,8 +697,8 @@ test("saving two kibbutz delivery rows updates home status and shows both packag
     const catalogCard = app(page).locator(".catalog-card").first();
     const packageName = ((await catalogCard.locator(".package-name").textContent()) ?? "").trim();
     await openPickupApprovalLinkIfPresent(context, catalogCard);
-    await catalogCard.getByRole("button", { name: "סמן נאספה" }).click();
-    await expect(catalogCard.getByRole("button", { name: "נאספה" })).toHaveAttribute(
+    await catalogCard.locator(".collect-button").click();
+    await expect(catalogCard.locator(".collect-button")).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -844,13 +842,14 @@ test("pickup flow reveals original messages only after confirmation and records 
   await pickupLink.click();
   const popup = await popupPromise;
   await popup.close();
-  await expect(page.getByRole("status")).toContainText("קישור האישור נפתח");
-
-  await app(page).locator(".catalog-card").first().getByRole("button", { name: "נאספה" }).click();
-  await expect(app(page).locator(".catalog-card").first().getByRole("button", { name: "נאספה" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await page.bringToFront();
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  const collectToggle = app(page).locator(".catalog-card").first().locator(".collect-button");
+  await expect(collectToggle).toHaveAttribute("aria-pressed", "true");
+  await collectToggle.click();
+  await expect(collectToggle).toHaveAttribute("aria-pressed", "false");
+  await collectToggle.click();
+  await expect(collectToggle).toHaveAttribute("aria-pressed", "true");
 
   await clickPhoneNav(page, "בית");
   await expect(app(page).getByText(/נאספה על ידי/).first()).toBeVisible();
@@ -902,8 +901,9 @@ test("multiple kibbutz delivery rows are collapsed until a package name is opene
   await catalogCards.nth(0).getByRole("link", { name: /https:\/\/u\.cheetahint\.com/ }).click();
   const popup = await popupPromise;
   await popup.close();
-  await catalogCards.nth(0).getByRole("button", { name: "סמן נאספה" }).click();
-  await catalogCards.nth(1).getByRole("button", { name: "סמן נאספה" }).click();
+  await page.bringToFront();
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await catalogCards.nth(1).locator(".collect-button").click();
 
   await clickPhoneNav(page, "מסירה");
   await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();

@@ -104,6 +104,12 @@ export interface AppOperationsRepository {
     deps: ActionDeps,
   ): RepositoryStateResult;
 
+  unmarkPackageCollected(
+    state: AppState,
+    input: { activeRunId: string | null; packageId: string },
+    deps: ActionDeps,
+  ): RepositoryStateResult;
+
   markPackageReceived(state: AppState, packageId: string, deps: ActionDeps): RepositoryStateResult;
 
   removeOwnPackage(state: AppState, packageId: string, deps: ActionDeps): RepositoryStateResult;

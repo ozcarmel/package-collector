@@ -1504,23 +1504,6 @@ form.stack,
   color: var(--primary-strong);
 }
 
-.button.pickup-link-button {
-  min-height: 36px;
-  border-color: #9fc7a6;
-  background: #e6f1df;
-  color: var(--primary-strong);
-  padding: 7px 12px;
-  font-size: 13px;
-  text-decoration: none;
-  box-shadow: none;
-}
-
-.button.pickup-link-button.opened {
-  border-color: #c9d6c1;
-  background: #f5eddc;
-  color: #566253;
-}
-
 .collect-checkbox-mark {
   width: 18px;
   height: 18px;

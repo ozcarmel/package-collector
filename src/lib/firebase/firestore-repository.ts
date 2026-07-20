@@ -594,6 +594,63 @@ export const firestoreRepository: AppOperationsRepository = {
     };
   },
 
+  async unmarkPackageCollected(
+    state: AppState,
+    input: { activeRunId: string | null; packageId: string },
+    deps: ActionDeps,
+  ) {
+    if (!input.activeRunId) {
+      throw new Error("A pickup run is required to unmark a package collected.");
+    }
+
+    const db = requireFirestore();
+    const unmarkedAt = deps.now();
+    const itemId = `${input.activeRunId}_${input.packageId}`;
+    const itemRef = doc(db, "pickupRunItems", itemId);
+    const itemSnapshot = await getDoc(itemRef);
+    const item = itemSnapshot.data() as PickupRunItem | undefined;
+    const batch = writeBatch(db);
+    batch.update(doc(db, "packages", input.packageId), {
+      status: "waiting",
+      collectorUserId: deleteField(),
+      updatedAt: unmarkedAt,
+    });
+    if (item?.itemStatus === "collected" || item?.collectedAt) {
+      batch.update(itemRef, {
+        itemStatus: "pending",
+        collectedAt: deleteField(),
+      });
+    }
+    await batch.commit();
+
+    return {
+      ...state,
+      packages: state.packages.map((pkg) => {
+        if (pkg.id !== input.packageId || pkg.status !== "collected") return pkg;
+
+        const waitingPackage = { ...pkg };
+        delete waitingPackage.collectorUserId;
+        return {
+          ...waitingPackage,
+          status: "waiting" as const,
+          updatedAt: unmarkedAt,
+        };
+      }),
+      pickupRunItems: state.pickupRunItems.map((item) => {
+        if (item.pickupRunId !== input.activeRunId || item.packageId !== input.packageId) {
+          return item;
+        }
+
+        const pendingItem = { ...item };
+        delete pendingItem.collectedAt;
+        return {
+          ...pendingItem,
+          itemStatus: "pending" as const,
+        };
+      }),
+    };
+  },
+
   async markPackageReceived(state: AppState, packageId: string, deps: ActionDeps) {
     const db = requireFirestore();
     const packageRef = doc(db, "packages", packageId);

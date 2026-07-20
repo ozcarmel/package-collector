@@ -14,6 +14,7 @@ import {
   promoteUser,
   rejectJoinRequest,
   startPickupRun,
+  unmarkPackageCollected,
   updateCollectedPackagesArrival,
   updatePackage,
   updatePickupLocation,
@@ -93,6 +94,8 @@ export const localDemoRepository: AppStateRepository = {
   logSensitiveAccess,
 
   markPackageCollected,
+
+  unmarkPackageCollected,
 
   markPackageReceived,
 

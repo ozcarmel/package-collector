@@ -266,6 +266,16 @@ service cloud.firestore {
           .hasOnly(["status", "collectorUserId", "updatedAt"]);
     }
 
+    function validCollectorPackageWaitingUpdate(packageId) {
+      return approved() &&
+        resource.data.status == "collected" &&
+        request.resource.data.status == "waiting" &&
+        request.resource.data.collectorUserId == null &&
+        hasSensitiveGrant(packageId) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "collectorUserId", "updatedAt"]);
+    }
+
     function pickupRun(runId) {
       return get(/databases/$(database)/documents/pickupRuns/$(runId));
     }
@@ -303,6 +313,16 @@ service cloud.firestore {
       return approved() &&
         pickupRunCollector(resource.data.pickupRunId) &&
         request.resource.data.itemStatus == "collected" &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["itemStatus", "collectedAt"]);
+    }
+
+    function validPickupRunItemPendingUpdate() {
+      return approved() &&
+        pickupRunCollector(resource.data.pickupRunId) &&
+        resource.data.itemStatus == "collected" &&
+        request.resource.data.itemStatus == "pending" &&
+        request.resource.data.collectedAt == null &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["itemStatus", "collectedAt"]);
     }
@@ -407,6 +427,7 @@ service cloud.firestore {
       allow update: if approved() && (
         validCollectorArrivalUpdate() ||
         validCollectorPackageCollectedUpdate(packageId) ||
+        validCollectorPackageWaitingUpdate(packageId) ||
         validOwnerPackageReceivedUpdate() ||
         validOwnerPackageUpdate() ||
         validOwnerPackageCancel() ||
@@ -425,7 +446,7 @@ service cloud.firestore {
     match /pickupRunItems/{itemId} {
       allow read: if approved() && (pickupRunCollector(resource.data.pickupRunId) || admin());
       allow create: if validPickupRunItemCreate(itemId);
-      allow update: if validPickupRunItemAccessUpdate() || validPickupRunItemCollectedUpdate() || admin();
+      allow update: if validPickupRunItemAccessUpdate() || validPickupRunItemCollectedUpdate() || validPickupRunItemPendingUpdate() || admin();
       allow delete: if admin();
     }
 

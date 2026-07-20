@@ -215,6 +215,133 @@ describe("firestore security rules", () => {
     await assertSucceeds(collectorDb.doc("sensitivePackageDetails/pkg-secure").get());
   });
 
+  it("allows an approved pickup user to mark and unmark a package in their active run", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner"));
+    await seedDoc("users/u-collector", userDoc("u-collector"));
+    await seedDoc("packages/pkg-toggle", packageDoc("pkg-toggle", "u-owner"));
+    await seedDoc("pickupRuns/run-toggle", {
+      id: "run-toggle",
+      collectorUserId: "u-collector",
+      pickupLocationId: "pitzutz",
+      status: "active",
+      createdAt: now,
+    });
+    await seedDoc("pickupRunItems/run-toggle_pkg-toggle", {
+      id: "run-toggle_pkg-toggle",
+      pickupRunId: "run-toggle",
+      packageId: "pkg-toggle",
+      itemStatus: "pending",
+    });
+    await seedDoc("sensitiveAccessGrants/u-collector_pkg-toggle", {
+      id: "u-collector_pkg-toggle",
+      packageId: "pkg-toggle",
+      pickupRunId: "run-toggle",
+      viewerUserId: "u-collector",
+      pickupLocationId: "pitzutz",
+      createdAt: now,
+    });
+
+    const collectorDb = dbFor("u-collector");
+    const collectBatch = collectorDb.batch();
+    collectBatch.update(collectorDb.doc("packages/pkg-toggle"), {
+      status: "collected",
+      collectorUserId: "u-collector",
+      updatedAt: now,
+    });
+    collectBatch.update(collectorDb.doc("pickupRunItems/run-toggle_pkg-toggle"), {
+      itemStatus: "collected",
+      collectedAt: now,
+    });
+    await assertSucceeds(collectBatch.commit());
+
+    const unmarkBatch = collectorDb.batch();
+    unmarkBatch.update(collectorDb.doc("packages/pkg-toggle"), {
+      status: "waiting",
+      collectorUserId: null,
+      updatedAt: now,
+    });
+    unmarkBatch.update(collectorDb.doc("pickupRunItems/run-toggle_pkg-toggle"), {
+      itemStatus: "pending",
+      collectedAt: null,
+    });
+    await assertSucceeds(unmarkBatch.commit());
+  });
+
+  it("blocks users without pickup access from unmarking collected packages", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner"));
+    await seedDoc("users/u-other", userDoc("u-other"));
+    await seedDoc(
+      "packages/pkg-toggle-blocked",
+      packageDoc("pkg-toggle-blocked", "u-owner", "pitzutz", {
+        status: "collected",
+        collectorUserId: "u-owner",
+      }),
+    );
+
+    await assertFails(
+      dbFor("u-other").doc("packages/pkg-toggle-blocked").update({
+        status: "waiting",
+        collectorUserId: null,
+        updatedAt: now,
+      }),
+    );
+  });
+
+  it("allows another approved pickup user with access to unmark a collected package", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner"));
+    await seedDoc("users/u-other-collector", userDoc("u-other-collector"));
+    await seedDoc(
+      "packages/pkg-shared-toggle",
+      packageDoc("pkg-shared-toggle", "u-owner", "pitzutz", {
+        status: "collected",
+        collectorUserId: "u-owner",
+      }),
+    );
+    await seedDoc("sensitiveAccessGrants/u-other-collector_pkg-shared-toggle", {
+      id: "u-other-collector_pkg-shared-toggle",
+      packageId: "pkg-shared-toggle",
+      pickupRunId: "run-shared-toggle",
+      viewerUserId: "u-other-collector",
+      pickupLocationId: "pitzutz",
+      createdAt: now,
+    });
+
+    await assertSucceeds(
+      dbFor("u-other-collector").doc("packages/pkg-shared-toggle").update({
+        status: "waiting",
+        collectorUserId: null,
+        updatedAt: now,
+      }),
+    );
+  });
+
+  it("blocks pickup toggling after the package entered kibbutz delivery", async () => {
+    await seedDoc("users/u-collector", userDoc("u-collector"));
+    await seedDoc(
+      "packages/pkg-arrived-toggle",
+      packageDoc("pkg-arrived-toggle", "u-owner", "pitzutz", {
+        status: "arrived",
+        collectorUserId: "u-collector",
+      }),
+    );
+    await seedDoc("sensitiveAccessGrants/u-collector_pkg-arrived-toggle", {
+      id: "u-collector_pkg-arrived-toggle",
+      packageId: "pkg-arrived-toggle",
+      pickupRunId: "run-arrived-toggle",
+      viewerUserId: "u-collector",
+      pickupLocationId: "pitzutz",
+      createdAt: now,
+    });
+
+    await assertFails(
+      dbFor("u-collector").doc("packages/pkg-arrived-toggle").update({
+        status: "waiting",
+        collectorUserId: null,
+        updatedAt: now,
+      }),
+    );
+  });
+
   it("allows admins to approve or reject pending users and join requests", async () => {
     await seedDoc("users/u-admin", userDoc("u-admin", { role: "admin" }));
     await seedDoc("users/u-pending", {
