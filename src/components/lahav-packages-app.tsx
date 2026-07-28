@@ -1044,7 +1044,7 @@ export function LahavPackagesApp() {
       case "add":
         return { title: "הוספת חבילה", backTarget: "home" };
       case "pickup":
-        return { title: "אני נוסע לאסוף", backTarget: "home" };
+        return { title: "איסוף בחנות", backTarget: "home" };
       case "catalog":
         return {
           title: "איסוף בחנות",
@@ -1943,10 +1943,7 @@ export function LahavPackagesApp() {
             style={pendingUnlockStyle}
           >
             <h2 id="pickup-unlock-title">האם אתה כבר בנקודת האיסוף?</h2>
-            <p>
-              כדי לפתוח הודעות מקוריות וקישורי אישור עבור {pendingUnlockLocation.name},
-              אשר שאתה נמצא עכשיו בנקודת האיסוף.
-            </p>
+            <p>כדי לפתוח הודעות משלוח וקישורים יש לאשר שאתה נמצא עכשיו בנקודת האיסוף</p>
             <div className="confirm-statement">
               אני מאשר שאני בנקודת האיסוף. הפעולה תירשם
             </div>
@@ -2673,7 +2670,7 @@ export function LahavPackagesApp() {
   function PickupScreen() {
     return (
       <>
-        <h1 className="screen-title">אני נוסע לאסוף</h1>
+        <h1 className="screen-title">איסוף בחנות</h1>
         <p className="screen-kicker">
           בחר נקודת איסוף. פרטי החבילות ייפתחו רק אחרי אישור שאתה כבר שם.
         </p>

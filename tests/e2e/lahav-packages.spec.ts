@@ -765,7 +765,7 @@ test("home waiting package shortcuts open pickup screen with the location select
   await gotoAdmin(page);
 
   await app(page).locator('.pickup-card[data-pickup-location-id="pitzutz"]').click();
-  await expect(app(page).getByRole("heading", { name: "אני נוסע לאסוף" })).toBeVisible();
+  await expect(app(page).getByRole("heading", { name: "איסוף בחנות" })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })).toHaveCount(0);
   await expect(app(page).locator('.location-button[data-pickup-location-id="pitzutz"]')).toHaveAttribute(
     "aria-pressed",
@@ -774,7 +774,7 @@ test("home waiting package shortcuts open pickup screen with the location select
 
   await clickPhoneNav(page, "בית");
   await app(page).locator(".status-action-badge").first().click();
-  await expect(app(page).getByRole("heading", { name: "אני נוסע לאסוף" })).toBeVisible();
+  await expect(app(page).getByRole("heading", { name: "איסוף בחנות" })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })).toHaveCount(0);
   await expect(app(page).locator('.location-button[data-pickup-location-id="pitzutz"]')).toHaveAttribute(
     "aria-pressed",
@@ -788,7 +788,7 @@ test("direct pickup navigation selects the first location with waiting packages 
   await gotoAdmin(page);
 
   await clickPhoneNav(page, "איסוף");
-  await expect(app(page).getByRole("heading", { name: "אני נוסע לאסוף" })).toBeVisible();
+  await expect(app(page).getByRole("heading", { name: "איסוף בחנות" })).toBeVisible();
 
   await expect(app(page).locator('.location-button[data-pickup-location-id="pitzutz"]')).toHaveAttribute(
     "aria-pressed",
@@ -831,6 +831,9 @@ test("pickup flow reveals original messages only after confirmation and records 
   const confirmDialog = page.getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" });
   await expect(confirmDialog).toBeVisible();
   await expect(confirmDialog).toHaveCSS("direction", "rtl");
+  await expect(confirmDialog).toContainText(
+    "כדי לפתוח הודעות משלוח וקישורים יש לאשר שאתה נמצא עכשיו בנקודת האיסוף",
+  );
   await confirmDialog.getByRole("button", { name: "אשר" }).click();
 
   await expect(app(page).getByText("איסוף בחנות")).toBeVisible();
