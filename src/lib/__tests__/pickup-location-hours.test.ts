@@ -70,6 +70,35 @@ describe("getPickupLocationOpenState", () => {
     ).toBe("unknown");
   });
 
+  it("keeps Epost lockers open 24/7 without configured opening hours", () => {
+    const epostLockers = {
+      id: "epost-לוקרים",
+      name: "Epost לוקרים",
+    };
+
+    expect(
+      getPickupLocationOpenState(
+        epostLockers,
+        new Date("2026-07-31T03:00:00+03:00"),
+      ),
+    ).toBe("open");
+    expect(
+      getPickupLocationOpenState(
+        epostLockers,
+        new Date("2026-08-01T23:59:00+03:00"),
+      ),
+    ).toBe("open");
+  });
+
+  it("does not treat other unconfigured locker locations as always open", () => {
+    expect(
+      getPickupLocationOpenState(
+        { id: "other-lockers", name: "לוקרים אחרים" },
+        new Date("2026-07-31T03:00:00+03:00"),
+      ),
+    ).toBe("unknown");
+  });
+
   it("uses real weekly hours when supplied on the location", () => {
     expect(
       getPickupLocationOpenState(

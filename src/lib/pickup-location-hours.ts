@@ -2,6 +2,12 @@ import type { PickupLocation, Weekday } from "@/lib/types";
 
 export type PickupLocationOpenState = "open" | "closed" | "unknown";
 
+const alwaysOpenPickupLocationNames = new Set(["epost לוקרים"]);
+
+function normalizePickupLocationName(name: string | undefined) {
+  return name?.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US") ?? "";
+}
+
 const fallbackWeeklyHoursByLocationId: Record<string, PickupLocation["weeklyHours"]> = {
   "home-paami": {
     0: [{ open: "10:00", close: "19:00" }],
@@ -84,9 +90,14 @@ function timeToMinutes(time: string) {
 }
 
 export function getPickupLocationOpenState(
-  location: Pick<PickupLocation, "id" | "weeklyHours">,
+  location: Pick<PickupLocation, "id" | "weeklyHours"> &
+    Partial<Pick<PickupLocation, "name">>,
   now = new Date(),
 ): PickupLocationOpenState {
+  if (alwaysOpenPickupLocationNames.has(normalizePickupLocationName(location.name))) {
+    return "open";
+  }
+
   if (!location.weeklyHours && demoOpenStateByLocationId[location.id]) {
     return demoOpenStateByLocationId[location.id];
   }
