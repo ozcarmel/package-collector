@@ -349,6 +349,20 @@ function openingHoursRows(location: PickupLocation) {
   return rows;
 }
 
+function openingHoursSummaryFromWeeklyHours(weeklyHours: WeeklyOpeningHours) {
+  return openingHoursRows({
+    id: "draft",
+    name: "draft",
+    address: "",
+    openingHours: "",
+    weeklyHours,
+    navigationUrl: "",
+    activeRequests: 0,
+  })
+    .map((row) => (row.days ? `${row.days} ${row.hours}` : row.hours))
+    .join(", ");
+}
+
 function statusBadgeClass(status: PackageStatus) {
   if (status === "collected") return "badge blue";
   if (status === "arrived" || status === "ready_for_handoff") return "badge arrived";
@@ -1406,16 +1420,24 @@ export function LahavPackagesApp() {
 
     const name = locationDraft.name.trim();
     const address = locationDraft.address.trim();
-    const openingHours = locationDraft.openingHours.trim();
     const hours = buildWeeklyHoursFromDraft();
 
-    if (!name || !address || !openingHours) {
-      notify("צריך למלא שם, כתובת ושעות פתיחה.");
+    if (!name || !address) {
+      notify("צריך למלא שם וכתובת לנקודת האיסוף.");
       return;
     }
 
-    if (!hours.isValid || !hours.hasEnabledRange) {
-      notify("צריך להגדיר לפחות יום פתוח אחד עם טווח שעות מלא.");
+    if (!hours.isValid) {
+      notify("צריך להשלים טווח שעות מלא לכל יום שסומן.");
+      return;
+    }
+
+    const openingHours =
+      locationDraft.openingHours.trim() ||
+      (hours.hasEnabledRange ? openingHoursSummaryFromWeeklyHours(hours.weeklyHours) : "");
+
+    if (!openingHours) {
+      notify("צריך למלא שעות פתיחה או לסמן ימים פתוחים.");
       return;
     }
 
@@ -1425,7 +1447,7 @@ export function LahavPackagesApp() {
         name,
         address,
         openingHours,
-        weeklyHours: hours.weeklyHours,
+        ...(hours.hasEnabledRange ? { weeklyHours: hours.weeklyHours } : {}),
       };
       const result = editingLocationId
         ? await operationsRepository.updatePickupLocation(
@@ -1440,11 +1462,18 @@ export function LahavPackagesApp() {
       applyRepositoryState(result.state);
       closeLocationModal();
       notify(editingLocationId ? "נקודת האיסוף עודכנה." : "נקודת האיסוף נוספה.");
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isPermissionError =
+        message.includes("permission") ||
+        message.includes("Missing or insufficient permissions") ||
+        message.includes("Only admins");
       notify(
-        editingLocationId
-          ? "לא הצלחנו לעדכן את נקודת האיסוף. נסה/י שוב בעוד רגע."
-          : "לא הצלחנו להוסיף את נקודת האיסוף. נסה/י שוב בעוד רגע.",
+        isPermissionError
+          ? "אין הרשאת מנהל לשמירת נקודת איסוף. נסה/י להתחבר שוב כעוז כרמל."
+          : editingLocationId
+            ? "לא הצלחנו לעדכן את נקודת האיסוף. נסה/י שוב בעוד רגע."
+            : "לא הצלחנו להוסיף את נקודת האיסוף. נסה/י שוב בעוד רגע.",
       );
     } finally {
       setIsSavingLocation(false);
