@@ -1088,6 +1088,12 @@ form.stack,
   gap: 10px;
 }
 
+.package-card > .package-whatsapp-link,
+.package-card > .package-icon {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
 .package-main {
   flex: 1 1 auto;
   min-width: 0;
@@ -1873,7 +1879,8 @@ form.stack,
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 12px;
 }
 

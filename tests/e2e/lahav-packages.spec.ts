@@ -838,6 +838,11 @@ test("pickup flow reveals original messages only after confirmation and records 
 
   await expect(app(page).getByText("איסוף בחנות")).toBeVisible();
   await expect(app(page).getByText("הודעה מקורית מחברת המשלוחים").first()).toBeVisible();
+  const firstCatalogCard = app(page).locator(".catalog-card").first();
+  const catalogWhatsApp = firstCatalogCard.getByRole("link", {
+    name: "פתח ווטסאפ עם עוז כרמל",
+  });
+  await expect(catalogWhatsApp).toHaveAttribute("href", "https://wa.me/972584411883");
   const pickupLink = app(page).getByRole("link", { name: /https:\/\/u\.cheetahint\.com/ }).first();
   await expect(pickupLink).toHaveAttribute("href", /https:\/\/u\.cheetahint\.com/);
 
@@ -853,9 +858,16 @@ test("pickup flow reveals original messages only after confirmation and records 
   await expect(collectToggle).toHaveAttribute("aria-pressed", "false");
   await collectToggle.click();
   await expect(collectToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(catalogWhatsApp).toBeVisible();
 
   await clickPhoneNav(page, "בית");
   await expect(app(page).getByText(/נאספה על ידי/).first()).toBeVisible();
+  const collectedHomeCard = app(page).locator(".package-card").filter({ hasText: "עוז כרמל" });
+  const collectedHomeWhatsApp = collectedHomeCard.getByRole("link", {
+    name: "פתח ווטסאפ עם עוז כרמל",
+  });
+  await expect(collectedHomeWhatsApp).toHaveCSS("align-self", "flex-start");
+  await expect(collectedHomeWhatsApp).toHaveCSS("margin-top", "2px");
 
   await clickPhoneNav(page, "מסירה");
   await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();

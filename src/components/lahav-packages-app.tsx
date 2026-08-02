@@ -3156,12 +3156,36 @@ export function LahavPackagesApp() {
     );
   }
 
-  function PackageCard({ pkg }: { pkg: DeliveryPackage }) {
-    const collectorName = getUserName(state.users, pkg.collectorUserId);
+  function PackageContactButton({ pkg }: { pkg: DeliveryPackage }) {
     const packageSubmitter = state.users.find(
       (user) => user.id === pkg.ownerUserId && user.verificationStatus === "approved",
     );
     const whatsAppUrl = packageSubmitter ? createWhatsAppUrl(packageSubmitter.phone) : null;
+
+    if (!whatsAppUrl || !packageSubmitter) {
+      return (
+        <div className="package-icon" aria-hidden="true">
+          <Package />
+        </div>
+      );
+    }
+
+    return (
+      <a
+        aria-label={`פתח ווטסאפ עם ${packageSubmitter.fullName}`}
+        className="package-whatsapp-link"
+        href={whatsAppUrl}
+        rel="noreferrer"
+        target="_blank"
+        title={`פתח ווטסאפ עם ${packageSubmitter.fullName}`}
+      >
+        <FaWhatsapp aria-hidden="true" />
+      </a>
+    );
+  }
+
+  function PackageCard({ pkg }: { pkg: DeliveryPackage }) {
+    const collectorName = getUserName(state.users, pkg.collectorUserId);
     const detailBadge = homePackageDetailBadge(pkg);
     const canRemoveOwnPackage =
       currentEquivalentUserIds.has(pkg.ownerUserId) &&
@@ -3182,22 +3206,7 @@ export function LahavPackagesApp() {
 
     return (
       <div className="card package-card">
-        {whatsAppUrl && packageSubmitter ? (
-          <a
-            aria-label={`פתח ווטסאפ עם ${packageSubmitter.fullName}`}
-            className="package-whatsapp-link"
-            href={whatsAppUrl}
-            rel="noreferrer"
-            target="_blank"
-            title={`פתח ווטסאפ עם ${packageSubmitter.fullName}`}
-          >
-            <FaWhatsapp aria-hidden="true" />
-          </a>
-        ) : (
-          <div className="package-icon" aria-hidden="true">
-            <Package />
-          </div>
-        )}
+        <PackageContactButton pkg={pkg} />
         <div className="package-main">
           <div className="package-top">
             <div>
@@ -3331,6 +3340,7 @@ export function LahavPackagesApp() {
         </div>
 
         <div className="catalog-actions">
+          <PackageContactButton pkg={pkg} />
           <button
             aria-pressed={isCollected}
             className={`button collect-button ${isCollected ? "checked" : ""}`}
