@@ -1058,3 +1058,32 @@ test("home and form UI avoid the known layout regressions", async ({ page }) => 
   await expect(addLocationDialog).toHaveCSS("direction", "rtl");
   await expectNoVerticalOverlap(addLocationDialog, ".location-admin-form > .field");
 });
+
+test("home package cards open the submitter WhatsApp without changing package state", async ({
+  page,
+  runtimeErrors,
+}) => {
+  await gotoAdmin(page);
+
+  const hilaCard = app(page).locator(".package-card").filter({ hasText: "הילה נבו" });
+  const hilaWhatsApp = hilaCard.getByRole("link", { name: "פתח ווטסאפ עם הילה נבו" });
+  await expect(hilaWhatsApp).toHaveAttribute("href", "https://wa.me/972502222222");
+
+  const ownCard = app(page).locator(".package-card").filter({ hasText: "עוז כרמל" });
+  await expect(
+    ownCard.getByRole("link", { name: "פתח ווטסאפ עם עוז כרמל" }),
+  ).toHaveAttribute("href", "https://wa.me/972584411883");
+
+  const missingContactCard = app(page).locator(".package-card").filter({ hasText: "איילת מדר" });
+  await expect(missingContactCard.locator(".package-icon")).toBeVisible();
+  await expect(missingContactCard.locator(".package-whatsapp-link")).toHaveCount(0);
+
+  const statusCountsBefore = await readHomeStatusCounts(page);
+  const popupPromise = page.waitForEvent("popup");
+  await hilaWhatsApp.click();
+  const whatsappPage = await popupPromise;
+  await whatsappPage.close();
+
+  await expect.poll(() => readHomeStatusCounts(page)).toEqual(statusCountsBefore);
+  expect(runtimeErrors).toEqual([]);
+});

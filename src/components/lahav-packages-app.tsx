@@ -31,6 +31,7 @@ import {
   UserX,
   X,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa6";
 import type { CSSProperties, ReactNode } from "react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { getConfiguredOperationsRepository } from "@/lib/app-repository";
@@ -58,6 +59,7 @@ import {
 import { sortHomePackagesByStatus } from "@/lib/home-package-sort";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import { normalizePickupLocationSchedules } from "@/lib/pickup-location-schedule-defaults";
+import { createWhatsAppUrl } from "@/lib/whatsapp";
 import type {
   AppState,
   DeliveryPackage,
@@ -3156,6 +3158,10 @@ export function LahavPackagesApp() {
 
   function PackageCard({ pkg }: { pkg: DeliveryPackage }) {
     const collectorName = getUserName(state.users, pkg.collectorUserId);
+    const packageSubmitter = state.users.find(
+      (user) => user.id === pkg.ownerUserId && user.verificationStatus === "approved",
+    );
+    const whatsAppUrl = packageSubmitter ? createWhatsAppUrl(packageSubmitter.phone) : null;
     const detailBadge = homePackageDetailBadge(pkg);
     const canRemoveOwnPackage =
       currentEquivalentUserIds.has(pkg.ownerUserId) &&
@@ -3176,9 +3182,22 @@ export function LahavPackagesApp() {
 
     return (
       <div className="card package-card">
-        <div className="package-icon" aria-hidden="true">
-          <Package />
-        </div>
+        {whatsAppUrl && packageSubmitter ? (
+          <a
+            aria-label={`פתח ווטסאפ עם ${packageSubmitter.fullName}`}
+            className="package-whatsapp-link"
+            href={whatsAppUrl}
+            rel="noreferrer"
+            target="_blank"
+            title={`פתח ווטסאפ עם ${packageSubmitter.fullName}`}
+          >
+            <FaWhatsapp aria-hidden="true" />
+          </a>
+        ) : (
+          <div className="package-icon" aria-hidden="true">
+            <Package />
+          </div>
+        )}
         <div className="package-main">
           <div className="package-top">
             <div>

@@ -49,3 +49,17 @@
 
 **Final Result**
 - final result: passed
+
+---
+
+**Home WhatsApp Contact QA - 2026-08-02**
+- Source reference: `C:\Users\OZ\AppData\Local\Temp\codex-clipboard-eeef67fe-6973-4d5e-9c5e-cb7f03466c3b.png`.
+- Implementation screenshot: `C:\Users\OZ\Documents\חבילות להב\.playwright-cli\page-2026-08-02T10-36-55-582Z.png`.
+- Comparison image: `C:\Users\OZ\Documents\חבילות להב\output\playwright\whatsapp-design-comparison.png`.
+- Viewport: 414 x 896, Home screen, local demo state.
+- The WhatsApp action uses the package icon's fixed 44 x 44 slot, so owned and non-owned cards retain identical alignment.
+- The visible WhatsApp logo is 28 x 28 with a white glyph on WhatsApp green, matching the approved touch-target specification.
+- Missing or invalid submitter contact data retains the original package cube.
+- Automated interaction verification confirms the exact `wa.me` URL, no message query, own-package support, and no package-status mutation.
+- No P0, P1, P2, or P3 visual findings remain.
+- final result: passed
