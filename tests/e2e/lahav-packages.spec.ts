@@ -86,7 +86,6 @@ type StatusCounts = {
   waiting: number;
   collected: number;
   arrived: number;
-  delivered: number;
 };
 
 async function readHomeStatusCounts(page: Page): Promise<StatusCounts> {
@@ -94,7 +93,6 @@ async function readHomeStatusCounts(page: Page): Promise<StatusCounts> {
     waiting: await readHomeStatusCount(page, "home-status-waiting"),
     collected: await readHomeStatusCount(page, "home-status-collected"),
     arrived: await readHomeStatusCount(page, "home-status-arrived"),
-    delivered: await readHomeStatusCount(page, "home-status-delivered"),
   };
 }
 
@@ -104,19 +102,17 @@ async function readPackageListStatusCounts(page: Page): Promise<StatusCounts> {
       waiting: 0,
       collected: 0,
       arrived: 0,
-      delivered: 0,
     };
 
     cards.forEach((card) => {
       const statusElement = card.querySelector(
-        ".status-action-badge, .badge.waiting, .badge.blue, .badge.arrived, .badge.delivered",
+        ".status-action-badge, .badge.waiting, .badge.blue, .badge.arrived",
       );
       const text = statusElement?.textContent ?? "";
 
       if (text.includes("ממתינה לאיסוף")) counts.waiting += 1;
       if (text.includes("נאספה")) counts.collected += 1;
       if (text.includes("נמסרה בקיבוץ")) counts.arrived += 1;
-      if (text.includes("נתקבלה")) counts.delivered += 1;
     });
 
     return counts;
@@ -134,10 +130,6 @@ async function expectHomeStatusSync(page: Page, expected: StatusCounts) {
   await expect(app(page).locator(".home-status-arrived strong")).toHaveText(String(expected.arrived), {
     timeout: 5000,
   });
-  await expect(app(page).locator(".home-status-delivered strong")).toHaveText(
-    String(expected.delivered),
-    { timeout: 5000 },
-  );
   await expect.poll(() => readPackageListStatusCounts(page), { timeout: 5000 }).toEqual(expected);
 }
 
@@ -240,10 +232,7 @@ test("fresh users can request access but cannot add or pick up before approval",
 test("join screen uses placeholders instead of demo name and phone values", async ({ page }) => {
   await gotoFreshUser(page);
 
-  await expect(app(page).getByLabel("עזרה להצטרפות")).toContainText("איך מצטרפים?");
-  await expect(app(page).getByLabel("עזרה להצטרפות")).toContainText(
-    "כבר אושרת בעבר? הזן/י את אותו מספר נייד ותיכנס/י מיד.",
-  );
+  await expect(app(page).getByLabel("עזרה להצטרפות")).toHaveCount(0);
 
   const phoneInput = app(page).locator("#join-phone");
   const nameInput = app(page).locator("#join-name");
@@ -368,9 +357,7 @@ test("add package uses example placeholders without saving empty demo values", a
 
   await expect(app(page).getByRole("heading", { name: "חבילות שהוספת" })).toBeVisible();
   await expect(
-    app(page).getByText(
-      "כאן ניתן לצפות בחבילות שהוספו בעבר ולערוך את פרטי החבילה אם עוד לא נאספה",
-    ),
+    app(page).getByText("צפה בחבילות שהוספו בעבר וערוך פרטי חבילה"),
   ).toBeVisible();
   const addedPackage = app(page).locator(".added-package-row").filter({ hasText: "עוז כרמל בדיקה" });
   await expect(addedPackage).toContainText("נוספה עכשיו");
@@ -411,7 +398,8 @@ test("new package appears on home under its pickup location and package status w
   await expect(app(page).locator(".home-status-band")).toContainText("ממתינות לאיסוף");
   await expect(app(page).locator(".home-status-band")).toContainText("נאספו");
   await expect(app(page).locator(".home-status-band")).toContainText("נמסרו בקיבוץ");
-  await expect(app(page).locator(".home-status-band")).toContainText("נתקבלו");
+  await expect(app(page).locator(".home-status-item")).toHaveCount(3);
+  await expect(app(page).locator(".home-status-band")).not.toContainText("נתקבלו");
   await expect(app(page).locator(".home-status-waiting strong")).toHaveText(
     String(beforeWaitingCount + 1),
     { timeout: 5000 },
@@ -476,11 +464,7 @@ test("top package status capsules open a bottom sheet with matching packages", a
   await expect(page.locator(".status-bottom-sheet")).toContainText("נעה אמבולוס");
   await page.getByRole("button", { name: "סגור" }).click();
 
-  await app(page).locator(".home-status-delivered").click();
-  await expect(page.getByRole("dialog", { name: "נתקבלו" })).toBeVisible();
-  await expect(page.locator(".status-bottom-sheet")).toContainText(
-    "אין חבילות בסטטוס הזה כרגע.",
-  );
+  await expect(app(page).locator(".home-status-delivered")).toHaveCount(0);
 });
 
 test("collecting one location does not hide active packages from other locations on home", async ({
@@ -632,18 +616,11 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
     );
   }
 
-  const receivedCard = app(page).locator(".package-card").filter({ hasText: "זרימה דואר אחת" });
-  await receivedCard.getByRole("button", { name: "אשר קבלה" }).click();
-  await expect(receivedCard.getByRole("button", { name: "התקבלה" })).toHaveCount(0);
-  await expect(receivedCard).not.toContainText("נתקבלה על ידי בעל החבילה");
-  await expectHomeStatusSync(page, {
-    ...baseline,
-    waiting: baseline.waiting + 3,
-    collected: baseline.collected,
-    arrived: baseline.arrived + 2,
-    delivered: baseline.delivered + 1,
-  });
-  await expectPackageCardStatus(page, "זרימה דואר אחת", "נתקבלה");
+  const deliveredInKibbutzCard = app(page)
+    .locator(".package-card")
+    .filter({ hasText: "זרימה דואר אחת" });
+  await expect(deliveredInKibbutzCard.getByRole("button", { name: "אשר קבלה" })).toHaveCount(0);
+  await expectPackageCardStatus(page, "זרימה דואר אחת", "נמסרה בקיבוץ");
 
   await collectPackageAtLocation(context, page, "post-office", "זרימה דואר שתיים");
 
@@ -652,8 +629,7 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
     ...baseline,
     waiting: baseline.waiting + 2,
     collected: baseline.collected + 1,
-    arrived: baseline.arrived + 2,
-    delivered: baseline.delivered + 1,
+    arrived: baseline.arrived + 3,
   });
   await expect(app(page).locator('.pickup-card[data-pickup-location-id="post-office"] strong')).toHaveText(
     String(baselinePickupCounts.postOffice),
@@ -663,7 +639,7 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
   await expectPackageCardStatus(page, "זרימה אשכולות", "ממתינה לאיסוף");
   await expectPackageCardStatus(page, "זרימה פיצוץ אחת", "נמסרה בקיבוץ");
   await expectPackageCardStatus(page, "זרימה דלי", "נמסרה בקיבוץ");
-  await expectPackageCardStatus(page, "זרימה דואר אחת", "נתקבלה");
+  await expectPackageCardStatus(page, "זרימה דואר אחת", "נמסרה בקיבוץ");
 });
 
 test("saving two kibbutz delivery rows updates home status and shows both packages", async ({
@@ -965,12 +941,10 @@ test("home and form UI avoid the known layout regressions", async ({ page }) => 
       packageWaiting: style(".package-card .badge.waiting"),
       topArrived: style(".home-status-arrived"),
       packageArrived: style(".package-card .badge.arrived"),
-      topDelivered: style(".home-status-delivered"),
     };
   });
   expect(statusColors.topWaiting).toBe(statusColors.packageWaiting);
   expect(statusColors.topArrived).toBe(statusColors.packageArrived);
-  expect(statusColors.topDelivered).not.toBe(statusColors.topArrived);
 
   await expect(app(page).locator(".home-status-waiting")).toHaveAttribute("title", /ממתינות לאיסוף/);
   const homeStatusLabelBox = await app(page)

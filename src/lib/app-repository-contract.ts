@@ -110,8 +110,6 @@ export interface AppOperationsRepository {
     deps: ActionDeps,
   ): RepositoryStateResult;
 
-  markPackageReceived(state: AppState, packageId: string, deps: ActionDeps): RepositoryStateResult;
-
   removeOwnPackage(state: AppState, packageId: string, deps: ActionDeps): RepositoryStateResult;
 
   deletePackage(state: AppState, packageId: string, deps: ActionDeps): RepositoryStateResult;

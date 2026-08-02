@@ -51,11 +51,7 @@ import {
   isOzSuperAdminUser,
   normalizePhone,
 } from "@/lib/oz-admin-shortcut";
-import {
-  getUserAddedPackages,
-  shouldShowPackageInAdminList,
-  shouldShowPackageOnHome,
-} from "@/lib/home-package-visibility";
+import { getUserAddedPackages } from "@/lib/home-package-visibility";
 import { sortHomePackagesByStatus } from "@/lib/home-package-sort";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import { normalizePickupLocationSchedules } from "@/lib/pickup-location-schedule-defaults";
@@ -83,14 +79,13 @@ type Screen =
 type EffectiveScreen = Screen | "loading";
 
 type AdminListView = "pending" | "approved" | "managers" | "packages";
-type HomePackageStatusBucket = "waiting" | "collected" | "arrived" | "delivered";
+type HomePackageStatusBucket = "waiting" | "collected" | "arrived";
 type PendingPackageRemovalMode = "owner-remove" | "admin-delete";
 
 const homeStatusBucketLabels: Record<HomePackageStatusBucket, string> = {
   waiting: "ממתינות לאיסוף",
   collected: "נאספו",
   arrived: "נמסרו בקיבוץ",
-  delivered: "נתקבלו",
 };
 
 interface DraftPackage {
@@ -266,7 +261,7 @@ function statusLabel(status: PackageStatus) {
     case "ready_for_handoff":
       return "נמסרה בקיבוץ";
     case "delivered":
-      return "נתקבלה";
+      return "נמסרה בקיבוץ";
     case "cancelled":
       return "בוטלה";
   }
@@ -367,8 +362,9 @@ function openingHoursSummaryFromWeeklyHours(weeklyHours: WeeklyOpeningHours) {
 
 function statusBadgeClass(status: PackageStatus) {
   if (status === "collected") return "badge blue";
-  if (status === "arrived" || status === "ready_for_handoff") return "badge arrived";
-  if (status === "delivered") return "badge delivered";
+  if (status === "arrived" || status === "ready_for_handoff" || status === "delivered") {
+    return "badge arrived";
+  }
   if (status === "cancelled") return "badge danger";
   return "badge waiting";
 }
@@ -382,9 +378,8 @@ function getHomePackageStatusBucket(status: PackageStatus): HomePackageStatusBuc
       return "collected";
     case "arrived":
     case "ready_for_handoff":
-      return "arrived";
     case "delivered":
-      return "delivered";
+      return "arrived";
     case "cancelled":
       return null;
   }
@@ -400,8 +395,6 @@ function homePackageStatusLabel(pkg: DeliveryPackage) {
       return "נאספה";
     case "arrived":
       return "נמסרה בקיבוץ";
-    case "delivered":
-      return "נתקבלה";
     case null:
       return statusLabel(pkg.status);
   }
@@ -417,8 +410,6 @@ function homePackageStatusBadgeClass(pkg: DeliveryPackage) {
       return "badge blue";
     case "arrived":
       return "badge arrived";
-    case "delivered":
-      return "badge delivered";
     case null:
       return statusBadgeClass(pkg.status);
   }
@@ -441,8 +432,6 @@ function homePackageDetailBadge(pkg: DeliveryPackage) {
           (pkg.currentKibbutzLocation ? dropNoteExamples[pkg.currentKibbutzLocation] : "") ||
           "מיקום בקיבוץ לא צוין",
       };
-    case "delivered":
-      return null;
     case null:
       return {
         className: statusBadgeClass(pkg.status),
@@ -516,7 +505,6 @@ function extractMessageUrls(message: string) {
 
 export function LahavPackagesApp() {
   const [state, setState] = useState<AppState>(() => getInitialRuntimeState());
-  const [currentTimeMs, setCurrentTimeMs] = useState<number | null>(null);
   const [repositoryReady, setRepositoryReady] = useState(false);
   const [isSubmittingJoinRequest, setIsSubmittingJoinRequest] = useState(false);
   const [isSavingPackage, setIsSavingPackage] = useState(false);
@@ -528,7 +516,6 @@ export function LahavPackagesApp() {
   const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [isStartingPickupRun, setIsStartingPickupRun] = useState(false);
   const [collectingPackageId, setCollectingPackageId] = useState<string | null>(null);
-  const [receivingPackageId, setReceivingPackageId] = useState<string | null>(null);
   const [savingArrivalPackageId, setSavingArrivalPackageId] = useState<string | null>(null);
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
   const [adminListView, setAdminListView] = useState<AdminListView>("pending");
@@ -596,17 +583,6 @@ export function LahavPackagesApp() {
       currentUserVerificationStatus,
     ],
   );
-
-  useEffect(() => {
-    function refreshCurrentTime() {
-      setCurrentTimeMs(Date.now());
-    }
-
-    refreshCurrentTime();
-    const intervalId = window.setInterval(refreshCurrentTime, 30 * 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
 
   useEffect(() => {
     if (!highlightedPackage) return undefined;
@@ -720,8 +696,7 @@ export function LahavPackagesApp() {
   }, [pendingUnlockLocationId]);
 
   const activeHomePackages = state.packages.filter(
-    (pkg) =>
-      getHomePackageStatusBucket(pkg.status) !== null && shouldShowPackageOnHome(pkg, currentTimeMs),
+    (pkg) => getHomePackageStatusBucket(pkg.status) !== null,
   );
   const waitingPackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) === "waiting",
@@ -742,9 +717,6 @@ export function LahavPackagesApp() {
   const arrivedPackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) === "arrived",
   );
-  const deliveredPackages = activeHomePackages.filter(
-    (pkg) => getHomePackageStatusBucket(pkg.status) === "delivered",
-  );
   const statusSheetPackages =
     activeStatusSheet === "waiting"
       ? waitingPackages
@@ -752,9 +724,7 @@ export function LahavPackagesApp() {
         ? collectedPackages
         : activeStatusSheet === "arrived"
           ? arrivedPackages
-          : activeStatusSheet === "delivered"
-            ? deliveredPackages
-            : [];
+          : [];
   const visibleHomePackages = sortHomePackagesByStatus(
     activeHomePackages.filter((pkg) => getHomePackageStatusBucket(pkg.status) !== null),
   );
@@ -938,8 +908,6 @@ export function LahavPackagesApp() {
         return collectorName ? `נאספה על ידי ${collectorName}` : pickupLocation;
       case "arrived":
         return pkg.currentKibbutzLocationText?.trim() || "נמסרה בקיבוץ";
-      case "delivered":
-        return pickupLocation;
       case null:
         return pickupLocation;
     }
@@ -1592,25 +1560,6 @@ export function LahavPackagesApp() {
       document.removeEventListener("visibilitychange", collectOpenedLinksOnReturn);
     };
   }, []);
-
-  async function markReceived(packageId: string) {
-    if (receivingPackageId) return;
-
-    setReceivingPackageId(packageId);
-    try {
-      const nextState = await operationsRepository.markPackageReceived(
-        state,
-        packageId,
-        actionDeps,
-      );
-      applyRepositoryState(nextState);
-      notify("החבילה סומנה כנתקבלה.");
-    } catch {
-      notify("לא הצלחנו לסמן את החבילה כנתקבלה. נסה/י שוב בעוד רגע.");
-    } finally {
-      setReceivingPackageId(null);
-    }
-  }
 
   async function updateArrivalPackage(packageId: string) {
     if (savingArrivalPackageId) return;
@@ -2416,19 +2365,6 @@ export function LahavPackagesApp() {
               <strong>{arrivedPackages.length}</strong>
               <span className="home-status-label">{homeStatusBucketLabels.arrived}</span>
             </button>
-            <button
-              className="home-status-item home-status-delivered"
-              aria-label={`${homeStatusBucketLabels.delivered}: ${deliveredPackages.length}`}
-              onClick={() => setActiveStatusSheet("delivered")}
-              title={`${homeStatusBucketLabels.delivered}: ${deliveredPackages.length}`}
-              type="button"
-            >
-              <span className="home-status-icon">
-                <Check />
-              </span>
-              <strong>{deliveredPackages.length}</strong>
-              <span className="home-status-label">{homeStatusBucketLabels.delivered}</span>
-            </button>
           </div>
 
           <div className="section-title-row pickup-locations-title">
@@ -2915,9 +2851,7 @@ export function LahavPackagesApp() {
       ),
       currentUserId,
     );
-    const adminPackages = state.packages.filter((pkg) =>
-      shouldShowPackageInAdminList(pkg, currentTimeMs),
-    );
+    const adminPackages = state.packages;
 
     return (
       <>
@@ -3132,9 +3066,6 @@ export function LahavPackagesApp() {
                       {pkg.currentKibbutzLocationText ? (
                         <span>מסירה בקיבוץ: {pkg.currentKibbutzLocationText}</span>
                       ) : null}
-                      {pkg.deliveredAt ? (
-                        <span>אישור קבלה: {formatHebrewDateTime(pkg.deliveredAt)}</span>
-                      ) : null}
                     </div>
                     <div className="card-actions single-action">
                       <button
@@ -3192,12 +3123,8 @@ export function LahavPackagesApp() {
       (pkg.status === "waiting" ||
         pkg.status === "collected" ||
         pkg.status === "arrived" ||
-        pkg.status === "ready_for_handoff");
-    const canConfirmReceived =
-      !canRemoveOwnPackage &&
-      pkg.ownerUserId === currentUserId &&
-      (pkg.status === "arrived" || pkg.status === "ready_for_handoff");
-    const isReceiving = receivingPackageId === pkg.id;
+        pkg.status === "ready_for_handoff" ||
+        pkg.status === "delivered");
     const wasCollected =
       pkg.status === "collected" ||
       pkg.status === "arrived" ||
@@ -3253,18 +3180,6 @@ export function LahavPackagesApp() {
           ) : null}
           {collectorName && wasCollected ? (
             <div className="package-note">נאספה על ידי {collectorName}</div>
-          ) : null}
-          {canConfirmReceived ? (
-            <div className="receive-action-row">
-              <button
-                className="button receive-button"
-                disabled={receivingPackageId !== null}
-                onClick={() => markReceived(pkg.id)}
-                type="button"
-              >
-                {isReceiving ? "מאשר..." : "אשר קבלה"}
-              </button>
-            </div>
           ) : null}
         </div>
       </div>

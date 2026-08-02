@@ -98,16 +98,16 @@ Expected:
 - Original links in delivery-company messages are clickable.
 - Marking `נאספה` stores the collector identity.
 
-### Delivery And Receipt
+### Kibbutz Delivery
 
 Risk: packages disappear without a clear audit trail.
 
 Expected:
 
 - A collected package appears in the delivery flow for the collector.
-- The package owner can mark `אשר קבלה`.
-- After confirmation, the button changes to `התקבלה`.
-- Delivered packages disappear from the home list after the configured delay.
+- Every collected package can be delivered to its own Kibbutz location.
+- After delivery, the package remains in the final `נמסרה בקיבוץ` status.
+- The owner can remove the package when it is no longer needed.
 - Admin can still review who collected the package, from where, and when.
 
 ### Two-Device Sync
@@ -133,9 +133,8 @@ Functional test:
 7. Device A should show the package as `נאספה` within 5 seconds.
 8. Device A should show the collector name and the top status counter should move from `ממתינות לאיסוף` to `נאספו`.
 9. On Device B, update delivery in `מסירה`.
-10. Device A should show the package as `הגיעה לקיבוץ` within 5 seconds.
-11. On Device A, press `אשר קבלה`.
-12. Device B should show the package as `נמסרה` and the `התקבלה` state within 5 seconds.
+10. Device A should show the package as `נמסרה בקיבוץ` within 5 seconds.
+11. Device A and Device B should both keep the package in the same final status until its owner or an admin removes it.
 
 Failure conditions:
 

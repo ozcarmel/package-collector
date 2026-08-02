@@ -11,7 +11,6 @@ import {
   kibbutzDropLocationDefaultNotes,
   logSensitiveAccess,
   markPackageCollected,
-  markPackageReceived,
   removeOwnPackage,
   promoteUser,
   rejectJoinRequest,
@@ -697,32 +696,6 @@ describe("app state actions", () => {
     });
   });
 
-  it("lets the package recipient mark an arrived package as delivered", () => {
-    const deps = createTestDeps();
-    const state = cloneState();
-    const arrivedPackage = state.packages.find((pkg) => pkg.status === "arrived");
-    expect(arrivedPackage).toBeTruthy();
-    const recipientState: AppState = {
-      ...state,
-      currentUser: {
-        id: arrivedPackage?.ownerUserId ?? "",
-        fullName: "Package Recipient",
-        phone: "050-777-7777",
-        role: "member",
-        verificationStatus: "approved",
-        createdAt: "2026-06-28T10:00:00.000Z",
-      },
-    };
-
-    const delivered = markPackageReceived(recipientState, arrivedPackage?.id ?? "", deps);
-
-    expect(delivered.packages.find((pkg) => pkg.id === arrivedPackage?.id)).toMatchObject({
-      status: "delivered",
-      deliveredAt: "2026-06-28T10:00:00.000Z",
-      updatedAt: "2026-06-28T10:00:00.000Z",
-    });
-  });
-
   it("allows admins to delete packages in any status from active state", () => {
     const state = cloneState();
     const arrivedPackage = state.packages.find((pkg) => pkg.status === "arrived");
@@ -811,6 +784,29 @@ describe("app state actions", () => {
     };
 
     const result = removeOwnPackage(arrivedState, memberPackage?.id ?? "", deps);
+    expect(result.packages.find((pkg) => pkg.id === memberPackage?.id)).toMatchObject({
+      status: "cancelled",
+      cancelledByUserId: member?.id,
+    });
+  });
+
+  it("allows a member to remove a legacy delivered package by cancelling it", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const member = state.users.find((user) => user.id === "u-hila");
+    const memberPackage = state.packages.find((pkg) => pkg.ownerUserId === member?.id);
+    expect(member).toBeTruthy();
+    expect(memberPackage).toBeTruthy();
+
+    const legacyState: AppState = {
+      ...state,
+      currentUser: member!,
+      packages: state.packages.map((pkg) =>
+        pkg.id === memberPackage?.id ? { ...pkg, status: "delivered" } : pkg,
+      ),
+    };
+
+    const result = removeOwnPackage(legacyState, memberPackage?.id ?? "", deps);
     expect(result.packages.find((pkg) => pkg.id === memberPackage?.id)).toMatchObject({
       status: "cancelled",
       cancelledByUserId: member?.id,

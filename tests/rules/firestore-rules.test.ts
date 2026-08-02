@@ -522,7 +522,7 @@ describe("firestore security rules", () => {
     );
   });
 
-  it("allows package owners to mark arrived packages delivered", async () => {
+  it("prevents package owners from creating the removed delivered status", async () => {
     await seedDoc("users/u-owner", userDoc("u-owner"));
     await seedDoc(
       "packages/pkg-arrived",
@@ -534,7 +534,7 @@ describe("firestore security rules", () => {
     );
     const ownerDb = dbFor("u-owner");
 
-    await assertSucceeds(
+    await assertFails(
       ownerDb.doc("packages/pkg-arrived").update({
         status: "delivered",
         deliveredAt: now,
@@ -676,6 +676,23 @@ describe("firestore security rules", () => {
 
     await assertSucceeds(
       dbFor("u-owner").doc("packages/pkg-arrived-owner").update({
+        status: "cancelled",
+        cancelledAt: now,
+        cancelledByUserId: "u-owner",
+        updatedAt: now,
+      }),
+    );
+  });
+
+  it("allows package owners to cancel their own legacy delivered package", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc(
+      "packages/pkg-delivered-owner",
+      packageDoc("pkg-delivered-owner", "u-owner", "pitzutz", { status: "delivered" }),
+    );
+
+    await assertSucceeds(
+      dbFor("u-owner").doc("packages/pkg-delivered-owner").update({
         status: "cancelled",
         cancelledAt: now,
         cancelledByUserId: "u-owner",

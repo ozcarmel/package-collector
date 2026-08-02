@@ -651,46 +651,6 @@ export const firestoreRepository: AppOperationsRepository = {
     };
   },
 
-  async markPackageReceived(state: AppState, packageId: string, deps: ActionDeps) {
-    const db = requireFirestore();
-    const packageRef = doc(db, "packages", packageId);
-    const packageSnapshot = await getDoc(packageRef);
-    const pkg = packageSnapshot.data() as DeliveryPackage | undefined;
-
-    if (!pkg) {
-      throw new Error("Package was not found.");
-    }
-
-    if (pkg.ownerUserId !== state.currentUser.id) {
-      throw new Error("Only the package owner can mark it received.");
-    }
-
-    if (pkg.status !== "arrived" && pkg.status !== "ready_for_handoff") {
-      throw new Error("Only arrived packages can be marked received.");
-    }
-
-    const deliveredAt = deps.now();
-    await updateDoc(packageRef, {
-      status: "delivered",
-      deliveredAt,
-      updatedAt: deliveredAt,
-    });
-
-    return {
-      ...state,
-      packages: state.packages.map((item) =>
-        item.id === packageId
-          ? {
-              ...item,
-              status: "delivered" as const,
-              deliveredAt,
-              updatedAt: deliveredAt,
-            }
-          : item,
-      ),
-    };
-  },
-
   async removeOwnPackage(state: AppState, packageId: string, deps: ActionDeps) {
     if (state.currentUser.verificationStatus !== "approved") {
       throw new Error("User must be approved to remove packages.");
@@ -726,7 +686,12 @@ export const firestoreRepository: AppOperationsRepository = {
       return removeOwnPackageAction(state, packageId, deps);
     }
 
-    if (pkg.status !== "collected" && pkg.status !== "arrived" && pkg.status !== "ready_for_handoff") {
+    if (
+      pkg.status !== "collected" &&
+      pkg.status !== "arrived" &&
+      pkg.status !== "ready_for_handoff" &&
+      pkg.status !== "delivered"
+    ) {
       throw new Error("Only active owner packages can be removed.");
     }
 

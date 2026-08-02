@@ -9,7 +9,6 @@ import {
   getWaitingPackageCount,
   logSensitiveAccess,
   markPackageCollected,
-  markPackageReceived,
   removeOwnPackage,
   promoteUser,
   rejectJoinRequest,
@@ -96,8 +95,6 @@ export const localDemoRepository: AppStateRepository = {
   markPackageCollected,
 
   unmarkPackageCollected,
-
-  markPackageReceived,
 
   removeOwnPackage,
 

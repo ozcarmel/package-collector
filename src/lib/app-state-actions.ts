@@ -491,39 +491,6 @@ export function markPackageCollected(
   };
 }
 
-export function markPackageReceived(state: AppState, packageId: string, deps: ActionDeps) {
-  assertApprovedUser(state, "mark packages received");
-
-  const targetPackage = state.packages.find((pkg) => pkg.id === packageId);
-  if (!targetPackage) {
-    throw new Error("Package was not found.");
-  }
-
-  if (targetPackage.ownerUserId !== state.currentUser.id) {
-    throw new Error("Only the package owner can mark it received.");
-  }
-
-  if (targetPackage.status !== "arrived" && targetPackage.status !== "ready_for_handoff") {
-    throw new Error("Only arrived packages can be marked received.");
-  }
-
-  const deliveredAt = deps.now();
-
-  return {
-    ...state,
-    packages: state.packages.map((pkg) =>
-      pkg.id === packageId
-        ? {
-            ...pkg,
-            status: "delivered" as const,
-            deliveredAt,
-            updatedAt: deliveredAt,
-          }
-        : pkg,
-    ),
-  };
-}
-
 export function unmarkPackageCollected(
   state: AppState,
   input: { activeRunId: string | null; packageId: string },
@@ -623,7 +590,8 @@ export function removeOwnPackage(state: AppState, packageId: string, deps: Actio
   if (
     targetPackage.status !== "collected" &&
     targetPackage.status !== "arrived" &&
-    targetPackage.status !== "ready_for_handoff"
+    targetPackage.status !== "ready_for_handoff" &&
+    targetPackage.status !== "delivered"
   ) {
     throw new Error("Only active owner packages can be removed.");
   }

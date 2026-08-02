@@ -13,6 +13,7 @@ export type PackageStatus =
   | "collected"
   | "arrived"
   | "ready_for_handoff"
+  // Legacy production value. New app flows stop at "arrived".
   | "delivered"
   | "cancelled";
 

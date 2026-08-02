@@ -204,15 +204,6 @@ service cloud.firestore {
           ]);
     }
 
-    function validOwnerPackageReceivedUpdate() {
-      return approved() &&
-        resource.data.ownerUserId == request.auth.uid &&
-        resource.data.status in ["arrived", "ready_for_handoff"] &&
-        request.resource.data.status == "delivered" &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(["status", "deliveredAt", "updatedAt"]);
-    }
-
     function validOwnerPackageDelete() {
       return approved() &&
         resource.data.status == "waiting" &&
@@ -224,7 +215,7 @@ service cloud.firestore {
 
     function validOwnerPackageCancel() {
       return approved() &&
-        resource.data.status in ["collected", "arrived", "ready_for_handoff"] &&
+        resource.data.status in ["collected", "arrived", "ready_for_handoff", "delivered"] &&
         request.resource.data.status == "cancelled" &&
         request.resource.data.cancelledByUserId == request.auth.uid &&
         (
@@ -428,7 +419,6 @@ service cloud.firestore {
         validCollectorArrivalUpdate() ||
         validCollectorPackageCollectedUpdate(packageId) ||
         validCollectorPackageWaitingUpdate(packageId) ||
-        validOwnerPackageReceivedUpdate() ||
         validOwnerPackageUpdate() ||
         validOwnerPackageCancel() ||
         admin()

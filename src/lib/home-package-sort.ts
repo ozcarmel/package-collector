@@ -9,11 +9,10 @@ export function getHomePackageStatusSortRank(status: PackageStatus) {
       return 1;
     case "arrived":
     case "ready_for_handoff":
-      return 2;
     case "delivered":
-      return 3;
+      return 2;
     case "cancelled":
-      return 4;
+      return 3;
   }
 }
 
