@@ -1134,17 +1134,22 @@ form.stack,
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: 999px;
+  border-radius: 5px;
   padding: 0;
-  color: #fff;
-  background: var(--danger);
-  box-shadow: 0 4px 9px rgb(183 52 38 / 18%);
+  color: #a63f35;
+  background: transparent;
+  transition: color 140ms ease, background-color 140ms ease;
 }
 
 .package-remove-button svg {
-  width: 15px;
-  height: 15px;
-  stroke-width: 4;
+  width: 19px;
+  height: 19px;
+  stroke-width: 2.2;
+}
+
+.package-remove-button:hover {
+  color: var(--danger);
+  background: #f9e5e1;
 }
 
 .package-remove-button:disabled {
@@ -1166,22 +1171,25 @@ form.stack,
   width: 44px;
   height: 44px;
   flex: 0 0 44px;
-  border-radius: 11px;
   display: grid;
   place-items: center;
   color: #fff;
-  background: #25d366;
-  box-shadow: 0 4px 10px rgb(17 109 55 / 20%);
   text-decoration: none;
-  transition: background-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  transition: transform 140ms ease;
 }
 
 .package-whatsapp-link svg {
-  width: 28px;
-  height: 28px;
+  box-sizing: content-box;
+  width: 24px;
+  height: 24px;
+  padding: 7px;
+  border-radius: 10px;
+  background: #25d366;
+  box-shadow: 0 4px 10px rgb(17 109 55 / 20%);
+  transition: background-color 140ms ease, box-shadow 140ms ease;
 }
 
-.package-whatsapp-link:hover {
+.package-whatsapp-link:hover svg {
   background: #1fbd5a;
   box-shadow: 0 5px 12px rgb(17 109 55 / 28%);
 }

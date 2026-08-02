@@ -1068,11 +1068,22 @@ test("home package cards open the submitter WhatsApp without changing package st
   const hilaCard = app(page).locator(".package-card").filter({ hasText: "הילה נבו" });
   const hilaWhatsApp = hilaCard.getByRole("link", { name: "פתח ווטסאפ עם הילה נבו" });
   await expect(hilaWhatsApp).toHaveAttribute("href", "https://wa.me/972502222222");
+  await expect
+    .poll(async () => {
+      const linkBox = await hilaWhatsApp.boundingBox();
+      const iconBox = await hilaWhatsApp.locator("svg").boundingBox();
+      return {
+        link: linkBox ? [linkBox.width, linkBox.height] : null,
+        icon: iconBox ? [iconBox.width, iconBox.height] : null,
+      };
+    })
+    .toEqual({ link: [44, 44], icon: [38, 38] });
 
   const ownCard = app(page).locator(".package-card").filter({ hasText: "עוז כרמל" });
   await expect(
     ownCard.getByRole("link", { name: "פתח ווטסאפ עם עוז כרמל" }),
   ).toHaveAttribute("href", "https://wa.me/972584411883");
+  await expect(ownCard.locator(".package-remove-button .lucide-trash-2")).toBeVisible();
 
   const missingContactCard = app(page).locator(".package-card").filter({ hasText: "איילת מדר" });
   await expect(missingContactCard.locator(".package-icon")).toBeVisible();

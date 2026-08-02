@@ -3217,7 +3217,7 @@ export function LahavPackagesApp() {
                     title="הסר חבילה"
                     type="button"
                   >
-                    <X />
+                    <Trash2 />
                   </button>
                 ) : null}
               </span>
