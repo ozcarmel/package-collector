@@ -735,12 +735,44 @@ test("saving two kibbutz delivery rows updates home status and shows both packag
   });
 });
 
+test("home pickup locations open details when open, closed, or empty", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-08-02T12:00:00+03:00"));
+  await gotoAdmin(page);
+
+  const openLocation = app(page).locator('.pickup-card[data-pickup-location-id="home-paami"]');
+  const openCount = await readPickupCount(page, "home-paami");
+  await expect(openLocation).toHaveClass(/pickup-card-open/);
+  await openLocation.click();
+  await expect(app(page).getByText("פרטי נקודת איסוף", { exact: true })).toBeVisible();
+  await expect(app(page).locator('.location-details-screen[data-pickup-location-id="home-paami"]')).toBeVisible();
+  await expect(app(page).getByRole("heading", { name: "הום פעמי" })).toBeVisible();
+  await expect(app(page).getByText("פתוח עכשיו", { exact: true })).toBeVisible();
+  await expect(app(page).getByLabel(`${openCount} חבילות ממתינות`)).toBeVisible();
+  await expect(app(page).getByRole("heading", { name: "שעות פתיחה" })).toBeVisible();
+  await app(page).getByRole("button", { name: "חזרה" }).click();
+
+  const closedLocation = app(page).locator('.pickup-card[data-pickup-location-id="post-office"]');
+  await expect(closedLocation).toHaveClass(/pickup-card-closed/);
+  await closedLocation.click();
+  await expect(app(page).locator('.location-details-screen[data-pickup-location-id="post-office"]')).toBeVisible();
+  await expect(app(page).getByText("סגור עכשיו", { exact: true })).toBeVisible();
+  await expect(app(page).getByRole("heading", { name: "שעות פתיחה" })).toBeVisible();
+  await app(page).getByRole("button", { name: "חזרה" }).click();
+
+  await expect(app(page).locator('.pickup-card[data-pickup-location-id="shoval"] strong')).toHaveText("0");
+  await app(page).locator('.pickup-card[data-pickup-location-id="shoval"]').click();
+  await expect(app(page).locator('.location-details-screen[data-pickup-location-id="shoval"]')).toBeVisible();
+  await expect(app(page).getByLabel("0 חבילות ממתינות")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })).toHaveCount(0);
+});
+
 test("home waiting package shortcuts open pickup screen with the location selected", async ({
   page,
 }) => {
   await gotoAdmin(page);
 
-  await app(page).locator('.pickup-card[data-pickup-location-id="pitzutz"]').click();
+  const waitingPackageCard = app(page).locator(".package-card").filter({ hasText: "עוז כרמל" }).first();
+  await waitingPackageCard.getByRole("button", { name: "ממתינה לאיסוף" }).click();
   await expect(app(page).getByRole("heading", { name: "איסוף בחנות" })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })).toHaveCount(0);
   await expect(app(page).locator('.location-button[data-pickup-location-id="pitzutz"]')).toHaveAttribute(

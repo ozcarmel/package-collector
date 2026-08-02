@@ -70,6 +70,7 @@ type Screen =
   | "join"
   | "pending"
   | "home"
+  | "location"
   | "add"
   | "pickup"
   | "catalog"
@@ -542,6 +543,7 @@ export function LahavPackagesApp() {
     useState<RevealedSensitivePackageDetails>({});
   const [pendingUnlockLocationId, setPendingUnlockLocationId] = useState<string | null>(null);
   const [hoursLocationId, setHoursLocationId] = useState<string | null>(null);
+  const [detailsLocationId, setDetailsLocationId] = useState<string | null>(null);
   const [pendingUnlockAnchor, setPendingUnlockAnchor] = useState<UnlockAnchor | null>(null);
   const [homeLocationFilterId, setHomeLocationFilterId] = useState<string | null>(null);
   const [joinPreviewMode, setJoinPreviewMode] = useState(() => hasJoinPreviewParam());
@@ -763,6 +765,9 @@ export function LahavPackagesApp() {
   const hoursLocation = hoursLocationId
     ? state.pickupLocations.find((location) => location.id === hoursLocationId)
     : null;
+  const detailsLocation = detailsLocationId
+    ? state.pickupLocations.find((location) => location.id === detailsLocationId)
+    : null;
   const pendingDeleteLocation = pendingDeleteLocationId
     ? state.pickupLocations.find((location) => location.id === pendingDeleteLocationId)
     : null;
@@ -832,6 +837,7 @@ export function LahavPackagesApp() {
       ),
     },
   ];
+  const activeNavScreen = effectiveScreen === "location" ? "home" : effectiveScreen;
   const headerConfig = getHeaderConfig();
   const operationsRepository = getConfiguredOperationsRepository();
   const actionDeps = useMemo(
@@ -1025,6 +1031,8 @@ export function LahavPackagesApp() {
           showBell: !canManageCommunity,
           showMark: true,
         };
+      case "location":
+        return { title: "פרטי נקודת איסוף", backTarget: "home" };
       case "add":
         return { title: "הוספת חבילה", backTarget: "home" };
       case "pickup":
@@ -1099,6 +1107,11 @@ export function LahavPackagesApp() {
     setPendingUnlockAnchor(null);
     setHomeLocationFilterId(locationId);
     setScreen("pickup");
+  }
+
+  function openPickupLocationDetails(locationId: string) {
+    setDetailsLocationId(locationId);
+    setScreen("location");
   }
 
   async function submitJoinRequest() {
@@ -1783,7 +1796,7 @@ export function LahavPackagesApp() {
             {navItems.map((item) => (
               <button
                 aria-disabled={item.disabled ? "true" : undefined}
-                className={`nav-item nav-${item.screen} ${effectiveScreen === item.screen ? "active" : ""}`}
+                className={`nav-item nav-${item.screen} ${activeNavScreen === item.screen ? "active" : ""}`}
                 disabled={item.disabled}
                 key={item.screen}
                 onClick={() => navigateToScreen(item.screen)}
@@ -2295,6 +2308,8 @@ export function LahavPackagesApp() {
         return <PendingScreen request={submittedJoinRequest} />;
       case "home":
         return HomeScreen();
+      case "location":
+        return PickupLocationDetailsScreen();
       case "add":
         return AddScreen();
       case "pickup":
@@ -2385,11 +2400,7 @@ export function LahavPackagesApp() {
                 const displayName = pickupLocationDisplayName(location);
                 const shouldPreventNameEllipsis =
                   location.id === "post-office" || location.id === "pitzutz";
-                const selectLocation = () => {
-                  if (locationPackageCount > 0) {
-                    openPickupScreenForLocation(location.id);
-                  }
-                };
+                const selectLocation = () => openPickupLocationDetails(location.id);
                 return (
                   <div className="pickup-card-group" key={location.id}>
                     <div
@@ -2404,9 +2415,7 @@ export function LahavPackagesApp() {
                         ) {
                           return;
                         }
-                        if (locationPackageCount > 0) {
-                          openPickupScreenForLocation(location.id);
-                        }
+                        openPickupLocationDetails(location.id);
                       }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
@@ -2466,6 +2475,59 @@ export function LahavPackagesApp() {
           </div>
         </section>
       </>
+    );
+  }
+
+  function PickupLocationDetailsScreen() {
+    if (!detailsLocation) {
+      return <div className="card empty-state">נקודת האיסוף אינה זמינה כרגע.</div>;
+    }
+
+    const waitingCount = state.packages.filter(
+      (pkg) => pkg.pickupLocationId === detailsLocation.id && pkg.status === "waiting",
+    ).length;
+    const openState = getPickupLocationOpenState(detailsLocation);
+    const openStateLabel =
+      openState === "open"
+        ? "פתוח עכשיו"
+        : openState === "closed"
+          ? "סגור עכשיו"
+          : "שעות לא זמינות";
+
+    return (
+      <div className="location-details-screen" data-pickup-location-id={detailsLocation.id}>
+        <section className="location-details-heading">
+          <div className={`location-details-state location-details-state-${openState}`}>
+            <Clock />
+            <span>{openStateLabel}</span>
+          </div>
+          <h1 className="screen-title">{detailsLocation.name}</h1>
+          <div className="location-details-address">
+            <MapPin />
+            <span>{detailsLocation.address}</span>
+          </div>
+        </section>
+
+        <section className="location-details-count" aria-label={`${waitingCount} חבילות ממתינות`}>
+          <Package />
+          <div>
+            <strong>{waitingCount}</strong>
+            <span>חבילות ממתינות לאיסוף</span>
+          </div>
+        </section>
+
+        <section className="location-details-hours" aria-labelledby="location-details-hours-title">
+          <h2 id="location-details-hours-title">שעות פתיחה</h2>
+          <div className="hours-summary">
+            {openingHoursRows(detailsLocation).map((row) => (
+              <div className="hours-row" key={`${row.days}-${row.hours}`}>
+                {row.days ? <span className="hours-days">{row.days}</span> : null}
+                <span className="hours-value">{row.hours}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
     );
   }
 
