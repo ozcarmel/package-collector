@@ -512,8 +512,19 @@ export function unmarkPackageCollected(
   deps: ActionDeps,
 ) {
   const targetPackage = state.packages.find((pkg) => pkg.id === input.packageId);
+  const equivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
+  const isRevertibleSelfCollection =
+    targetPackage?.status === "arrived" &&
+    targetPackage.currentKibbutzLocation === "direct-home" &&
+    equivalentUserIds.has(targetPackage.ownerUserId) &&
+    Boolean(
+      targetPackage.collectorUserId && equivalentUserIds.has(targetPackage.collectorUserId),
+    );
 
-  if (!targetPackage || targetPackage.status !== "collected") {
+  if (
+    !targetPackage ||
+    (targetPackage.status !== "collected" && !isRevertibleSelfCollection)
+  ) {
     return state;
   }
 
@@ -524,6 +535,8 @@ export function unmarkPackageCollected(
 
       const waitingPackage = { ...pkg };
       delete waitingPackage.collectorUserId;
+      delete waitingPackage.currentKibbutzLocation;
+      delete waitingPackage.currentKibbutzLocationText;
       return {
         ...waitingPackage,
         status: "waiting" as const,

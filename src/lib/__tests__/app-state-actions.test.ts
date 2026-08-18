@@ -528,6 +528,20 @@ describe("app state actions", () => {
       itemStatus: "collected",
       collectedAt: "2026-06-28T10:00:00.000Z",
     });
+
+    const waiting = unmarkPackageCollected(
+      delivered,
+      { activeRunId: runResult.runId, packageId: "pkg-oz" },
+      deps,
+    );
+    const waitingPackage = waiting.packages.find((pkg) => pkg.id === "pkg-oz");
+    expect(waitingPackage).toMatchObject({ status: "waiting" });
+    expect(waitingPackage?.collectorUserId).toBeUndefined();
+    expect(waitingPackage?.currentKibbutzLocation).toBeUndefined();
+    expect(waitingPackage?.currentKibbutzLocationText).toBeUndefined();
+    expect(waiting.pickupRunItems.find((item) => item.packageId === "pkg-oz")).toMatchObject({
+      itemStatus: "pending",
+    });
   });
   it("switches a collected package back to waiting and keeps access logs", () => {
     const deps = createTestDeps();

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   ArrowLeft,
@@ -425,6 +425,7 @@ function homePackageDetailBadge(pkg: DeliveryPackage) {
     case "collected":
       return null;
     case "arrived":
+      if (pkg.currentKibbutzLocation === "direct-home") return null;
       return {
         className: "package-detail-note",
         icon: null,
@@ -916,7 +917,9 @@ export function LahavPackagesApp() {
       case "collected":
         return collectorName ? `נאספה על ידי ${collectorName}` : pickupLocation;
       case "arrived":
-        return pkg.currentKibbutzLocationText?.trim() || "נמסרה בקיבוץ";
+        return pkg.currentKibbutzLocation === "direct-home"
+          ? "נמסרה בקיבוץ"
+          : pkg.currentKibbutzLocationText?.trim() || "נמסרה בקיבוץ";
       case null:
         return pickupLocation;
     }
@@ -3308,9 +3311,16 @@ export function LahavPackagesApp() {
     const runItem = activeRunItems.find((item) => item.packageId === pkg.id);
     const isCollected = pkg.status === "collected";
     const isDeliveredInKibbutz = getHomePackageStatusBucket(pkg.status) === "arrived";
+    const isRevertibleSelfCollection =
+      isDeliveredInKibbutz &&
+      pkg.currentKibbutzLocation === "direct-home" &&
+      currentEquivalentUserIds.has(pkg.ownerUserId) &&
+      runItem?.itemStatus === "collected";
+    const isMarkedCollected = isCollected || isRevertibleSelfCollection;
     const isCollecting = collectingPackageId === pkg.id;
     const canToggleCollected =
-      !isDeliveredInKibbutz && (collectingPackageId === null || isCollecting);
+      (!isDeliveredInKibbutz || isRevertibleSelfCollection) &&
+      (collectingPackageId === null || isCollecting);
     return (
       <div className="card catalog-card">
         <div className="catalog-card-head">
@@ -3344,14 +3354,14 @@ export function LahavPackagesApp() {
         <div className="catalog-actions">
           <PackageContactButton pkg={pkg} />
           <button
-            aria-pressed={isCollected}
-            className={`button collect-button ${isCollected ? "checked" : ""}`}
+            aria-pressed={isMarkedCollected}
+            className={`button collect-button ${isMarkedCollected ? "checked" : ""}`}
             disabled={!canToggleCollected}
-            onClick={() => toggleCollected(pkg.id, isCollected)}
+            onClick={() => toggleCollected(pkg.id, isMarkedCollected)}
             type="button"
           >
             <span className="collect-checkbox-mark" aria-hidden="true">
-              {isCollected ? <Check /> : null}
+              {isMarkedCollected ? <Check /> : null}
             </span>
             {isCollecting
               ? "מעדכן..."

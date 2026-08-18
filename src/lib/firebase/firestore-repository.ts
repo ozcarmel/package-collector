@@ -621,6 +621,24 @@ export const firestoreRepository: AppOperationsRepository = {
       throw new Error("A pickup run is required to unmark a package collected.");
     }
 
+    const targetPackage = state.packages.find((pkg) => pkg.id === input.packageId);
+    const equivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
+    const isRevertibleSelfCollection =
+      targetPackage?.status === "arrived" &&
+      targetPackage.currentKibbutzLocation === "direct-home" &&
+      equivalentUserIds.has(targetPackage.ownerUserId) &&
+      Boolean(
+        targetPackage.collectorUserId &&
+          equivalentUserIds.has(targetPackage.collectorUserId),
+      );
+
+    if (
+      !targetPackage ||
+      (targetPackage.status !== "collected" && !isRevertibleSelfCollection)
+    ) {
+      return state;
+    }
+
     const db = requireFirestore();
     const unmarkedAt = deps.now();
     const itemId = `${input.activeRunId}_${input.packageId}`;
@@ -631,6 +649,8 @@ export const firestoreRepository: AppOperationsRepository = {
     batch.update(doc(db, "packages", input.packageId), {
       status: "waiting",
       collectorUserId: deleteField(),
+      currentKibbutzLocation: deleteField(),
+      currentKibbutzLocationText: deleteField(),
       updatedAt: unmarkedAt,
     });
     if (item?.itemStatus === "collected" || item?.collectedAt) {
@@ -644,10 +664,12 @@ export const firestoreRepository: AppOperationsRepository = {
     return {
       ...state,
       packages: state.packages.map((pkg) => {
-        if (pkg.id !== input.packageId || pkg.status !== "collected") return pkg;
+        if (pkg.id !== input.packageId) return pkg;
 
         const waitingPackage = { ...pkg };
         delete waitingPackage.collectorUserId;
+        delete waitingPackage.currentKibbutzLocation;
+        delete waitingPackage.currentKibbutzLocationText;
         return {
           ...waitingPackage,
           status: "waiting" as const,

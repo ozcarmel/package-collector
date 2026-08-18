@@ -307,7 +307,22 @@ describe("firestore security rules", () => {
     });
 
     await assertSucceeds(collectBatch.commit());
+
+    const unmarkBatch = ownerDb.batch();
+    unmarkBatch.update(ownerDb.doc("packages/pkg-self"), {
+      status: "waiting",
+      collectorUserId: null,
+      currentKibbutzLocation: null,
+      currentKibbutzLocationText: null,
+      updatedAt: now,
+    });
+    unmarkBatch.update(ownerDb.doc("pickupRunItems/run-self_pkg-self"), {
+      itemStatus: "pending",
+      collectedAt: null,
+    });
+    await assertSucceeds(unmarkBatch.commit());
   });
+
   it("blocks users without pickup access from unmarking collected packages", async () => {
     await seedDoc("users/u-owner", userDoc("u-owner"));
     await seedDoc("users/u-other", userDoc("u-other"));

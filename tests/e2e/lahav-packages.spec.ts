@@ -174,7 +174,8 @@ async function collectPackageAtLocation(
   const collectButton = catalogCard.locator(".collect-button");
   await collectButton.click();
   if (expectedAfterCollection === "arrived") {
-    await expect(collectButton).toBeDisabled();
+    await expect(collectButton).toBeEnabled();
+    await expect(collectButton).toHaveAttribute("aria-pressed", "true");
     await expect(collectButton).toContainText("נמסרה בקיבוץ");
   } else {
     await expect(collectButton).toHaveAttribute("aria-pressed", "true");
@@ -492,7 +493,8 @@ test("collecting one location does not hide active packages from other locations
   await openPickupApprovalLinkIfPresent(context, mosheCard);
   const mosheCollectButton = mosheCard.locator(".collect-button");
   await mosheCollectButton.click();
-  await expect(mosheCollectButton).toBeDisabled();
+  await expect(mosheCollectButton).toBeEnabled();
+  await expect(mosheCollectButton).toHaveAttribute("aria-pressed", "true");
   await expect(mosheCollectButton).toContainText("נמסרה בקיבוץ");
 
   await clickPhoneNav(page, "בית");
@@ -799,7 +801,14 @@ test("pickup flow reveals original messages only after confirmation and records 
   await page.bringToFront();
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   const selfCollectToggle = firstCatalogCard.locator(".collect-button");
-  await expect(selfCollectToggle).toBeDisabled();
+  await expect(selfCollectToggle).toBeEnabled();
+  await expect(selfCollectToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(selfCollectToggle).toContainText("נמסרה בקיבוץ");
+  await selfCollectToggle.click();
+  await expect(selfCollectToggle).toHaveAttribute("aria-pressed", "false");
+  await expect(selfCollectToggle).toContainText("ממתינה לאיסוף");
+  await selfCollectToggle.click();
+  await expect(selfCollectToggle).toHaveAttribute("aria-pressed", "true");
   await expect(selfCollectToggle).toContainText("נמסרה בקיבוץ");
 
   const otherCatalogCard = app(page).locator(".catalog-card").filter({ hasText: "הילה נבו" });
@@ -813,6 +822,10 @@ test("pickup flow reveals original messages only after confirmation and records 
   await expect(catalogWhatsApp).toBeVisible();
 
   await clickPhoneNav(page, "בית");
+  const selfDeliveredHomeCard = app(page)
+    .locator(".package-card")
+    .filter({ has: page.getByText("עוז כרמל", { exact: true }) });
+  await expect(selfDeliveredHomeCard).not.toContainText("אצל בעל החבילה");
   await expect(app(page).getByText(/נאספה על ידי/).first()).toBeVisible();
   const collectedHomeCard = app(page).locator(".package-card").filter({ hasText: "הילה נבו" });
   const collectedHomeWhatsApp = collectedHomeCard.getByRole("link", {
