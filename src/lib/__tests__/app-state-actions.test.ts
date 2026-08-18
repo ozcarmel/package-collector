@@ -451,7 +451,8 @@ describe("app state actions", () => {
   it("marks a package collected and then updates arrival location", () => {
     const deps = createTestDeps();
     const runResult = startPickupRun(cloneState(), "pitzutz", deps);
-    const packageId = runResult.state.pickupRunItems[0].packageId;
+    const packageId =
+      runResult.state.pickupRunItems.find((item) => item.packageId === "pkg-hila")?.packageId ?? "";
 
     const collected = markPackageCollected(
       runResult.state,
@@ -492,7 +493,8 @@ describe("app state actions", () => {
   it("marks a package collected without requiring a pickup link", () => {
     const deps = createTestDeps();
     const runResult = startPickupRun(cloneState(), "pitzutz", deps);
-    const packageId = runResult.state.pickupRunItems[0].packageId;
+    const packageId =
+      runResult.state.pickupRunItems.find((item) => item.packageId === "pkg-hila")?.packageId ?? "";
 
     const collected = markPackageCollected(
       runResult.state,
@@ -506,10 +508,32 @@ describe("app state actions", () => {
     });
   });
 
+  it("moves a self-collected package directly to kibbutz delivery", () => {
+    const deps = createTestDeps();
+    const runResult = startPickupRun(cloneState(), "pitzutz", deps);
+
+    const delivered = markPackageCollected(
+      runResult.state,
+      { activeRunId: runResult.runId, packageId: "pkg-oz" },
+      deps,
+    );
+
+    expect(delivered.packages.find((pkg) => pkg.id === "pkg-oz")).toMatchObject({
+      status: "arrived",
+      collectorUserId: delivered.currentUser.id,
+      currentKibbutzLocation: "direct-home",
+      currentKibbutzLocationText: "אצל בעל החבילה",
+    });
+    expect(delivered.pickupRunItems.find((item) => item.packageId === "pkg-oz")).toMatchObject({
+      itemStatus: "collected",
+      collectedAt: "2026-06-28T10:00:00.000Z",
+    });
+  });
   it("switches a collected package back to waiting and keeps access logs", () => {
     const deps = createTestDeps();
     const runResult = startPickupRun(cloneState(), "pitzutz", deps);
-    const packageId = runResult.state.pickupRunItems[0].packageId;
+    const packageId =
+      runResult.state.pickupRunItems.find((item) => item.packageId === "pkg-hila")?.packageId ?? "";
     const accessed = logSensitiveAccess(
       runResult.state,
       {

@@ -267,6 +267,47 @@ describe("firestore security rules", () => {
     await assertSucceeds(unmarkBatch.commit());
   });
 
+  it("allows a package owner to collect their own package directly into kibbutz delivery", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner"));
+    await seedDoc("packages/pkg-self", packageDoc("pkg-self", "u-owner"));
+    await seedDoc("pickupRuns/run-self", {
+      id: "run-self",
+      collectorUserId: "u-owner",
+      pickupLocationId: "pitzutz",
+      status: "active",
+      createdAt: now,
+    });
+    await seedDoc("pickupRunItems/run-self_pkg-self", {
+      id: "run-self_pkg-self",
+      pickupRunId: "run-self",
+      packageId: "pkg-self",
+      itemStatus: "pending",
+    });
+    await seedDoc("sensitiveAccessGrants/u-owner_pkg-self", {
+      id: "u-owner_pkg-self",
+      packageId: "pkg-self",
+      pickupRunId: "run-self",
+      viewerUserId: "u-owner",
+      pickupLocationId: "pitzutz",
+      createdAt: now,
+    });
+
+    const ownerDb = dbFor("u-owner");
+    const collectBatch = ownerDb.batch();
+    collectBatch.update(ownerDb.doc("packages/pkg-self"), {
+      status: "arrived",
+      collectorUserId: "u-owner",
+      currentKibbutzLocation: "direct-home",
+      currentKibbutzLocationText: "אצל בעל החבילה",
+      updatedAt: now,
+    });
+    collectBatch.update(ownerDb.doc("pickupRunItems/run-self_pkg-self"), {
+      itemStatus: "collected",
+      collectedAt: now,
+    });
+
+    await assertSucceeds(collectBatch.commit());
+  });
   it("blocks users without pickup access from unmarking collected packages", async () => {
     await seedDoc("users/u-owner", userDoc("u-owner"));
     await seedDoc("users/u-other", userDoc("u-other"));

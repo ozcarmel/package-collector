@@ -40,6 +40,7 @@ import {
   getEquivalentUserIdsForCurrentUser,
   removeOwnPackage as removeOwnPackageAction,
   resolveKibbutzDropNote,
+  selfCollectedDeliveryText,
   updatePackage as updatePackageAction,
   updateCollectedPackagesArrival as updateCollectedPackagesArrivalAction,
   updatePickupLocation as updatePickupLocationAction,
@@ -561,11 +562,22 @@ export const firestoreRepository: AppOperationsRepository = {
 
     const db = requireFirestore();
     const collectedAt = deps.now();
+    const targetPackage = state.packages.find((pkg) => pkg.id === input.packageId);
+    const equivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
+    const isSelfCollected = Boolean(
+      targetPackage && equivalentUserIds.has(targetPackage.ownerUserId),
+    );
     const itemId = `${input.activeRunId}_${input.packageId}`;
     const batch = writeBatch(db);
     batch.update(doc(db, "packages", input.packageId), {
-      status: "collected",
+      status: isSelfCollected ? "arrived" : "collected",
       collectorUserId: state.currentUser.id,
+      ...(isSelfCollected
+        ? {
+            currentKibbutzLocation: "direct-home",
+            currentKibbutzLocationText: selfCollectedDeliveryText,
+          }
+        : {}),
       updatedAt: collectedAt,
     });
     batch.update(doc(db, "pickupRunItems", itemId), {
@@ -580,8 +592,14 @@ export const firestoreRepository: AppOperationsRepository = {
         pkg.id === input.packageId
           ? {
               ...pkg,
-              status: "collected" as const,
+              status: isSelfCollected ? ("arrived" as const) : ("collected" as const),
               collectorUserId: state.currentUser.id,
+              ...(isSelfCollected
+                ? {
+                    currentKibbutzLocation: "direct-home" as const,
+                    currentKibbutzLocationText: selfCollectedDeliveryText,
+                  }
+                : {}),
               updatedAt: collectedAt,
             }
           : pkg,

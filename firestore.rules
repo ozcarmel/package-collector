@@ -257,6 +257,27 @@ service cloud.firestore {
           .hasOnly(["status", "collectorUserId", "updatedAt"]);
     }
 
+    function validOwnerSelfCollectionUpdate(packageId) {
+      return approved() &&
+        resource.data.status == "waiting" &&
+        (
+          resource.data.ownerUserId == request.auth.uid ||
+          sameApprovedPhoneAsCurrent(resource.data.ownerUserId)
+        ) &&
+        request.resource.data.status == "arrived" &&
+        request.resource.data.collectorUserId == request.auth.uid &&
+        request.resource.data.currentKibbutzLocation == "direct-home" &&
+        request.resource.data.currentKibbutzLocationText == "אצל בעל החבילה" &&
+        hasSensitiveGrant(packageId) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            "status",
+            "collectorUserId",
+            "currentKibbutzLocation",
+            "currentKibbutzLocationText",
+            "updatedAt"
+          ]);
+    }
     function validCollectorPackageWaitingUpdate(packageId) {
       return approved() &&
         resource.data.status == "collected" &&
@@ -418,6 +439,7 @@ service cloud.firestore {
       allow update: if approved() && (
         validCollectorArrivalUpdate() ||
         validCollectorPackageCollectedUpdate(packageId) ||
+        validOwnerSelfCollectionUpdate(packageId) ||
         validCollectorPackageWaitingUpdate(packageId) ||
         validOwnerPackageUpdate() ||
         validOwnerPackageCancel() ||

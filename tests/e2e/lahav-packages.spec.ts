@@ -157,6 +157,7 @@ async function collectPackageAtLocation(
   page: Page,
   locationId: string,
   ownerName: string,
+  expectedAfterCollection: "collected" | "arrived" = "collected",
 ) {
   await clickPhoneNav(page, "איסוף");
   await app(page).locator(`.location-button[data-pickup-location-id="${locationId}"]`).click();
@@ -170,11 +171,14 @@ async function collectPackageAtLocation(
   const catalogCard = app(page).locator(".catalog-card").filter({ hasText: ownerName });
   await expect(catalogCard).toBeVisible({ timeout: 5000 });
   await openPickupApprovalLinkIfPresent(context, catalogCard);
-  await catalogCard.locator(".collect-button").click();
-  await expect(catalogCard.locator(".collect-button")).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  const collectButton = catalogCard.locator(".collect-button");
+  await collectButton.click();
+  if (expectedAfterCollection === "arrived") {
+    await expect(collectButton).toBeDisabled();
+    await expect(collectButton).toContainText("נמסרה בקיבוץ");
+  } else {
+    await expect(collectButton).toHaveAttribute("aria-pressed", "true");
+  }
 }
 
 async function openPickupApprovalLinkIfPresent(context: BrowserContext, card: Locator) {
@@ -486,11 +490,10 @@ test("collecting one location does not hide active packages from other locations
   const mosheCard = app(page).locator(".catalog-card").filter({ hasText: "משה בדואר" });
   await expect(mosheCard).toBeVisible();
   await openPickupApprovalLinkIfPresent(context, mosheCard);
-  await mosheCard.locator(".collect-button").click();
-  await expect(mosheCard.locator(".collect-button")).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  const mosheCollectButton = mosheCard.locator(".collect-button");
+  await mosheCollectButton.click();
+  await expect(mosheCollectButton).toBeDisabled();
+  await expect(mosheCollectButton).toContainText("נמסרה בקיבוץ");
 
   await clickPhoneNav(page, "בית");
   await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
@@ -500,11 +503,11 @@ test("collecting one location does not hide active packages from other locations
   await expect(app(page).locator(".package-list")).toContainText("בונו בפיצוץ", {
     timeout: 5000,
   });
-  await expect(app(page).locator(".package-list")).toContainText("נאספה");
+  await expect(app(page).locator(".package-list")).toContainText("נמסרה בקיבוץ");
   await expect(app(page).locator(".package-list")).toContainText("ממתינה לאיסוף");
 });
 
-test("multi-package lifecycle keeps home counters, pickup counts, and package statuses synchronized", async ({
+test("multi-package self-collection keeps home counters, pickup counts, and package statuses synchronized", async ({
   context,
   page,
 }) => {
@@ -555,15 +558,15 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
     await expectPackageCardStatus(page, item.name, "ממתינה לאיסוף");
   }
 
-  await collectPackageAtLocation(context, page, "post-office", "זרימה דואר אחת");
-  await collectPackageAtLocation(context, page, "pitzutz", "זרימה פיצוץ אחת");
-  await collectPackageAtLocation(context, page, "deli-place", "זרימה דלי");
+  await collectPackageAtLocation(context, page, "post-office", "זרימה דואר אחת", "arrived");
+  await collectPackageAtLocation(context, page, "pitzutz", "זרימה פיצוץ אחת", "arrived");
+  await collectPackageAtLocation(context, page, "deli-place", "זרימה דלי", "arrived");
 
   await clickPhoneNav(page, "בית");
   await expectHomeStatusSync(page, {
     ...baseline,
     waiting: baseline.waiting + 3,
-    collected: baseline.collected + 3,
+    arrived: baseline.arrived + 3,
   });
   await expect(app(page).locator('.pickup-card[data-pickup-location-id="post-office"] strong')).toHaveText(
     String(baselinePickupCounts.postOffice + 1),
@@ -577,64 +580,29 @@ test("multi-package lifecycle keeps home counters, pickup counts, and package st
   await expect(app(page).locator('.pickup-card[data-pickup-location-id="deli-place"] strong')).toHaveText(
     String(baselinePickupCounts.deliPlace),
   );
-  await expectPackageCardStatus(page, "זרימה דואר אחת", "נאספה");
+  await expectPackageCardStatus(page, "זרימה דואר אחת", "נמסרה בקיבוץ");
   await expectPackageCardStatus(page, "זרימה דואר שתיים", "ממתינה לאיסוף");
-  await expectPackageCardStatus(page, "זרימה פיצוץ אחת", "נאספה");
+  await expectPackageCardStatus(page, "זרימה פיצוץ אחת", "נמסרה בקיבוץ");
   await expectPackageCardStatus(page, "זרימה פיצוץ שתיים", "ממתינה לאיסוף");
   await expectPackageCardStatus(page, "זרימה אשכולות", "ממתינה לאיסוף");
-  await expectPackageCardStatus(page, "זרימה דלי", "נאספה");
+  await expectPackageCardStatus(page, "זרימה דלי", "נמסרה בקיבוץ");
 
   await clickPhoneNav(page, "מסירה");
   await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();
-  const deliveryTargets = [
-    { name: "זרימה דואר אחת", dropLocation: "gate-crate", note: "שמתי בדולב" },
-    { name: "זרימה פיצוץ אחת", dropLocation: "kolbo", note: "שמתי בארון הכלבו למעלה" },
-    { name: "זרימה דלי", dropLocation: "collector-home", note: "מוזמנים לקחת ממני, שמתי ליד הדלת" },
-  ];
-
-  for (const target of deliveryTargets) {
-    const arrivalCard = app(page).locator(".arrival-package-card").filter({ hasText: target.name });
-    await expect(arrivalCard).toBeVisible();
-    await arrivalCard.locator(".arrival-package-toggle").click();
-    await arrivalCard.locator("select[id^='drop-location-']").selectOption(target.dropLocation);
-    await arrivalCard.locator(".arrival-package-submit").click();
-    await expect(arrivalCard).toHaveCount(0);
-  }
-
-  await clickPhoneNav(page, "בית");
-  await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
-  await expectHomeStatusSync(page, {
-    ...baseline,
-    waiting: baseline.waiting + 3,
-    collected: baseline.collected,
-    arrived: baseline.arrived + 3,
-  });
-  for (const target of deliveryTargets) {
-    await expectPackageCardStatus(page, target.name, "נמסרה בקיבוץ");
-    await expect(app(page).locator(".package-card").filter({ hasText: target.name })).toContainText(
-      target.note,
-    );
-  }
-
-  const deliveredInKibbutzCard = app(page)
-    .locator(".package-card")
-    .filter({ hasText: "זרימה דואר אחת" });
-  await expect(deliveredInKibbutzCard.getByRole("button", { name: "אשר קבלה" })).toHaveCount(0);
-  await expectPackageCardStatus(page, "זרימה דואר אחת", "נמסרה בקיבוץ");
-
-  await collectPackageAtLocation(context, page, "post-office", "זרימה דואר שתיים");
+  await expect(app(page).locator(".arrival-package-card")).toHaveCount(0);
+  await expect(app(page)).toContainText("אין כרגע חבילות שסומנו כנאספו על ידך.");
+  await collectPackageAtLocation(context, page, "post-office", "זרימה דואר שתיים", "arrived");
 
   await clickPhoneNav(page, "בית");
   await expectHomeStatusSync(page, {
     ...baseline,
     waiting: baseline.waiting + 2,
-    collected: baseline.collected + 1,
-    arrived: baseline.arrived + 3,
+    arrived: baseline.arrived + 4,
   });
   await expect(app(page).locator('.pickup-card[data-pickup-location-id="post-office"] strong')).toHaveText(
     String(baselinePickupCounts.postOffice),
   );
-  await expectPackageCardStatus(page, "זרימה דואר שתיים", "נאספה");
+  await expectPackageCardStatus(page, "זרימה דואר שתיים", "נמסרה בקיבוץ");
   await expectPackageCardStatus(page, "זרימה פיצוץ שתיים", "ממתינה לאיסוף");
   await expectPackageCardStatus(page, "זרימה אשכולות", "ממתינה לאיסוף");
   await expectPackageCardStatus(page, "זרימה פיצוץ אחת", "נמסרה בקיבוץ");
@@ -648,41 +616,11 @@ test("saving two kibbutz delivery rows updates home status and shows both packag
 }) => {
   await gotoAdmin(page);
 
-  await clickPhoneNav(page, "הוספה");
-  await app(page).getByLabel("שם מקבל החבילה").fill("בדיקת מסירה אשכולות");
-  await app(page).locator("#pickup-location").selectOption("eshkolot");
-  await app(page)
-    .getByLabel("הודעת המשלוח המקורית")
-    .fill("משלוח ESH-001 ממתין לאיסוף באשכולות. קוד 111222.");
-  await app(page).getByRole("button", { name: /הוסף חבילה/ }).click();
-  await clickPhoneNav(page, "בית");
-  await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
-
   const beforeArrivedCount = await readHomeStatusCount(page, "home-status-arrived");
-  const collectedNames: string[] = [];
+  const collectedNames = ["הילה נבו", "איילת מדר"];
 
-  async function collectFirstPackageAtLocation(locationId: string) {
-    await clickPhoneNav(page, "איסוף");
-    await app(page).locator(`.location-button[data-pickup-location-id="${locationId}"]`).click();
-    await page
-      .getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })
-      .getByRole("button", { name: "אשר" })
-      .click();
-    await expect(app(page).getByText("איסוף בחנות")).toBeVisible();
-
-    const catalogCard = app(page).locator(".catalog-card").first();
-    const packageName = ((await catalogCard.locator(".package-name").textContent()) ?? "").trim();
-    await openPickupApprovalLinkIfPresent(context, catalogCard);
-    await catalogCard.locator(".collect-button").click();
-    await expect(catalogCard.locator(".collect-button")).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    return packageName;
-  }
-
-  collectedNames.push(await collectFirstPackageAtLocation("pitzutz"));
-  collectedNames.push(await collectFirstPackageAtLocation("eshkolot"));
+  await collectPackageAtLocation(context, page, "pitzutz", collectedNames[0]);
+  await collectPackageAtLocation(context, page, "pitzutz", collectedNames[1]);
 
   await clickPhoneNav(page, "מסירה");
   await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();
@@ -860,7 +798,13 @@ test("pickup flow reveals original messages only after confirmation and records 
   await popup.close();
   await page.bringToFront();
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-  const collectToggle = app(page).locator(".catalog-card").first().locator(".collect-button");
+  const selfCollectToggle = firstCatalogCard.locator(".collect-button");
+  await expect(selfCollectToggle).toBeDisabled();
+  await expect(selfCollectToggle).toContainText("נמסרה בקיבוץ");
+
+  const otherCatalogCard = app(page).locator(".catalog-card").filter({ hasText: "הילה נבו" });
+  const collectToggle = otherCatalogCard.locator(".collect-button");
+  await collectToggle.click();
   await expect(collectToggle).toHaveAttribute("aria-pressed", "true");
   await collectToggle.click();
   await expect(collectToggle).toHaveAttribute("aria-pressed", "false");
@@ -870,9 +814,9 @@ test("pickup flow reveals original messages only after confirmation and records 
 
   await clickPhoneNav(page, "בית");
   await expect(app(page).getByText(/נאספה על ידי/).first()).toBeVisible();
-  const collectedHomeCard = app(page).locator(".package-card").filter({ hasText: "עוז כרמל" });
+  const collectedHomeCard = app(page).locator(".package-card").filter({ hasText: "הילה נבו" });
   const collectedHomeWhatsApp = collectedHomeCard.getByRole("link", {
-    name: "פתח ווטסאפ עם עוז כרמל",
+    name: "פתח ווטסאפ עם הילה נבו",
   });
   await expect(collectedHomeWhatsApp).toHaveCSS("align-self", "flex-start");
   await expect(collectedHomeWhatsApp).toHaveCSS("margin-top", "2px");
@@ -882,24 +826,23 @@ test("pickup flow reveals original messages only after confirmation and records 
   await expect(app(page).getByText("אלה החבילות שמחכות לעדכון מיקום בקיבוץ")).toBeVisible();
   const arrivalCard = app(page).locator(".arrival-package-card").first();
   await expect(arrivalCard).toBeVisible();
-  const dropNote = arrivalCard.locator("textarea[id^='drop-note-']");
   const dropLocation = arrivalCard.locator("select[id^='drop-location-']");
-  await expect(dropNote).toHaveValue("");
-  await expect(dropNote).toHaveAttribute("placeholder", "שמתי בדולב");
-  await dropLocation.selectOption("kolbo");
-  await expect(dropNote).toHaveValue("");
-  await expect(dropNote).toHaveAttribute("placeholder", "שמתי בארון הכלבו למעלה");
-  await dropLocation.selectOption("collector-home");
-  await expect(dropNote).toHaveValue("");
-  await expect(dropNote).toHaveAttribute("placeholder", "מוזמנים לקחת ממני, שמתי ליד הדלת");
-  await dropLocation.selectOption("direct-home");
-  await expect(dropNote).toHaveValue("");
-  await expect(dropNote).toHaveAttribute("placeholder", "");
-  await dropNote.fill("השארתי ליד המזכירות");
-  await expect(dropNote).toHaveValue("השארתי ליד המזכירות");
+  await expect(dropLocation).toHaveValue("gate-crate");
+  await expect(dropLocation.locator("option")).toHaveText(["דולב ש.ג", "כלבו", "אחר"]);
+  await expect(arrivalCard.getByText("הערה למסירה", { exact: true })).toHaveCount(0);
+  await expect(arrivalCard.locator("input[id^='drop-other-']")).toHaveCount(0);
+
+  await dropLocation.selectOption("other");
+  const otherLocation = arrivalCard.locator("input[id^='drop-other-']");
+  await expect(otherLocation).toBeVisible();
+  await expect(otherLocation).not.toHaveAttribute("placeholder");
+  await expect(otherLocation).toHaveAttribute("maxlength", "40");
+  await expect(arrivalCard.locator(".arrival-package-submit")).toBeDisabled();
+  await otherLocation.fill("ליד המזכירות");
+  await expect(arrivalCard.locator(".arrival-package-submit")).toBeEnabled();
 
   await dropLocation.selectOption("gate-crate");
-  await dropNote.fill("");
+  await expect(otherLocation).toHaveCount(0);
   await arrivalCard.locator(".arrival-package-submit").click();
   await expect(page.getByRole("status")).toContainText("החבילה נמסרה בקיבוץ");
   await clickPhoneNav(page, "בית");
@@ -907,7 +850,6 @@ test("pickup flow reveals original messages only after confirmation and records 
 });
 
 test("multiple kibbutz delivery rows are collapsed until a package name is opened", async ({
-  context,
   page,
 }) => {
   await gotoAdmin(page);
@@ -920,13 +862,8 @@ test("multiple kibbutz delivery rows are collapsed until a package name is opene
   const catalogCards = app(page).locator(".catalog-card");
   await expect(catalogCards).toHaveCount(3);
 
-  const popupPromise = context.waitForEvent("page");
-  await catalogCards.nth(0).getByRole("link", { name: /https:\/\/u\.cheetahint\.com/ }).click();
-  const popup = await popupPromise;
-  await popup.close();
-  await page.bringToFront();
-  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await catalogCards.nth(1).locator(".collect-button").click();
+  await catalogCards.nth(2).locator(".collect-button").click();
 
   await clickPhoneNav(page, "מסירה");
   await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();

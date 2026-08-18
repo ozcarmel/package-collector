@@ -714,7 +714,10 @@ export function LahavPackagesApp() {
   );
   const currentEquivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
   const currentUserCollectedPackages = collectedPackages.filter(
-    (pkg) => pkg.collectorUserId && currentEquivalentUserIds.has(pkg.collectorUserId),
+    (pkg) =>
+      pkg.collectorUserId &&
+      currentEquivalentUserIds.has(pkg.collectorUserId) &&
+      !currentEquivalentUserIds.has(pkg.ownerUserId),
   );
   const arrivedPackages = activeHomePackages.filter(
     (pkg) => getHomePackageStatusBucket(pkg.status) === "arrived",
@@ -1581,7 +1584,8 @@ export function LahavPackagesApp() {
       (pkg) =>
         pkg.status === "collected" &&
         pkg.collectorUserId &&
-        currentEquivalentUserIds.has(pkg.collectorUserId),
+        currentEquivalentUserIds.has(pkg.collectorUserId) &&
+        !currentEquivalentUserIds.has(pkg.ownerUserId),
     );
     const packageToUpdate = packagesCollectedByCurrentUser.find((pkg) => pkg.id === packageId);
     if (!packageToUpdate) return;
@@ -1600,7 +1604,7 @@ export function LahavPackagesApp() {
             {
               packageId: packageToUpdate.id,
               dropLocation: draft.dropLocation,
-              dropNote: draft.dropNote,
+              dropNote: draft.dropLocation === "other" ? draft.dropNote : "",
             },
           ],
         },
@@ -2761,7 +2765,8 @@ export function LahavPackagesApp() {
       (pkg) =>
         pkg.status === "collected" &&
         pkg.collectorUserId &&
-        currentEquivalentUserIds.has(pkg.collectorUserId),
+        currentEquivalentUserIds.has(pkg.collectorUserId) &&
+        !currentEquivalentUserIds.has(pkg.ownerUserId),
     );
 
     function arrivalDraftForPackage(packageId: string): ArrivalPackageDraft {
@@ -2855,32 +2860,36 @@ export function LahavPackagesApp() {
                         onChange={(event) =>
                           updateArrivalDraft(pkg.id, {
                             dropLocation: event.target.value as KibbutzDropLocation,
+                            dropNote: "",
                           })
                         }
                       >
-                        <option value="gate-crate">בדולב בש.ג</option>
-                        <option value="kolbo">בכלבו</option>
-                        <option value="collector-home">אצלי בבית</option>
-                        <option value="direct-home">נמסר ישירות לבעל החבילה</option>
+                        <option value="gate-crate">דולב ש.ג</option>
+                        <option value="kolbo">כלבו</option>
                         <option value="other">אחר</option>
                       </select>
                     </div>
 
-                    <div className="field">
-                      <label htmlFor={`drop-note-${pkg.id}`}>הערה למסירה</label>
-                      <textarea
-                        id={`drop-note-${pkg.id}`}
-                        placeholder={dropNoteExamples[arrivalDraft.dropLocation]}
-                        value={arrivalDraft.dropNote}
-                        onChange={(event) =>
-                          updateArrivalDraft(pkg.id, { dropNote: event.target.value })
-                        }
-                      />
-                    </div>
+                    {arrivalDraft.dropLocation === "other" ? (
+                      <div className="field">
+                        <label htmlFor={`drop-other-${pkg.id}`}>מקום המסירה</label>
+                        <input
+                          id={`drop-other-${pkg.id}`}
+                          maxLength={40}
+                          value={arrivalDraft.dropNote}
+                          onChange={(event) =>
+                            updateArrivalDraft(pkg.id, { dropNote: event.target.value })
+                          }
+                        />
+                      </div>
+                    ) : null}
 
                     <button
                       className="button primary full arrival-package-submit"
-                      disabled={savingArrivalPackageId === pkg.id}
+                      disabled={
+                        savingArrivalPackageId === pkg.id ||
+                        (arrivalDraft.dropLocation === "other" && !arrivalDraft.dropNote.trim())
+                      }
                       onClick={() => updateArrivalPackage(pkg.id)}
                       type="button"
                     >
@@ -3183,6 +3192,7 @@ export function LahavPackagesApp() {
     const homeStatusBucket = getHomePackageStatusBucket(pkg.status);
     const canOpenArrivalFromStatus =
       homeStatusBucket === "collected" &&
+      !currentEquivalentUserIds.has(pkg.ownerUserId) &&
       Boolean(pkg.collectorUserId && currentEquivalentUserIds.has(pkg.collectorUserId));
     const canRemoveOwnPackage =
       currentEquivalentUserIds.has(pkg.ownerUserId) &&
@@ -3297,8 +3307,10 @@ export function LahavPackagesApp() {
   function CatalogCard({ pkg, index }: { pkg: DeliveryPackage; index: number }) {
     const runItem = activeRunItems.find((item) => item.packageId === pkg.id);
     const isCollected = pkg.status === "collected";
+    const isDeliveredInKibbutz = getHomePackageStatusBucket(pkg.status) === "arrived";
     const isCollecting = collectingPackageId === pkg.id;
-    const canToggleCollected = collectingPackageId === null || isCollecting;
+    const canToggleCollected =
+      !isDeliveredInKibbutz && (collectingPackageId === null || isCollecting);
     return (
       <div className="card catalog-card">
         <div className="catalog-card-head">
@@ -3311,8 +3323,8 @@ export function LahavPackagesApp() {
               {pkg.parsedAddresseeName ?? pkg.ownerName}
             </div>
           </div>
-          <span className={isCollected ? "badge done" : "badge waiting"}>
-            {isCollected ? "נאספה" : "ממתינה לאיסוף"}
+          <span className={isCollected || isDeliveredInKibbutz ? "badge done" : "badge waiting"}>
+            {isDeliveredInKibbutz ? "נמסרה בקיבוץ" : isCollected ? "נאספה" : "ממתינה לאיסוף"}
           </span>
         </div>
 
@@ -3341,7 +3353,13 @@ export function LahavPackagesApp() {
             <span className="collect-checkbox-mark" aria-hidden="true">
               {isCollected ? <Check /> : null}
             </span>
-            {isCollecting ? "מעדכן..." : isCollected ? "נאספה" : "ממתינה לאיסוף"}
+            {isCollecting
+              ? "מעדכן..."
+              : isDeliveredInKibbutz
+                ? "נמסרה בקיבוץ"
+                : isCollected
+                  ? "נאספה"
+                  : "ממתינה לאיסוף"}
           </button>
         </div>
       </div>

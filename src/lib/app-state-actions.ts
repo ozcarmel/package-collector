@@ -59,6 +59,8 @@ export const kibbutzDropLocationDefaultNotes: Record<KibbutzDropLocation, string
   other: "",
 };
 
+export const selfCollectedDeliveryText = "אצל בעל החבילה";
+
 export interface ArrivalPackageUpdateInput {
   packageId: string;
   dropLocation: KibbutzDropLocation;
@@ -471,21 +473,34 @@ export function markPackageCollected(
   input: { activeRunId: string | null; packageId: string },
   deps: ActionDeps,
 ) {
+  const collectedAt = deps.now();
+  const targetPackage = state.packages.find((pkg) => pkg.id === input.packageId);
+  const equivalentUserIds = getEquivalentUserIdsForCurrentUser(state);
+  const isSelfCollected = Boolean(
+    targetPackage && equivalentUserIds.has(targetPackage.ownerUserId),
+  );
+
   return {
     ...state,
     packages: state.packages.map((pkg) =>
       pkg.id === input.packageId
         ? {
             ...pkg,
-            status: "collected" as const,
+            status: isSelfCollected ? ("arrived" as const) : ("collected" as const),
             collectorUserId: state.currentUser.id,
-            updatedAt: deps.now(),
+            ...(isSelfCollected
+              ? {
+                  currentKibbutzLocation: "direct-home" as const,
+                  currentKibbutzLocationText: selfCollectedDeliveryText,
+                }
+              : {}),
+            updatedAt: collectedAt,
           }
         : pkg,
     ),
     pickupRunItems: state.pickupRunItems.map((item) =>
       item.packageId === input.packageId && item.pickupRunId === input.activeRunId
-        ? { ...item, itemStatus: "collected" as const, collectedAt: deps.now() }
+        ? { ...item, itemStatus: "collected" as const, collectedAt }
         : item,
     ),
   };
