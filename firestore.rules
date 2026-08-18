@@ -353,7 +353,7 @@ service cloud.firestore {
         pickupRunCollector(resource.data.pickupRunId) &&
         request.resource.data.itemStatus == "collected" &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(["itemStatus", "collectedAt"]);
+          .hasOnly(["itemStatus", "collectedAt", "lastCollectedAt"]);
     }
 
     function validPickupRunItemPendingUpdate() {
@@ -363,7 +363,7 @@ service cloud.firestore {
         request.resource.data.itemStatus == "pending" &&
         request.resource.data.collectedAt == null &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(["itemStatus", "collectedAt"]);
+          .hasOnly(["itemStatus", "collectedAt", "lastCollectedAt"]);
     }
 
     function validSensitiveGrantCreate(grantId) {

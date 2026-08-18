@@ -114,10 +114,12 @@ export interface PickupRunItem {
   pickupRunId: string;
   packageId: string;
   itemStatus: PickupRunItemStatus;
+  ownerNameSnapshot?: string;
   sensitiveMessageViewedAt?: string;
   sensitivePickupLinkOpenedAt?: string;
   pickupProblemText?: string;
   collectedAt?: string;
+  lastCollectedAt?: string;
 }
 
 export interface SensitiveAccessLog {

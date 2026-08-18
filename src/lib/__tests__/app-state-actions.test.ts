@@ -388,9 +388,11 @@ describe("app state actions", () => {
       pickupLocationId: "pitzutz",
       status: "active",
     });
-    expect(
-      result.state.pickupRunItems.filter((item) => item.pickupRunId === result.runId),
-    ).toHaveLength(waitingCount);
+    const runItems = result.state.pickupRunItems.filter(
+      (item) => item.pickupRunId === result.runId,
+    );
+    expect(runItems).toHaveLength(waitingCount);
+    expect(runItems.every((item) => Boolean(item.ownerNameSnapshot))).toBe(true);
     expect(
       result.state.accessLogs.filter((log) => log.pickupRunId === result.runId),
     ).toHaveLength(waitingCount);
@@ -467,6 +469,7 @@ describe("app state actions", () => {
     expect(collected.pickupRunItems.find((item) => item.packageId === packageId)).toMatchObject({
       itemStatus: "collected",
       collectedAt: "2026-06-28T10:00:00.000Z",
+      lastCollectedAt: "2026-06-28T10:00:00.000Z",
     });
 
     const arrived = updateCollectedPackagesArrival(
@@ -527,6 +530,7 @@ describe("app state actions", () => {
     expect(delivered.pickupRunItems.find((item) => item.packageId === "pkg-oz")).toMatchObject({
       itemStatus: "collected",
       collectedAt: "2026-06-28T10:00:00.000Z",
+      lastCollectedAt: "2026-06-28T10:00:00.000Z",
     });
 
     const waiting = unmarkPackageCollected(
@@ -575,7 +579,10 @@ describe("app state actions", () => {
     );
     expect(pkg).toMatchObject({ status: "waiting" });
     expect(pkg?.collectorUserId).toBeUndefined();
-    expect(runItem).toMatchObject({ itemStatus: "pending" });
+    expect(runItem).toMatchObject({
+      itemStatus: "pending",
+      lastCollectedAt: "2026-06-28T10:00:00.000Z",
+    });
     expect(runItem?.collectedAt).toBeUndefined();
     expect(waiting.accessLogs).toHaveLength(accessed.accessLogs.length);
   });

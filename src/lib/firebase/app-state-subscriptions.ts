@@ -103,9 +103,14 @@ export function subscribeFirestoreAppState(
         ] = await Promise.all([
           getDocs(collection(firestoreDb, "pickupLocations")),
           getDocs(collection(firestoreDb, "packages")),
-          getDocs(
-            query(collection(firestoreDb, "pickupRuns"), where("collectorUserId", "==", user.id)),
-          ),
+          isAdmin
+            ? getDocs(collection(firestoreDb, "pickupRuns"))
+            : getDocs(
+                query(
+                  collection(firestoreDb, "pickupRuns"),
+                  where("collectorUserId", "==", user.id),
+                ),
+              ),
           getDocs(
             query(
               collection(firestoreDb, "sensitivePackageDetails"),
@@ -120,15 +125,22 @@ export function subscribeFirestoreAppState(
         const pickupRuns = sortByUpdatedAt(
           pickupRunsSnapshot.docs.map((item) => item.data() as PickupRun),
         );
-        const runItems = (
-          await Promise.all(
-            pickupRuns.map((run) =>
-              getDocs(
-                query(collection(firestoreDb, "pickupRunItems"), where("pickupRunId", "==", run.id)),
-              ),
-            ),
-          )
-        ).flatMap((snapshot) => snapshot.docs.map((item) => item.data() as PickupRunItem));
+        const runItems = isAdmin
+          ? []
+          : (
+              await Promise.all(
+                pickupRuns.map((run) =>
+                  getDocs(
+                    query(
+                      collection(firestoreDb, "pickupRunItems"),
+                      where("pickupRunId", "==", run.id),
+                    ),
+                  ),
+                ),
+              )
+            ).flatMap((snapshot) =>
+              snapshot.docs.map((item) => item.data() as PickupRunItem),
+            );
 
         nextState.pickupLocations = mergePickupLocations(remoteLocations);
         nextState.users = approvedUsersSnapshot.docs.map((item) => item.data() as AppUser);

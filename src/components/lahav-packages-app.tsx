@@ -5,6 +5,7 @@ import {
   Bell,
   CalendarDays,
   Check,
+  ChevronDown,
   ChevronLeft,
   Clock,
   ClipboardList,
@@ -34,6 +35,7 @@ import {
 import { FaWhatsapp } from "react-icons/fa6";
 import type { CSSProperties, ReactNode } from "react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { buildAdminPickupConfirmations } from "@/lib/admin-pickup-confirmations";
 import { getConfiguredOperationsRepository } from "@/lib/app-repository";
 import type { RevealedSensitivePackageDetails } from "@/lib/app-repository-contract";
 import {
@@ -521,6 +523,7 @@ export function LahavPackagesApp() {
   const [savingArrivalPackageId, setSavingArrivalPackageId] = useState<string | null>(null);
   const [adminActionId, setAdminActionId] = useState<string | null>(null);
   const [adminListView, setAdminListView] = useState<AdminListView>("pending");
+  const [isAdminPickupAuditOpen, setIsAdminPickupAuditOpen] = useState(true);
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
   const [isHomeHelpOpen, setIsHomeHelpOpen] = useState(false);
   const [activeStatusSheet, setActiveStatusSheet] = useState<HomePackageStatusBucket | null>(
@@ -2926,6 +2929,7 @@ export function LahavPackagesApp() {
       currentUserId,
     );
     const adminPackages = state.packages;
+    const pickupConfirmations = buildAdminPickupConfirmations(state);
 
     return (
       <>
@@ -2984,6 +2988,61 @@ export function LahavPackagesApp() {
             <span>חבילות</span>
           </button>
         </div>
+
+        <section className="admin-card admin-pickup-audit">
+          <button
+            aria-expanded={isAdminPickupAuditOpen}
+            className="admin-pickup-audit-toggle"
+            onClick={() => setIsAdminPickupAuditOpen((current) => !current)}
+            type="button"
+          >
+            <span className="admin-pickup-audit-heading">
+              <strong>אישורי איסוף חבילות</strong>
+              <span className="admin-pickup-audit-count">{pickupConfirmations.length}</span>
+            </span>
+            <ChevronDown
+              aria-hidden="true"
+              className={isAdminPickupAuditOpen ? "expanded" : ""}
+            />
+          </button>
+
+          {isAdminPickupAuditOpen ? (
+            <div className="admin-pickup-audit-list">
+              {pickupConfirmations.length === 0 ? (
+                <div className="admin-pickup-audit-empty">עדיין אין אישורי איסוף.</div>
+              ) : (
+                pickupConfirmations.map((confirmation) => (
+                  <article className="admin-pickup-audit-row" key={confirmation.id}>
+                    <div className="admin-pickup-audit-topline">
+                      <strong>{confirmation.pickupLocationName}</strong>
+                      <time>{formatHebrewDateTime(confirmation.confirmedAt)}</time>
+                    </div>
+                    <div className="admin-pickup-audit-user">
+                      {confirmation.userName} אישר/ה שנמצא/ת בנקודת האיסוף
+                    </div>
+                    <div
+                      className={`admin-pickup-audit-result ${
+                        confirmation.collectedPackageCount === 0 ? "empty" : ""
+                      }`}
+                    >
+                      {confirmation.collectedPackageCount === 0
+                        ? "לא נאספו חבילות לאחר האישור"
+                        : `${
+                            confirmation.collectedPackageCount === 1
+                              ? "נאספה חבילה אחת"
+                              : `נאספו ${confirmation.collectedPackageCount} חבילות`
+                          }${
+                            confirmation.collectedRecipientNames.length > 0
+                              ? ` עבור: ${confirmation.collectedRecipientNames.join(", ")}`
+                              : ""
+                          }`}
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          ) : null}
+        </section>
 
         <div className="stack">
           {adminListView === "pending" && pendingJoinRequests.length === 0 ? (

@@ -427,6 +427,7 @@ export const firestoreRepository: AppOperationsRepository = {
       pickupRunId: runId,
       packageId: pkg.id,
       itemStatus: "pending",
+      ownerNameSnapshot: pkg.ownerName,
       sensitiveMessageViewedAt: createdAt,
     }));
 
@@ -583,6 +584,7 @@ export const firestoreRepository: AppOperationsRepository = {
     batch.update(doc(db, "pickupRunItems", itemId), {
       itemStatus: "collected",
       collectedAt,
+      lastCollectedAt: collectedAt,
     });
     await batch.commit();
 
@@ -606,7 +608,12 @@ export const firestoreRepository: AppOperationsRepository = {
       ),
       pickupRunItems: state.pickupRunItems.map((item) =>
         item.pickupRunId === input.activeRunId && item.packageId === input.packageId
-          ? { ...item, itemStatus: "collected" as const, collectedAt }
+          ? {
+              ...item,
+              itemStatus: "collected" as const,
+              collectedAt,
+              lastCollectedAt: collectedAt,
+            }
           : item,
       ),
     };
@@ -657,6 +664,7 @@ export const firestoreRepository: AppOperationsRepository = {
       batch.update(itemRef, {
         itemStatus: "pending",
         collectedAt: deleteField(),
+        lastCollectedAt: item.lastCollectedAt ?? item.collectedAt,
       });
     }
     await batch.commit();
@@ -681,7 +689,10 @@ export const firestoreRepository: AppOperationsRepository = {
           return item;
         }
 
-        const pendingItem = { ...item };
+        const pendingItem = {
+          ...item,
+          lastCollectedAt: item.lastCollectedAt ?? item.collectedAt,
+        };
         delete pendingItem.collectedAt;
         return {
           ...pendingItem,
@@ -719,7 +730,10 @@ export const firestoreRepository: AppOperationsRepository = {
         batch.delete(sensitiveDetailsSnapshot.ref);
       }
       runItemsSnapshot.docs.forEach((itemDoc) => {
-        batch.delete(itemDoc.ref);
+        const item = itemDoc.data() as PickupRunItem;
+        if (!item.lastCollectedAt && !item.collectedAt) {
+          batch.delete(itemDoc.ref);
+        }
       });
 
       await batch.commit();
@@ -773,7 +787,10 @@ export const firestoreRepository: AppOperationsRepository = {
       batch.delete(sensitiveDetailsSnapshot.ref);
     }
     runItemsSnapshot.docs.forEach((itemDoc) => {
-      batch.delete(itemDoc.ref);
+      const item = itemDoc.data() as PickupRunItem;
+      if (!item.lastCollectedAt && !item.collectedAt) {
+        batch.delete(itemDoc.ref);
+      }
     });
 
     await batch.commit();
@@ -781,7 +798,9 @@ export const firestoreRepository: AppOperationsRepository = {
     return {
       ...state,
       packages: state.packages.filter((pkg) => pkg.id !== packageId),
-      pickupRunItems: state.pickupRunItems.filter((item) => item.packageId !== packageId),
+      pickupRunItems: state.pickupRunItems.filter(
+        (item) => item.packageId !== packageId || Boolean(item.lastCollectedAt || item.collectedAt),
+      ),
       accessLogs: state.accessLogs.filter((log) => log.packageId !== packageId),
     };
   },

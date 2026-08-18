@@ -1042,6 +1042,123 @@ form.stack,
   text-align: center;
 }
 
+.admin-pickup-audit {
+  margin: 14px 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-pickup-audit-toggle {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  background: transparent;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text);
+  text-align: start;
+}
+
+.admin-pickup-audit-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-pickup-audit-heading strong {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.admin-pickup-audit-count {
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  padding-inline: 7px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-pickup-audit-toggle > svg {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+  transition: transform 160ms ease;
+}
+
+.admin-pickup-audit-toggle > svg.expanded {
+  transform: rotate(180deg);
+}
+
+.admin-pickup-audit-list {
+  border-top: 1px solid var(--line);
+}
+
+.admin-pickup-audit-row {
+  padding: 12px;
+}
+
+.admin-pickup-audit-row + .admin-pickup-audit-row {
+  border-top: 1px solid #eadcc8;
+}
+
+.admin-pickup-audit-topline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+}
+
+.admin-pickup-audit-topline strong {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.admin-pickup-audit-topline time {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.admin-pickup-audit-user {
+  margin-top: 2px;
+  color: #4e493f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-pickup-audit-result {
+  margin-top: 7px;
+  border-radius: 7px;
+  background: #edf5e8;
+  padding: 7px 9px;
+  color: var(--primary-strong);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-pickup-audit-result.empty {
+  background: var(--field);
+  color: var(--muted);
+}
+
+.admin-pickup-audit-empty {
+  padding: 15px 12px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 14px;
+}
+
 .location-manager-panel {
   margin-top: 12px;
   border: 1px solid var(--line);

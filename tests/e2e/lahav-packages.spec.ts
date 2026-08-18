@@ -298,6 +298,33 @@ test("admin can reject pending users and the pending list updates", async ({ pag
   await expect(app(page).locator(".admin-card").filter({ hasText: "050-203-4475" })).toHaveCount(0);
 });
 
+test("admin pickup confirmations show who confirmed and which package was collected", async ({
+  context,
+  page,
+}) => {
+  await gotoAdmin(page);
+  await collectPackageAtLocation(context, page, "pitzutz", "הילה נבו");
+  await openAdmin(page);
+
+  const audit = app(page).locator(".admin-pickup-audit");
+  await expect(audit.getByText("אישורי איסוף חבילות")).toBeVisible();
+
+  const confirmation = audit
+    .locator(".admin-pickup-audit-row")
+    .filter({ hasText: "פיצוץ להבים" })
+    .first();
+  await expect(confirmation).toContainText("עוז כרמל");
+  await expect(confirmation).toContainText("נאספה חבילה אחת עבור: הילה נבו");
+  await expect(confirmation.locator("time")).not.toBeEmpty();
+
+  const toggle = audit.getByRole("button", { name: /אישורי איסוף חבילות/ });
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(audit.locator(".admin-pickup-audit-list")).toHaveCount(0);
+  await toggle.click();
+  await expect(confirmation).toBeVisible();
+});
 test("admin-created pickup locations appear across home, add, pickup, and hours flows", async ({
   page,
 }) => {

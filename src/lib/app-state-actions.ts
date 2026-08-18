@@ -412,6 +412,7 @@ export function startPickupRun(state: AppState, pickupLocationId: string, deps: 
     pickupRunId: runId,
     packageId: pkg.id,
     itemStatus: "pending",
+    ownerNameSnapshot: pkg.ownerName,
     sensitiveMessageViewedAt: createdAt,
   }));
   const viewLogs = packagesForLocation.map((pkg) => ({
@@ -500,7 +501,12 @@ export function markPackageCollected(
     ),
     pickupRunItems: state.pickupRunItems.map((item) =>
       item.packageId === input.packageId && item.pickupRunId === input.activeRunId
-        ? { ...item, itemStatus: "collected" as const, collectedAt }
+        ? {
+            ...item,
+            itemStatus: "collected" as const,
+            collectedAt,
+            lastCollectedAt: collectedAt,
+          }
         : item,
     ),
   };
@@ -548,7 +554,10 @@ export function unmarkPackageCollected(
         return item;
       }
 
-      const pendingItem = { ...item };
+      const pendingItem = {
+        ...item,
+        lastCollectedAt: item.lastCollectedAt ?? item.collectedAt,
+      };
       delete pendingItem.collectedAt;
       return {
         ...pendingItem,
@@ -610,7 +619,10 @@ export function removeOwnPackage(state: AppState, packageId: string, deps: Actio
     return {
       ...state,
       packages: state.packages.filter((pkg) => pkg.id !== packageId),
-      pickupRunItems: state.pickupRunItems.filter((item) => item.packageId !== packageId),
+      pickupRunItems: state.pickupRunItems.filter(
+        (item) =>
+          item.packageId !== packageId || Boolean(item.lastCollectedAt || item.collectedAt),
+      ),
       accessLogs: state.accessLogs.filter((log) => log.packageId !== packageId),
     };
   }
@@ -658,7 +670,9 @@ export function deletePackage(state: AppState, packageId: string) {
   return {
     ...state,
     packages: state.packages.filter((pkg) => pkg.id !== packageId),
-    pickupRunItems: state.pickupRunItems.filter((item) => item.packageId !== packageId),
+    pickupRunItems: state.pickupRunItems.filter(
+      (item) => item.packageId !== packageId || Boolean(item.lastCollectedAt || item.collectedAt),
+    ),
     accessLogs: state.accessLogs.filter((log) => log.packageId !== packageId),
   };
 }

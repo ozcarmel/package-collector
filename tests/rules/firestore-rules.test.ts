@@ -185,6 +185,34 @@ describe("firestore security rules", () => {
     );
   });
 
+  it("allows admins to read all pickup confirmations but blocks regular users from the admin log", async () => {
+    await seedDoc("users/u-admin", userDoc("u-admin", { role: "admin" }));
+    await seedDoc("users/u-collector", userDoc("u-collector"));
+    await seedDoc("users/u-other", userDoc("u-other"));
+    await seedDoc("pickupRuns/run-audit", {
+      id: "run-audit",
+      collectorUserId: "u-collector",
+      pickupLocationId: "pitzutz",
+      status: "active",
+      sensitiveDetailsAccessConfirmedAt: now,
+      createdAt: now,
+    });
+    await seedDoc("pickupRunItems/run-audit_pkg-audit", {
+      id: "run-audit_pkg-audit",
+      pickupRunId: "run-audit",
+      packageId: "pkg-audit",
+      itemStatus: "pending",
+      ownerNameSnapshot: "Test Recipient",
+    });
+
+    const adminDb = dbFor("u-admin");
+    await assertSucceeds(adminDb.collection("pickupRuns").get());
+    await assertSucceeds(adminDb.collection("pickupRunItems").get());
+
+    const regularDb = dbFor("u-other");
+    await assertFails(regularDb.collection("pickupRuns").get());
+    await assertFails(regularDb.collection("pickupRunItems").get());
+  });
   it("hides sensitive package details until a collector has an access grant", async () => {
     await seedDoc("users/u-owner", userDoc("u-owner"));
     await seedDoc("users/u-collector", userDoc("u-collector"));
@@ -251,6 +279,7 @@ describe("firestore security rules", () => {
     collectBatch.update(collectorDb.doc("pickupRunItems/run-toggle_pkg-toggle"), {
       itemStatus: "collected",
       collectedAt: now,
+      lastCollectedAt: now,
     });
     await assertSucceeds(collectBatch.commit());
 
@@ -263,6 +292,7 @@ describe("firestore security rules", () => {
     unmarkBatch.update(collectorDb.doc("pickupRunItems/run-toggle_pkg-toggle"), {
       itemStatus: "pending",
       collectedAt: null,
+      lastCollectedAt: now,
     });
     await assertSucceeds(unmarkBatch.commit());
   });
@@ -304,6 +334,7 @@ describe("firestore security rules", () => {
     collectBatch.update(ownerDb.doc("pickupRunItems/run-self_pkg-self"), {
       itemStatus: "collected",
       collectedAt: now,
+      lastCollectedAt: now,
     });
 
     await assertSucceeds(collectBatch.commit());
@@ -319,6 +350,7 @@ describe("firestore security rules", () => {
     unmarkBatch.update(ownerDb.doc("pickupRunItems/run-self_pkg-self"), {
       itemStatus: "pending",
       collectedAt: null,
+      lastCollectedAt: now,
     });
     await assertSucceeds(unmarkBatch.commit());
   });
