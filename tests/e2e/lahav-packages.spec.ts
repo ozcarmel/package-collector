@@ -877,7 +877,7 @@ test("pickup flow reveals original messages only after confirmation and records 
   await expect(collectedHomeWhatsApp).toHaveCSS("align-self", "flex-start");
   await expect(collectedHomeWhatsApp).toHaveCSS("margin-top", "2px");
 
-  await clickPhoneNav(page, "מסירה");
+  await collectedHomeCard.getByRole("button", { name: "נאספה" }).click();
   await expect(app(page).getByRole("heading", { name: "החבילות הגיעו" })).toBeVisible();
   await expect(app(page).getByText("אלה החבילות שמחכות לעדכון מיקום בקיבוץ")).toBeVisible();
   const arrivalCard = app(page).locator(".arrival-package-card").first();

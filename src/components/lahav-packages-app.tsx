@@ -3180,6 +3180,10 @@ export function LahavPackagesApp() {
   function PackageCard({ pkg }: { pkg: DeliveryPackage }) {
     const collectorName = getUserName(state.users, pkg.collectorUserId);
     const detailBadge = homePackageDetailBadge(pkg);
+    const homeStatusBucket = getHomePackageStatusBucket(pkg.status);
+    const canOpenArrivalFromStatus =
+      homeStatusBucket === "collected" &&
+      Boolean(pkg.collectorUserId && currentEquivalentUserIds.has(pkg.collectorUserId));
     const canRemoveOwnPackage =
       currentEquivalentUserIds.has(pkg.ownerUserId) &&
       (pkg.status === "waiting" ||
@@ -3219,10 +3223,19 @@ export function LahavPackagesApp() {
                   </button>
                 ) : null}
               </span>
-              {getHomePackageStatusBucket(pkg.status) === "waiting" ? (
+              {homeStatusBucket === "waiting" ? (
                 <button
                   className={`${homePackageStatusBadgeClass(pkg)} status-action-badge package-status-slot`}
                   onClick={() => openPickupScreenForLocation(pkg.pickupLocationId)}
+                  type="button"
+                >
+                  {homePackageStatusLabel(pkg)}
+                </button>
+              ) : canOpenArrivalFromStatus ? (
+                <button
+                  className={`${homePackageStatusBadgeClass(pkg)} status-action-badge package-status-slot`}
+                  onClick={() => navigateToScreen("arrival")}
+                  title="מעבר למסירה"
                   type="button"
                 >
                   {homePackageStatusLabel(pkg)}
