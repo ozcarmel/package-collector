@@ -1,5 +1,6 @@
 import type {
   ActionDeps,
+  AdminPackageStatus,
   CreateJoinRequestInput,
   CreatePackageInput,
   CreatePickupLocationInput,
@@ -113,6 +114,12 @@ export interface AppOperationsRepository {
   removeOwnPackage(state: AppState, packageId: string, deps: ActionDeps): RepositoryStateResult;
 
   deletePackage(state: AppState, packageId: string, deps: ActionDeps): RepositoryStateResult;
+
+  setPackageStatusByAdmin(
+    state: AppState,
+    input: { packageId: string; status: AdminPackageStatus },
+    deps: ActionDeps,
+  ): RepositoryStateResult;
 
   updateCollectedPackagesArrival(
     state: AppState,

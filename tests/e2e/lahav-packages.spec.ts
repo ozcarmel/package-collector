@@ -325,6 +325,58 @@ test("admin pickup confirmations show who confirmed and which package was collec
   await toggle.click();
   await expect(confirmation).toBeVisible();
 });
+test("admin status correction keeps Home and pickup catalog synchronized", async ({ page }) => {
+  await gotoAdmin(page);
+  await openAdmin(page);
+  await app(page)
+    .locator(".summary-grid")
+    .getByRole("button", { name: /חבילות/ })
+    .click();
+
+  const adminPackageCard = app(page).locator(".admin-card").filter({ hasText: "הילה נבו" });
+  await adminPackageCard
+    .getByRole("button", { name: "העבר את הילה נבו לסטטוס נאספה" })
+    .click();
+  await expect(page.getByRole("status")).toContainText("החבילה עודכנה כנאספה");
+
+  await clickPhoneNav(page, "בית");
+  await expectPackageCardStatus(page, "הילה נבו", "נאספה");
+
+  await clickPhoneNav(page, "איסוף");
+  await app(page).locator('.location-button[data-pickup-location-id="pitzutz"]').click();
+  await page
+    .getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })
+    .getByRole("button", { name: "אשר" })
+    .click();
+  await expect(app(page).locator(".catalog-card").filter({ hasText: "הילה נבו" })).toHaveCount(0);
+
+  await openAdmin(page);
+  await app(page)
+    .locator(".summary-grid")
+    .getByRole("button", { name: /חבילות/ })
+    .click();
+  await app(page)
+    .locator(".admin-card")
+    .filter({ hasText: "הילה נבו" })
+    .getByRole("button", { name: "העבר את הילה נבו לסטטוס ממתינה לאיסוף" })
+    .click();
+  await expect(page.getByRole("status")).toContainText("החבילה הוחזרה לממתינה לאיסוף");
+
+  await clickPhoneNav(page, "בית");
+  await expectPackageCardStatus(page, "הילה נבו", "ממתינה לאיסוף");
+
+  await clickPhoneNav(page, "איסוף");
+  await app(page).locator('.location-button[data-pickup-location-id="pitzutz"]').click();
+  await page
+    .getByRole("dialog", { name: "האם אתה כבר בנקודת האיסוף?" })
+    .getByRole("button", { name: "אשר" })
+    .click();
+  const restoredCatalogCard = app(page)
+    .locator(".catalog-card")
+    .filter({ hasText: "הילה נבו" });
+  await expect(restoredCatalogCard).toBeVisible();
+  await expect(restoredCatalogCard.locator(".original-message")).toBeVisible();
+});
 test("admin-created pickup locations appear across home, add, pickup, and hours flows", async ({
   page,
 }) => {

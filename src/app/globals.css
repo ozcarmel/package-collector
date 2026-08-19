@@ -2074,6 +2074,55 @@ form.stack,
   font-size: 13px;
 }
 
+.admin-package-status-control {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.admin-package-status-control > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-package-status-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.admin-package-status-option {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--field);
+  color: var(--text);
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-package-status-option:not(:disabled) {
+  cursor: pointer;
+}
+
+.admin-package-status-option:disabled {
+  opacity: 1;
+}
+
+.admin-package-status-option.waiting.selected {
+  border-color: var(--status-waiting-border);
+  background: var(--status-waiting-bg);
+  color: var(--status-waiting-text);
+}
+
+.admin-package-status-option.collected.selected {
+  border-color: #afd3ca;
+  background: #dcefed;
+  color: #0d5b51;
+}
 .admin-package-log {
   display: grid;
   gap: 5px;

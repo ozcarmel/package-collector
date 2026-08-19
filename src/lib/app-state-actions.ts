@@ -40,6 +40,13 @@ export interface UpdatePackageInput extends CreatePackageInput {
   packageId: string;
 }
 
+export type AdminPackageStatus = "waiting" | "collected";
+
+export interface SetAdminPackageStatusInput {
+  packageId: string;
+  status: AdminPackageStatus;
+}
+
 export interface CreatePickupLocationInput {
   name: string;
   address: string;
@@ -677,6 +684,53 @@ export function deletePackage(state: AppState, packageId: string) {
   };
 }
 
+export function setPackageStatusByAdmin(
+  state: AppState,
+  input: SetAdminPackageStatusInput,
+  deps: ActionDeps,
+) {
+  if (state.currentUser.role !== "admin" && state.currentUser.role !== "owner") {
+    throw new Error("Only admins can change package status.");
+  }
+
+  const targetPackage = state.packages.find((pkg) => pkg.id === input.packageId);
+  if (!targetPackage || targetPackage.status === input.status) return state;
+
+  const updatedAt = deps.now();
+  const updatedPackage: DeliveryPackage = {
+    ...targetPackage,
+    status: input.status,
+    publicSummary: input.status === "waiting" ? "ממתינה לאיסוף" : "נאספה",
+    updatedAt,
+  };
+
+  delete updatedPackage.currentKibbutzLocation;
+  delete updatedPackage.currentKibbutzLocationText;
+  delete updatedPackage.deliveredAt;
+  delete updatedPackage.cancelledAt;
+  delete updatedPackage.cancelledByUserId;
+  if (input.status === "waiting") {
+    delete updatedPackage.collectorUserId;
+  }
+
+  return {
+    ...state,
+    packages: state.packages.map((pkg) =>
+      pkg.id === input.packageId ? updatedPackage : pkg,
+    ),
+    pickupRunItems: state.pickupRunItems.map((item) => {
+      if (item.packageId !== input.packageId) return item;
+
+      const updatedItem = {
+        ...item,
+        itemStatus: "skipped" as const,
+        lastCollectedAt: item.lastCollectedAt ?? item.collectedAt,
+      };
+      delete updatedItem.collectedAt;
+      return updatedItem;
+    }),
+  };
+}
 export function approveJoinRequest(state: AppState, requestId: string, deps: ActionDeps) {
   const request = state.joinRequests.find((item) => item.id === requestId);
   if (!request) return state;

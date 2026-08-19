@@ -26,6 +26,7 @@ import type {
 } from "@/lib/app-repository-contract";
 import type {
   ActionDeps,
+  AdminPackageStatus,
   CreateJoinRequestInput,
   CreatePackageInput,
   CreatePickupLocationInput,
@@ -41,6 +42,7 @@ import {
   removeOwnPackage as removeOwnPackageAction,
   resolveKibbutzDropNote,
   selfCollectedDeliveryText,
+  setPackageStatusByAdmin as setPackageStatusByAdminAction,
   updatePackage as updatePackageAction,
   updateCollectedPackagesArrival as updateCollectedPackagesArrivalAction,
   updatePickupLocation as updatePickupLocationAction,
@@ -805,6 +807,55 @@ export const firestoreRepository: AppOperationsRepository = {
     };
   },
 
+  async setPackageStatusByAdmin(
+    state: AppState,
+    input: { packageId: string; status: AdminPackageStatus },
+    deps: ActionDeps,
+  ) {
+    if (state.currentUser.role !== "admin" && state.currentUser.role !== "owner") {
+      throw new Error("Only admins can change package status.");
+    }
+
+    const db = requireFirestore();
+    const packageRef = doc(db, "packages", input.packageId);
+    const packageSnapshot = await getDoc(packageRef);
+    const pkg = packageSnapshot.data() as DeliveryPackage | undefined;
+    if (!pkg || pkg.status === input.status) return state;
+
+    const updatedAt = deps.now();
+    const packageUpdate: Record<string, unknown> = {
+      status: input.status,
+      publicSummary: input.status === "waiting" ? "ממתינה לאיסוף" : "נאספה",
+      currentKibbutzLocation: deleteField(),
+      currentKibbutzLocationText: deleteField(),
+      deliveredAt: deleteField(),
+      cancelledAt: deleteField(),
+      cancelledByUserId: deleteField(),
+      updatedAt,
+    };
+    if (input.status === "waiting") {
+      packageUpdate.collectorUserId = deleteField();
+    }
+
+    const runItemsSnapshot = await getDocs(
+      query(collection(db, "pickupRunItems"), where("packageId", "==", input.packageId)),
+    );
+    const batch = writeBatch(db);
+    batch.update(packageRef, packageUpdate);
+    runItemsSnapshot.docs.forEach((itemDoc) => {
+      const item = itemDoc.data() as PickupRunItem;
+      const itemUpdate: Record<string, unknown> = {
+        itemStatus: "skipped",
+        collectedAt: deleteField(),
+      };
+      const lastCollectedAt = item.lastCollectedAt ?? item.collectedAt;
+      if (lastCollectedAt) itemUpdate.lastCollectedAt = lastCollectedAt;
+      batch.update(itemDoc.ref, itemUpdate);
+    });
+    await batch.commit();
+
+    return setPackageStatusByAdminAction(state, input, deps);
+  },
   async updateCollectedPackagesArrival(
     state: AppState,
     input: UpdateArrivalInput,

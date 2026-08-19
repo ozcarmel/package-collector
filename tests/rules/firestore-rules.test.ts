@@ -692,6 +692,46 @@ describe("firestore security rules", () => {
     );
   });
 
+  it("allows admins to correct package status and blocks regular members", async () => {
+    await seedDoc("users/u-admin", userDoc("u-admin", { role: "admin" }));
+    await seedDoc("users/u-member", userDoc("u-member"));
+    await seedDoc(
+      "packages/pkg-status-correction",
+      packageDoc("pkg-status-correction", "u-owner", "pitzutz", {
+        status: "collected",
+        collectorUserId: "u-collector",
+      }),
+    );
+    await seedDoc("pickupRunItems/run-status_pkg-status-correction", {
+      id: "run-status_pkg-status-correction",
+      pickupRunId: "run-status",
+      packageId: "pkg-status-correction",
+      itemStatus: "collected",
+      collectedAt: now,
+    });
+
+    const adminDb = dbFor("u-admin");
+    const adminBatch = adminDb.batch();
+    adminBatch.update(adminDb.doc("packages/pkg-status-correction"), {
+      status: "waiting",
+      publicSummary: "Waiting for pickup",
+      collectorUserId: null,
+      updatedAt: now,
+    });
+    adminBatch.update(adminDb.doc("pickupRunItems/run-status_pkg-status-correction"), {
+      itemStatus: "skipped",
+      collectedAt: null,
+      lastCollectedAt: now,
+    });
+    await assertSucceeds(adminBatch.commit());
+
+    await assertFails(
+      dbFor("u-member").doc("packages/pkg-status-correction").update({
+        status: "collected",
+        updatedAt: now,
+      }),
+    );
+  });
   it("allows admins to delete packages in any status", async () => {
     await seedDoc("users/u-admin", userDoc("u-admin", { role: "admin" }));
     await seedDoc(

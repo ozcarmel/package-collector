@@ -39,6 +39,7 @@ import { buildAdminPickupConfirmations } from "@/lib/admin-pickup-confirmations"
 import { getConfiguredOperationsRepository } from "@/lib/app-repository";
 import type { RevealedSensitivePackageDetails } from "@/lib/app-repository-contract";
 import {
+  type AdminPackageStatus,
   createId,
   getEquivalentUserIdsForCurrentUser,
   kibbutzDropLocationDefaultNotes,
@@ -757,7 +758,11 @@ export function LahavPackagesApp() {
   const activeRunPackageIds = new Set(activeRunItems.map((item) => item.packageId));
   const catalogPackages = activeRun
     ? state.packages
-        .filter((pkg) => activeRunPackageIds.has(pkg.id))
+        .filter((pkg) => {
+          if (!activeRunPackageIds.has(pkg.id)) return false;
+          const runItem = activeRunItems.find((item) => item.packageId === pkg.id);
+          return pkg.status === "waiting" || runItem?.itemStatus === "collected";
+        })
         .map((pkg) => ({ ...pkg, ...revealedSensitiveDetails[pkg.id] }))
     : [];
   catalogPackagesRef.current = catalogPackages;
@@ -1671,6 +1676,28 @@ export function LahavPackagesApp() {
     }
   }
 
+  async function setAdminPackageStatus(packageId: string, status: AdminPackageStatus) {
+    if (adminActionId) return;
+
+    setAdminActionId(`status-package-${packageId}-${status}`);
+    try {
+      const nextState = await operationsRepository.setPackageStatusByAdmin(
+        state,
+        { packageId, status },
+        actionDeps,
+      );
+      applyRepositoryState(nextState);
+      notify(
+        status === "waiting"
+          ? "החבילה הוחזרה לממתינה לאיסוף."
+          : "החבילה עודכנה כנאספה.",
+      );
+    } catch {
+      notify("לא הצלחנו לשנות את סטטוס החבילה. נסה/י שוב בעוד רגע.");
+    } finally {
+      setAdminActionId(null);
+    }
+  }
   async function approveJoinRequest(requestId: string) {
     if (adminActionId) return;
 
@@ -3191,6 +3218,39 @@ export function LahavPackagesApp() {
                       <span className={statusBadgeClass(pkg.status)}>
                         {statusLabel(pkg.status)}
                       </span>
+                    </div>
+                    <div className="admin-package-status-control">
+                      <span>שנה סטטוס</span>
+                      <div
+                        aria-label={`שינוי סטטוס לחבילה של ${pkg.ownerName}`}
+                        className="admin-package-status-options"
+                        role="group"
+                      >
+                        <button
+                          aria-label={`העבר את ${pkg.ownerName} לסטטוס ממתינה לאיסוף`}
+                          aria-pressed={pkg.status === "waiting"}
+                          className={`admin-package-status-option waiting ${
+                            pkg.status === "waiting" ? "selected" : ""
+                          }`}
+                          disabled={adminActionId !== null || pkg.status === "waiting"}
+                          onClick={() => setAdminPackageStatus(pkg.id, "waiting")}
+                          type="button"
+                        >
+                          ממתינה לאיסוף
+                        </button>
+                        <button
+                          aria-label={`העבר את ${pkg.ownerName} לסטטוס נאספה`}
+                          aria-pressed={pkg.status === "collected"}
+                          className={`admin-package-status-option collected ${
+                            pkg.status === "collected" ? "selected" : ""
+                          }`}
+                          disabled={adminActionId !== null || pkg.status === "collected"}
+                          onClick={() => setAdminPackageStatus(pkg.id, "collected")}
+                          type="button"
+                        >
+                          נאספה
+                        </button>
+                      </div>
                     </div>
                     <div className="message-preview admin-package-log">
                       <strong>יומן חבילה</strong>

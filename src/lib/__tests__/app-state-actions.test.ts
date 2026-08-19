@@ -14,6 +14,7 @@ import {
   removeOwnPackage,
   promoteUser,
   rejectJoinRequest,
+  setPackageStatusByAdmin,
   startPickupRun,
   unmarkPackageCollected,
   updateCollectedPackagesArrival,
@@ -739,6 +740,99 @@ describe("app state actions", () => {
       currentKibbutzLocation: "kolbo",
       currentKibbutzLocationText: kibbutzDropLocationDefaultNotes.kolbo,
     });
+  });
+
+  it("lets an admin return a collected package to waiting and restores pickup eligibility", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const waitingPackage = state.packages.find((pkg) => pkg.status === "waiting");
+    expect(waitingPackage).toBeTruthy();
+
+    const collectedState: AppState = {
+      ...state,
+      packages: state.packages.map((pkg) =>
+        pkg.id === waitingPackage?.id
+          ? {
+              ...pkg,
+              status: "collected",
+              publicSummary: "נאספה",
+              collectorUserId: "u-hila",
+              currentKibbutzLocation: "kolbo",
+              currentKibbutzLocationText: "בכלבו",
+              deliveredAt: "2026-06-27T10:00:00.000Z",
+            }
+          : pkg,
+      ),
+      pickupRunItems: [
+        ...state.pickupRunItems,
+        {
+          id: "run-admin_pkg-admin",
+          pickupRunId: "run-admin",
+          packageId: waitingPackage?.id ?? "",
+          itemStatus: "collected",
+          collectedAt: "2026-06-27T09:00:00.000Z",
+        },
+      ],
+    };
+
+    const result = setPackageStatusByAdmin(
+      collectedState,
+      { packageId: waitingPackage?.id ?? "", status: "waiting" },
+      deps,
+    );
+    const pkg = result.packages.find((item) => item.id === waitingPackage?.id);
+    const runItem = result.pickupRunItems.find((item) => item.id === "run-admin_pkg-admin");
+
+    expect(pkg).toMatchObject({
+      status: "waiting",
+      publicSummary: "ממתינה לאיסוף",
+      updatedAt: "2026-06-28T10:00:00.000Z",
+    });
+    expect(pkg?.collectorUserId).toBeUndefined();
+    expect(pkg?.currentKibbutzLocation).toBeUndefined();
+    expect(pkg?.currentKibbutzLocationText).toBeUndefined();
+    expect(pkg?.deliveredAt).toBeUndefined();
+    expect(runItem).toMatchObject({
+      itemStatus: "skipped",
+      lastCollectedAt: "2026-06-27T09:00:00.000Z",
+    });
+    expect(runItem?.collectedAt).toBeUndefined();
+  });
+
+  it("lets an admin return an arrived package to collected without inventing a collector", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const arrivedPackage = state.packages.find((pkg) => pkg.status === "arrived");
+    expect(arrivedPackage).toBeTruthy();
+    const previousCollectorUserId = arrivedPackage?.collectorUserId;
+
+    const result = setPackageStatusByAdmin(
+      state,
+      { packageId: arrivedPackage?.id ?? "", status: "collected" },
+      deps,
+    );
+    const pkg = result.packages.find((item) => item.id === arrivedPackage?.id);
+
+    expect(pkg).toMatchObject({ status: "collected", publicSummary: "נאספה" });
+    expect(pkg?.collectorUserId).toBe(previousCollectorUserId);
+    expect(pkg?.currentKibbutzLocation).toBeUndefined();
+    expect(pkg?.currentKibbutzLocationText).toBeUndefined();
+  });
+
+  it("prevents a regular member from changing package status as an admin", () => {
+    const state = cloneState();
+    const member = state.users.find((user) => user.role === "member");
+    const pkg = state.packages.find((item) => item.status === "waiting");
+    expect(member).toBeTruthy();
+    expect(pkg).toBeTruthy();
+
+    expect(() =>
+      setPackageStatusByAdmin(
+        { ...state, currentUser: member! },
+        { packageId: pkg?.id ?? "", status: "collected" },
+        createTestDeps(),
+      ),
+    ).toThrow("Only admins can change package status.");
   });
 
   it("allows admins to delete packages in any status from active state", () => {

@@ -12,6 +12,7 @@ import {
   removeOwnPackage,
   promoteUser,
   rejectJoinRequest,
+  setPackageStatusByAdmin,
   startPickupRun,
   unmarkPackageCollected,
   updateCollectedPackagesArrival,
@@ -99,6 +100,8 @@ export const localDemoRepository: AppStateRepository = {
   removeOwnPackage,
 
   deletePackage,
+
+  setPackageStatusByAdmin,
 
   updateCollectedPackagesArrival,
 
