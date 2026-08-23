@@ -56,6 +56,7 @@ import {
 } from "@/lib/oz-admin-shortcut";
 import { getUserAddedPackages } from "@/lib/home-package-visibility";
 import { sortHomePackagesByStatus } from "@/lib/home-package-sort";
+import { shouldShowStartupLoading } from "@/lib/startup-readiness";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import { normalizePickupLocationSchedules } from "@/lib/pickup-location-schedule-defaults";
 import { createWhatsAppUrl } from "@/lib/whatsapp";
@@ -511,6 +512,9 @@ function extractMessageUrls(message: string) {
 export function LahavPackagesApp() {
   const [state, setState] = useState<AppState>(() => getInitialRuntimeState());
   const [repositoryReady, setRepositoryReady] = useState(false);
+  const [loadedFirestoreSubscriptionKey, setLoadedFirestoreSubscriptionKey] = useState<
+    string | null
+  >(null);
   const [isSubmittingJoinRequest, setIsSubmittingJoinRequest] = useState(false);
   const [isSavingPackage, setIsSavingPackage] = useState(false);
   const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
@@ -590,6 +594,7 @@ export function LahavPackagesApp() {
       currentUserVerificationStatus,
     ],
   );
+  const firestoreSubscriptionKey = `${subscriptionUser.id}:${subscriptionUser.role}:${subscriptionUser.verificationStatus}`;
 
   useEffect(() => {
     if (!highlightedPackage) return undefined;
@@ -660,18 +665,22 @@ export function LahavPackagesApp() {
   useEffect(() => {
     if (!firebaseEnabled || !repositoryReady) return;
 
+    const subscriptionKey = firestoreSubscriptionKey;
     const unsubscribe = subscribeFirestoreAppState(
       subscriptionUser,
-      (nextState) =>
+      (nextState) => {
         setState((currentState) =>
           normalizePickupLocationSchedules(mergePendingCreatedPackages(currentState, nextState)),
-        ),
+        );
+        setLoadedFirestoreSubscriptionKey(subscriptionKey);
+      },
       () => setToast("לא הצלחנו לקבל עדכונים חיים מ-Firebase."),
     );
 
     return () => unsubscribe?.();
   }, [
     firebaseEnabled,
+    firestoreSubscriptionKey,
     repositoryReady,
     subscriptionUser,
   ]);
@@ -811,7 +820,13 @@ export function LahavPackagesApp() {
   const canManageCommunity =
     isApprovedUser && (currentUser.role === "admin" || currentUser.role === "owner");
   const canOpenArrivalScreen = isApprovedUser;
-  const isResolvingFirebaseSession = firebaseEnabled && !repositoryReady && !joinPreviewMode;
+  const isResolvingFirebaseSession = shouldShowStartupLoading({
+    firebaseEnabled,
+    joinPreviewMode,
+    sessionReady: repositoryReady,
+    subscriptionKey: firestoreSubscriptionKey,
+    loadedSubscriptionKey: loadedFirestoreSubscriptionKey,
+  });
   const requestedScreenAccessMessage = isApprovedUser ? null : unapprovedAccessMessage(screen);
   const effectiveScreen: EffectiveScreen = isResolvingFirebaseSession
     ? "loading"
@@ -3503,7 +3518,7 @@ function LoadingScreen() {
         <Package />
       </div>
       <h1>טוען את חבילות להב...</h1>
-      <p>בודקים את פרטי המשתמש.</p>
+      <p>טוענים את פרטי האפליקציה.</p>
     </div>
   );
 }
