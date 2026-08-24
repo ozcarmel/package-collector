@@ -57,6 +57,7 @@ import {
 import { getUserAddedPackages } from "@/lib/home-package-visibility";
 import { sortHomePackagesByStatus } from "@/lib/home-package-sort";
 import { shouldShowStartupLoading } from "@/lib/startup-readiness";
+import { sortUsersByHebrewSurname } from "@/lib/user-sort";
 import { getPickupLocationOpenState } from "@/lib/pickup-location-hours";
 import { normalizePickupLocationSchedules } from "@/lib/pickup-location-schedule-defaults";
 import { createWhatsAppUrl } from "@/lib/whatsapp";
@@ -2956,11 +2957,13 @@ export function LahavPackagesApp() {
 
   function AdminScreen() {
     const isSuperAdmin = isOzSuperAdminUser(currentUser);
-    const approvedUsers = dedupeUsersByPhone(
-      state.users.filter(
-        (user) => user.role === "member" && user.verificationStatus === "approved",
+    const approvedUsers = sortUsersByHebrewSurname(
+      dedupeUsersByPhone(
+        state.users.filter(
+          (user) => user.role === "member" && user.verificationStatus === "approved",
+        ),
+        currentUserId,
       ),
-      currentUserId,
     );
     const managerUsers = dedupeUsersByPhone(
       state.users.filter(
