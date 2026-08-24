@@ -724,13 +724,11 @@ export const firestoreRepository: AppOperationsRepository = {
       const runItemsSnapshot = await getDocs(
         query(collection(db, "pickupRunItems"), where("packageId", "==", packageId)),
       );
-      const sensitiveDetailsSnapshot = await getDoc(doc(db, "sensitivePackageDetails", packageId));
+      const sensitiveDetailsRef = doc(db, "sensitivePackageDetails", packageId);
       const batch = writeBatch(db);
 
       batch.delete(packageRef);
-      if (sensitiveDetailsSnapshot.exists()) {
-        batch.delete(sensitiveDetailsSnapshot.ref);
-      }
+      batch.delete(sensitiveDetailsRef);
       runItemsSnapshot.docs.forEach((itemDoc) => {
         const item = itemDoc.data() as PickupRunItem;
         if (!item.lastCollectedAt && !item.collectedAt) {

@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const projectId = "demo-lahav-packages-rules";
 const now = "2026-06-30T10:00:00.000Z";
@@ -767,6 +767,10 @@ describe("firestore security rules", () => {
       ownerNameSnapshot: "Owner",
     });
     const ownerDb = dbFor("u-owner");
+    const pickupItems = await assertSucceeds(
+      ownerDb.collection("pickupRunItems").where("packageId", "==", "pkg-waiting").get(),
+    );
+    expect(pickupItems.size).toBe(1);
     const batch = ownerDb.batch();
 
     batch.delete(ownerDb.doc("pickupRunItems/run-owner_pkg-waiting"));
@@ -795,6 +799,13 @@ describe("firestore security rules", () => {
       itemStatus: "pending",
     });
     const deviceDb = dbFor("u-owner-device");
+    const pickupItems = await assertSucceeds(
+      deviceDb
+        .collection("pickupRunItems")
+        .where("packageId", "==", "pkg-device-waiting")
+        .get(),
+    );
+    expect(pickupItems.size).toBe(1);
     const batch = deviceDb.batch();
 
     batch.delete(deviceDb.doc("pickupRunItems/run-device_pkg-device-waiting"));
@@ -802,6 +813,25 @@ describe("firestore security rules", () => {
     batch.delete(deviceDb.doc("packages/pkg-device-waiting"));
 
     await assertSucceeds(batch.commit());
+  });
+
+  it("prevents another approved user from querying an owner's pickup items", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc("users/u-other", userDoc("u-other", { phone: "050-222-2222" }));
+    await seedDoc("packages/pkg-private", packageDoc("pkg-private", "u-owner"));
+    await seedDoc("pickupRunItems/run-private_pkg-private", {
+      id: "run-private_pkg-private",
+      pickupRunId: "run-private",
+      packageId: "pkg-private",
+      itemStatus: "pending",
+    });
+
+    await assertFails(
+      dbFor("u-other")
+        .collection("pickupRunItems")
+        .where("packageId", "==", "pkg-private")
+        .get(),
+    );
   });
 
   it("preserves pickup history when an owner removes a waiting package", async () => {

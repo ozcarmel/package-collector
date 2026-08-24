@@ -379,6 +379,15 @@ service cloud.firestore {
         );
     }
 
+    function validOwnerPickupRunItemRead() {
+      let pkg = packageDoc(resource.data.packageId);
+      return approved() &&
+        (
+          pkg.data.ownerUserId == request.auth.uid ||
+          sameApprovedPhoneAsCurrent(pkg.data.ownerUserId)
+        );
+    }
+
     function validSensitiveGrantCreate(grantId) {
       let pkg = packageDoc(request.resource.data.packageId);
       let run = pickupRunAfter(request.resource.data.pickupRunId);
@@ -497,7 +506,11 @@ service cloud.firestore {
     }
 
     match /pickupRunItems/{itemId} {
-      allow read: if approved() && (pickupRunCollector(resource.data.pickupRunId) || admin());
+      allow read: if approved() && (
+        pickupRunCollector(resource.data.pickupRunId) ||
+        validOwnerPickupRunItemRead() ||
+        admin()
+      );
       allow create: if validPickupRunItemCreate(itemId);
       allow update: if validPickupRunItemAccessUpdate() || validPickupRunItemCollectedUpdate() || validPickupRunItemPendingUpdate() || admin();
       allow delete: if admin() || validOwnerUncollectedPickupRunItemDelete();
