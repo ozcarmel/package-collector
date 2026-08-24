@@ -759,13 +759,65 @@ describe("firestore security rules", () => {
       createdAt: now,
       updatedAt: now,
     });
+    await seedDoc("pickupRunItems/run-owner_pkg-waiting", {
+      id: "run-owner_pkg-waiting",
+      pickupRunId: "run-owner",
+      packageId: "pkg-waiting",
+      itemStatus: "pending",
+      ownerNameSnapshot: "Owner",
+    });
     const ownerDb = dbFor("u-owner");
     const batch = ownerDb.batch();
 
+    batch.delete(ownerDb.doc("pickupRunItems/run-owner_pkg-waiting"));
     batch.delete(ownerDb.doc("sensitivePackageDetails/pkg-waiting"));
     batch.delete(ownerDb.doc("packages/pkg-waiting"));
 
     await assertSucceeds(batch.commit());
+  });
+
+  it("allows an equivalent approved phone session to remove its waiting package", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc("users/u-owner-device", userDoc("u-owner-device", { phone: "050-111-1111" }));
+    await seedDoc("packages/pkg-device-waiting", packageDoc("pkg-device-waiting", "u-owner"));
+    await seedDoc("sensitivePackageDetails/pkg-device-waiting", {
+      packageId: "pkg-device-waiting",
+      ownerUserId: "u-owner",
+      pickupLocationId: "pitzutz",
+      sensitiveDeliveryMessage: "Original message",
+      createdAt: now,
+      updatedAt: now,
+    });
+    await seedDoc("pickupRunItems/run-device_pkg-device-waiting", {
+      id: "run-device_pkg-device-waiting",
+      pickupRunId: "run-device",
+      packageId: "pkg-device-waiting",
+      itemStatus: "pending",
+    });
+    const deviceDb = dbFor("u-owner-device");
+    const batch = deviceDb.batch();
+
+    batch.delete(deviceDb.doc("pickupRunItems/run-device_pkg-device-waiting"));
+    batch.delete(deviceDb.doc("sensitivePackageDetails/pkg-device-waiting"));
+    batch.delete(deviceDb.doc("packages/pkg-device-waiting"));
+
+    await assertSucceeds(batch.commit());
+  });
+
+  it("preserves pickup history when an owner removes a waiting package", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc("packages/pkg-waiting-history", packageDoc("pkg-waiting-history", "u-owner"));
+    await seedDoc("pickupRunItems/run-owner_pkg-waiting-history", {
+      id: "run-owner_pkg-waiting-history",
+      pickupRunId: "run-owner",
+      packageId: "pkg-waiting-history",
+      itemStatus: "pending",
+      lastCollectedAt: now,
+    });
+
+    await assertFails(
+      dbFor("u-owner").doc("pickupRunItems/run-owner_pkg-waiting-history").delete(),
+    );
   });
 
   it("prevents package owners from deleting packages after pickup", async () => {
@@ -827,6 +879,32 @@ describe("firestore security rules", () => {
         updatedAt: now,
       }),
     );
+  });
+
+  it("allows an equivalent approved phone session to remove packages in every later status", async () => {
+    await seedDoc("users/u-owner", userDoc("u-owner", { phone: "050-111-1111" }));
+    await seedDoc("users/u-owner-device", userDoc("u-owner-device", { phone: "050-111-1111" }));
+    const statuses = ["collected", "arrived", "ready_for_handoff", "delivered"];
+
+    for (const status of statuses) {
+      await seedDoc(
+        `packages/pkg-device-${status}`,
+        packageDoc(`pkg-device-${status}`, "u-owner", "pitzutz", { status }),
+      );
+    }
+
+    const deviceDb = dbFor("u-owner-device");
+    const batch = deviceDb.batch();
+    statuses.forEach((status) => {
+      batch.update(deviceDb.doc(`packages/pkg-device-${status}`), {
+        status: "cancelled",
+        cancelledAt: now,
+        cancelledByUserId: "u-owner-device",
+        updatedAt: now,
+      });
+    });
+
+    await assertSucceeds(batch.commit());
   });
 
   it("prevents members from cancelling another member's package", async () => {

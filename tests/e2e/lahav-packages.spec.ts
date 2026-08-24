@@ -265,6 +265,28 @@ test("approved phone can enter from a new device without another admin approval"
   await expect(app(page).locator(".bottom-nav").getByRole("button", { name: "הוספה" })).toBeEnabled();
 });
 
+test("regular member can remove a waiting package they added", async ({ page }) => {
+  await gotoFreshUser(page);
+
+  await app(page).getByLabel("מספר טלפון נייד").fill("+972501111111");
+  await app(page).getByLabel("שם מלא").fill("משתמש מחיקה");
+  await app(page).getByRole("button", { name: /שלח בקשת הצטרפות/ }).click();
+  await expect(app(page).getByRole("heading", { name: "מה מצב החבילות?" })).toBeVisible();
+
+  const packageName = "חבילת מחיקה משתמש רגיל";
+  await addPackageForPickupLocation(page, packageName, "pitzutz");
+  await clickPhoneNav(page, "בית");
+
+  const packageCard = app(page).locator(".package-card").filter({ hasText: packageName });
+  await expect(packageCard).toBeVisible();
+  await packageCard.getByRole("button", { name: "הסר חבילה" }).click();
+  const dialog = page.getByRole("dialog", { name: "להסיר את החבילה?" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "הסר חבילה" }).click();
+
+  await expect(packageCard).toHaveCount(0);
+});
+
 test("admin can approve pending users and approved users appear as regular members", async ({ page }) => {
   await gotoAdmin(page);
   await expect(app(page).locator(".bottom-nav button")).toHaveCount(4);

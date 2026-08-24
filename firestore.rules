@@ -366,6 +366,19 @@ service cloud.firestore {
           .hasOnly(["itemStatus", "collectedAt", "lastCollectedAt"]);
     }
 
+    function validOwnerUncollectedPickupRunItemDelete() {
+      let pkg = packageDoc(resource.data.packageId);
+      return approved() &&
+        pkg.data.status == "waiting" &&
+        resource.data.itemStatus == "pending" &&
+        resource.data.get("collectedAt", null) == null &&
+        resource.data.get("lastCollectedAt", null) == null &&
+        (
+          pkg.data.ownerUserId == request.auth.uid ||
+          sameApprovedPhoneAsCurrent(pkg.data.ownerUserId)
+        );
+    }
+
     function validSensitiveGrantCreate(grantId) {
       let pkg = packageDoc(request.resource.data.packageId);
       let run = pickupRunAfter(request.resource.data.pickupRunId);
@@ -487,7 +500,7 @@ service cloud.firestore {
       allow read: if approved() && (pickupRunCollector(resource.data.pickupRunId) || admin());
       allow create: if validPickupRunItemCreate(itemId);
       allow update: if validPickupRunItemAccessUpdate() || validPickupRunItemCollectedUpdate() || validPickupRunItemPendingUpdate() || admin();
-      allow delete: if admin();
+      allow delete: if admin() || validOwnerUncollectedPickupRunItemDelete();
     }
 
     match /sensitiveAccessGrants/{grantId} {
