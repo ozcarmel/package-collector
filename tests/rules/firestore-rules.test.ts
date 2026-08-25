@@ -6,6 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
+import { deleteField } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const projectId = "demo-lahav-packages-rules";
@@ -286,12 +287,12 @@ describe("firestore security rules", () => {
     const unmarkBatch = collectorDb.batch();
     unmarkBatch.update(collectorDb.doc("packages/pkg-toggle"), {
       status: "waiting",
-      collectorUserId: null,
+      collectorUserId: deleteField(),
       updatedAt: now,
     });
     unmarkBatch.update(collectorDb.doc("pickupRunItems/run-toggle_pkg-toggle"), {
       itemStatus: "pending",
-      collectedAt: null,
+      collectedAt: deleteField(),
       lastCollectedAt: now,
     });
     await assertSucceeds(unmarkBatch.commit());
@@ -342,14 +343,14 @@ describe("firestore security rules", () => {
     const unmarkBatch = ownerDb.batch();
     unmarkBatch.update(ownerDb.doc("packages/pkg-self"), {
       status: "waiting",
-      collectorUserId: null,
-      currentKibbutzLocation: null,
-      currentKibbutzLocationText: null,
+      collectorUserId: deleteField(),
+      currentKibbutzLocation: deleteField(),
+      currentKibbutzLocationText: deleteField(),
       updatedAt: now,
     });
     unmarkBatch.update(ownerDb.doc("pickupRunItems/run-self_pkg-self"), {
       itemStatus: "pending",
-      collectedAt: null,
+      collectedAt: deleteField(),
       lastCollectedAt: now,
     });
     await assertSucceeds(unmarkBatch.commit());

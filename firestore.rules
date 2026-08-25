@@ -282,7 +282,7 @@ service cloud.firestore {
       return approved() &&
         resource.data.status == "collected" &&
         request.resource.data.status == "waiting" &&
-        request.resource.data.collectorUserId == null &&
+        request.resource.data.get("collectorUserId", null) == null &&
         hasSensitiveGrant(packageId) &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["status", "collectorUserId", "updatedAt"]);
@@ -301,9 +301,9 @@ service cloud.firestore {
           sameApprovedPhoneAsCurrent(resource.data.collectorUserId)
         ) &&
         request.resource.data.status == "waiting" &&
-        request.resource.data.collectorUserId == null &&
-        request.resource.data.currentKibbutzLocation == null &&
-        request.resource.data.currentKibbutzLocationText == null &&
+        request.resource.data.get("collectorUserId", null) == null &&
+        request.resource.data.get("currentKibbutzLocation", null) == null &&
+        request.resource.data.get("currentKibbutzLocationText", null) == null &&
         hasSensitiveGrant(packageId) &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly([
@@ -361,7 +361,7 @@ service cloud.firestore {
         pickupRunCollector(resource.data.pickupRunId) &&
         resource.data.itemStatus == "collected" &&
         request.resource.data.itemStatus == "pending" &&
-        request.resource.data.collectedAt == null &&
+        request.resource.data.get("collectedAt", null) == null &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["itemStatus", "collectedAt", "lastCollectedAt"]);
     }
