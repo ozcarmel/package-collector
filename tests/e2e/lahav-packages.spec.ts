@@ -894,6 +894,10 @@ test("pickup flow reveals original messages only after confirmation and records 
   await expect(catalogWhatsApp).toHaveAttribute("href", "https://wa.me/972584411883");
   const pickupLink = app(page).getByRole("link", { name: /https:\/\/u\.cheetahint\.com/ }).first();
   await expect(pickupLink).toHaveAttribute("href", /https:\/\/u\.cheetahint\.com/);
+  const selfCollectToggle = firstCatalogCard.locator(".collect-button");
+  await expect(selfCollectToggle).toBeEnabled();
+  await expect(selfCollectToggle).toHaveAttribute("aria-pressed", "false");
+  await expect(selfCollectToggle).toHaveText("לחץ לאיסוף");
 
   const popupPromise = context.waitForEvent("page");
   await pickupLink.click();
@@ -901,23 +905,25 @@ test("pickup flow reveals original messages only after confirmation and records 
   await popup.close();
   await page.bringToFront();
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-  const selfCollectToggle = firstCatalogCard.locator(".collect-button");
   await expect(selfCollectToggle).toBeEnabled();
   await expect(selfCollectToggle).toHaveAttribute("aria-pressed", "true");
   await expect(selfCollectToggle).toContainText("נמסרה בקיבוץ");
   await selfCollectToggle.click();
   await expect(selfCollectToggle).toHaveAttribute("aria-pressed", "false");
-  await expect(selfCollectToggle).toContainText("ממתינה לאיסוף");
+  await expect(selfCollectToggle).toHaveText("לחץ לאיסוף");
   await selfCollectToggle.click();
   await expect(selfCollectToggle).toHaveAttribute("aria-pressed", "true");
   await expect(selfCollectToggle).toContainText("נמסרה בקיבוץ");
 
   const otherCatalogCard = app(page).locator(".catalog-card").filter({ hasText: "הילה נבו" });
   const collectToggle = otherCatalogCard.locator(".collect-button");
+  await expect(collectToggle).toHaveText("לחץ לאיסוף");
   await collectToggle.click();
   await expect(collectToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(collectToggle).toHaveText("נאספה");
   await collectToggle.click();
   await expect(collectToggle).toHaveAttribute("aria-pressed", "false");
+  await expect(collectToggle).toHaveText("לחץ לאיסוף");
   await collectToggle.click();
   await expect(collectToggle).toHaveAttribute("aria-pressed", "true");
   await expect(catalogWhatsApp).toBeVisible();

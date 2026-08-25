@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Bell,
   CalendarDays,
-  Check,
   ChevronDown,
   ChevronLeft,
   Clock,
@@ -3497,16 +3496,13 @@ export function LahavPackagesApp() {
             onClick={() => toggleCollected(pkg.id, isMarkedCollected)}
             type="button"
           >
-            <span className="collect-checkbox-mark" aria-hidden="true">
-              {isMarkedCollected ? <Check /> : null}
-            </span>
             {isCollecting
               ? "מעדכן..."
               : isDeliveredInKibbutz
                 ? "נמסרה בקיבוץ"
                 : isCollected
                   ? "נאספה"
-                  : "ממתינה לאיסוף"}
+                  : "לחץ לאיסוף"}
           </button>
         </div>
       </div>

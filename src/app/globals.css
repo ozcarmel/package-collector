@@ -1717,11 +1717,12 @@ form.stack,
 
 .button.collect-button {
   min-height: 36px;
-  border-color: #b8c9b0;
-  background: #f5eddc;
-  color: var(--primary-strong);
-  padding: 7px 12px;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fffaf1;
+  padding: 7px 16px;
   font-size: 13px;
+  font-weight: 900;
   box-shadow: none;
 }
 
@@ -1731,22 +1732,6 @@ form.stack,
   color: var(--primary-strong);
 }
 
-.collect-checkbox-mark {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #3b7f5a;
-  border-radius: 4px;
-  display: inline-grid;
-  place-items: center;
-  background: #fffaf1;
-}
-
-.collect-checkbox-mark svg {
-  width: 14px;
-  height: 14px;
-  stroke-width: 3;
-  color: var(--primary);
-}
 
 .button.warn {
   color: var(--danger);
