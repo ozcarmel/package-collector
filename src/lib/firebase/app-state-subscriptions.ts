@@ -7,6 +7,7 @@ import {
   where,
 } from "firebase/firestore";
 import { initialAppState } from "@/lib/demo-data";
+import { isCollectedPackageExpired } from "@/lib/collected-package-expiration";
 import { getFirebaseDb, hasFirebaseConfig } from "@/lib/firebase/client";
 import type {
   AppState,
@@ -150,6 +151,7 @@ export function subscribeFirestoreAppState(
             item.data() as Partial<DeliveryPackage>,
           ]),
         );
+        const now = new Date();
         nextState.packages = sortByUpdatedAt(
           packagesSnapshot.docs.map((item) => {
             const pkg = item.data() as DeliveryPackage;
@@ -162,7 +164,7 @@ export function subscribeFirestoreAppState(
                   sensitivePackageCode: details.sensitivePackageCode,
                 }
               : pkg;
-          }),
+          }).filter((pkg) => !isCollectedPackageExpired(pkg, now)),
         );
         nextState.pickupRuns = pickupRuns;
         nextState.pickupRunItems = runItems;
