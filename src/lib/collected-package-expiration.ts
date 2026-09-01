@@ -20,12 +20,12 @@ function israelCalendarDay(value: string | Date) {
 }
 
 export function isCollectedPackageExpired(
-  pkg: Pick<DeliveryPackage, "status" | "updatedAt">,
+  pkg: Pick<DeliveryPackage, "status" | "updatedAt" | "collectedAt">,
   now = new Date(),
 ) {
   if (pkg.status !== "collected") return false;
 
-  const collectedDay = israelCalendarDay(pkg.updatedAt);
+  const collectedDay = israelCalendarDay(pkg.collectedAt ?? pkg.updatedAt);
   const currentDay = israelCalendarDay(now);
   if (!collectedDay || !currentDay) return false;
 

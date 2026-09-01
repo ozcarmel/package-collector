@@ -45,6 +45,7 @@ export type AdminPackageStatus = "waiting" | "collected";
 export interface SetAdminPackageStatusInput {
   packageId: string;
   status: AdminPackageStatus;
+  externalCollectorName?: string;
 }
 
 export interface CreatePickupLocationInput {
@@ -694,7 +695,25 @@ export function setPackageStatusByAdmin(
   }
 
   const targetPackage = state.packages.find((pkg) => pkg.id === input.packageId);
-  if (!targetPackage || targetPackage.status === input.status) return state;
+  if (!targetPackage) return state;
+
+  const externalCollectorName = input.externalCollectorName?.trim();
+  if (
+    input.status === "collected" &&
+    targetPackage.status === "waiting" &&
+    !targetPackage.collectorUserId &&
+    !externalCollectorName &&
+    !targetPackage.externalCollectorName
+  ) {
+    throw new Error("collector-name-required");
+  }
+
+  if (
+    targetPackage.status === input.status &&
+    (!externalCollectorName || externalCollectorName === targetPackage.externalCollectorName)
+  ) {
+    return state;
+  }
 
   const updatedAt = deps.now();
   const updatedPackage: DeliveryPackage = {
@@ -711,6 +730,17 @@ export function setPackageStatusByAdmin(
   delete updatedPackage.cancelledByUserId;
   if (input.status === "waiting") {
     delete updatedPackage.collectorUserId;
+    delete updatedPackage.externalCollectorName;
+    delete updatedPackage.collectedAt;
+    delete updatedPackage.collectionRecordedByUserId;
+  } else {
+    if (externalCollectorName) {
+      updatedPackage.externalCollectorName = externalCollectorName;
+      delete updatedPackage.collectorUserId;
+    }
+    updatedPackage.collectedAt =
+      targetPackage.status === "collected" ? targetPackage.collectedAt ?? updatedAt : updatedAt;
+    updatedPackage.collectionRecordedByUserId = state.currentUser.id;
   }
 
   return {

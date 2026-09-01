@@ -26,10 +26,10 @@ import type {
 } from "@/lib/app-repository-contract";
 import type {
   ActionDeps,
-  AdminPackageStatus,
   CreateJoinRequestInput,
   CreatePackageInput,
   CreatePickupLocationInput,
+  SetAdminPackageStatusInput,
   UpdatePackageInput,
   UpdatePickupLocationInput,
   UpdateArrivalInput,
@@ -807,7 +807,7 @@ export const firestoreRepository: AppOperationsRepository = {
 
   async setPackageStatusByAdmin(
     state: AppState,
-    input: { packageId: string; status: AdminPackageStatus },
+    input: SetAdminPackageStatusInput,
     deps: ActionDeps,
   ) {
     if (state.currentUser.role !== "admin" && state.currentUser.role !== "owner") {
@@ -818,7 +818,25 @@ export const firestoreRepository: AppOperationsRepository = {
     const packageRef = doc(db, "packages", input.packageId);
     const packageSnapshot = await getDoc(packageRef);
     const pkg = packageSnapshot.data() as DeliveryPackage | undefined;
-    if (!pkg || pkg.status === input.status) return state;
+    if (!pkg) return state;
+
+    const externalCollectorName = input.externalCollectorName?.trim();
+    if (
+      input.status === "collected" &&
+      pkg.status === "waiting" &&
+      !pkg.collectorUserId &&
+      !externalCollectorName &&
+      !pkg.externalCollectorName
+    ) {
+      throw new Error("collector-name-required");
+    }
+
+    if (
+      pkg.status === input.status &&
+      (!externalCollectorName || externalCollectorName === pkg.externalCollectorName)
+    ) {
+      return state;
+    }
 
     const updatedAt = deps.now();
     const packageUpdate: Record<string, unknown> = {
@@ -833,6 +851,17 @@ export const firestoreRepository: AppOperationsRepository = {
     };
     if (input.status === "waiting") {
       packageUpdate.collectorUserId = deleteField();
+      packageUpdate.externalCollectorName = deleteField();
+      packageUpdate.collectedAt = deleteField();
+      packageUpdate.collectionRecordedByUserId = deleteField();
+    } else {
+      if (externalCollectorName) {
+        packageUpdate.externalCollectorName = externalCollectorName;
+        packageUpdate.collectorUserId = deleteField();
+      }
+      packageUpdate.collectedAt =
+        pkg.status === "collected" ? pkg.collectedAt ?? updatedAt : updatedAt;
+      packageUpdate.collectionRecordedByUserId = state.currentUser.id;
     }
 
     const runItemsSnapshot = await getDocs(

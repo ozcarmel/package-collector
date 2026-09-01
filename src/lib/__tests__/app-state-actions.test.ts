@@ -742,6 +742,48 @@ describe("app state actions", () => {
     });
   });
 
+  it("lets an admin record an unregistered collector by name", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const waitingPackage = state.packages.find((pkg) => pkg.status === "waiting");
+    expect(waitingPackage).toBeTruthy();
+
+    const result = setPackageStatusByAdmin(
+      state,
+      {
+        packageId: waitingPackage?.id ?? "",
+        status: "collected",
+        externalCollectorName: "  שושנה גרין  ",
+      },
+      deps,
+    );
+    const pkg = result.packages.find((item) => item.id === waitingPackage?.id);
+
+    expect(pkg).toMatchObject({
+      status: "collected",
+      publicSummary: "נאספה",
+      externalCollectorName: "שושנה גרין",
+      collectedAt: "2026-06-28T10:00:00.000Z",
+      collectionRecordedByUserId: state.currentUser.id,
+      updatedAt: "2026-06-28T10:00:00.000Z",
+    });
+    expect(pkg?.collectorUserId).toBeUndefined();
+  });
+
+  it("requires a collector name when an admin marks an unassigned waiting package collected", () => {
+    const state = cloneState();
+    const waitingPackage = state.packages.find((pkg) => pkg.status === "waiting");
+    expect(waitingPackage).toBeTruthy();
+
+    expect(() =>
+      setPackageStatusByAdmin(
+        state,
+        { packageId: waitingPackage?.id ?? "", status: "collected" },
+        createTestDeps(),
+      ),
+    ).toThrow("collector-name-required");
+  });
+
   it("lets an admin return a collected package to waiting and restores pickup eligibility", () => {
     const deps = createTestDeps();
     const state = cloneState();
@@ -760,6 +802,9 @@ describe("app state actions", () => {
               currentKibbutzLocation: "kolbo",
               currentKibbutzLocationText: "בכלבו",
               deliveredAt: "2026-06-27T10:00:00.000Z",
+              externalCollectorName: "שושנה גרין",
+              collectedAt: "2026-06-27T09:00:00.000Z",
+              collectionRecordedByUserId: state.currentUser.id,
             }
           : pkg,
       ),
@@ -789,6 +834,9 @@ describe("app state actions", () => {
       updatedAt: "2026-06-28T10:00:00.000Z",
     });
     expect(pkg?.collectorUserId).toBeUndefined();
+    expect(pkg?.externalCollectorName).toBeUndefined();
+    expect(pkg?.collectedAt).toBeUndefined();
+    expect(pkg?.collectionRecordedByUserId).toBeUndefined();
     expect(pkg?.currentKibbutzLocation).toBeUndefined();
     expect(pkg?.currentKibbutzLocationText).toBeUndefined();
     expect(pkg?.deliveredAt).toBeUndefined();

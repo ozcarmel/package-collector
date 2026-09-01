@@ -93,6 +93,9 @@ export interface DeliveryPackage {
   currentKibbutzLocation?: KibbutzDropLocation;
   currentKibbutzLocationText?: string;
   collectorUserId?: string;
+  externalCollectorName?: string;
+  collectedAt?: string;
+  collectionRecordedByUserId?: string;
   createdAt?: string;
   updatedAt: string;
   deliveredAt?: string;

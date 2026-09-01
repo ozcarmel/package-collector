@@ -2733,6 +2733,16 @@ form.stack,
   max-width: 340px;
 }
 
+.admin-collector-modal {
+  width: min(360px, calc(100vw - 32px));
+  display: grid;
+  gap: 14px;
+}
+
+.admin-collector-modal p {
+  margin: 0;
+}
+
 .admin-location-modal {
   width: min(370px, calc(100vw - 32px));
   max-height: min(720px, calc(100dvh - 44px));

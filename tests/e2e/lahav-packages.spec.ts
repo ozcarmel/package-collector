@@ -359,11 +359,16 @@ test("admin status correction keeps Home and pickup catalog synchronized", async
   await adminPackageCard
     .getByRole("button", { name: "העבר את הילה נבו לסטטוס נאספה" })
     .click();
+  const collectorDialog = page.getByRole("dialog", { name: "מי אסף את החבילה?" });
+  await collectorDialog.getByLabel("שם האוסף").fill("שושנה גרין");
+  await collectorDialog.getByRole("button", { name: "סמן כנאספה" }).click();
   await expect(page.getByRole("status")).toContainText("החבילה עודכנה כנאספה");
 
   await clickPhoneNav(page, "בית");
   await expectPackageCardStatus(page, "הילה נבו", "נאספה");
-
+  await expect(app(page).locator(".package-card").filter({ hasText: "הילה נבו" })).toContainText(
+    "נאספה על ידי שושנה גרין",
+  );
   await clickPhoneNav(page, "איסוף");
   await app(page).locator('.location-button[data-pickup-location-id="pitzutz"]').click();
   await page

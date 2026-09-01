@@ -20,6 +20,16 @@ describe("collected package expiration", () => {
     ).toBe(true);
   });
 
+  it("uses the collection timestamp even if the package was updated later", () => {
+    const pkg = {
+      status: "collected" as const,
+      collectedAt: "2026-08-31T20:59:00.000Z",
+      updatedAt: "2026-09-01T08:00:00.000Z",
+    };
+
+    expect(isCollectedPackageExpired(pkg, new Date("2026-08-31T21:00:00.000Z"))).toBe(true);
+  });
+
   it("does not expire packages in other statuses", () => {
     const now = new Date("2026-09-01T12:00:00.000Z");
 

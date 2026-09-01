@@ -725,6 +725,16 @@ describe("firestore security rules", () => {
       lastCollectedAt: now,
     });
     await assertSucceeds(adminBatch.commit());
+    await assertSucceeds(
+      adminDb.doc("packages/pkg-status-correction").update({
+        status: "collected",
+        publicSummary: "Collected",
+        externalCollectorName: "Shoshana Green",
+        collectedAt: now,
+        collectionRecordedByUserId: "u-admin",
+        updatedAt: now,
+      }),
+    );
 
     await assertFails(
       dbFor("u-member").doc("packages/pkg-status-correction").update({

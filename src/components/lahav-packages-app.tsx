@@ -455,6 +455,10 @@ function getUserName(users: AppState["users"], id?: string) {
   return id ? users.find((user) => user.id === id)?.fullName : undefined;
 }
 
+function getPackageCollectorName(users: AppState["users"], pkg: DeliveryPackage) {
+  return pkg.externalCollectorName?.trim() || getUserName(users, pkg.collectorUserId);
+}
+
 function dedupeUsersByPhone(users: AppState["users"], preferredUserId: string) {
   const grouped = new Map<string, AppState["users"][number]>();
 
@@ -537,6 +541,9 @@ export function LahavPackagesApp() {
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [pendingDeleteLocationId, setPendingDeleteLocationId] = useState<string | null>(null);
   const [pendingDeletePackageId, setPendingDeletePackageId] = useState<string | null>(null);
+  const [pendingAdminCollectedPackageId, setPendingAdminCollectedPackageId] =
+    useState<string | null>(null);
+  const [adminExternalCollectorName, setAdminExternalCollectorName] = useState("");
   const [pendingDeletePackageMode, setPendingDeletePackageMode] =
     useState<PendingPackageRemovalMode>("owner-remove");
   const [screen, setScreen] = useState<Screen>(() => (hasJoinPreviewParam() ? "join" : "home"));
@@ -795,6 +802,9 @@ export function LahavPackagesApp() {
   const pendingDeletePackage = pendingDeletePackageId
     ? state.packages.find((pkg) => pkg.id === pendingDeletePackageId)
     : null;
+  const pendingAdminCollectedPackage = pendingAdminCollectedPackageId
+    ? state.packages.find((pkg) => pkg.id === pendingAdminCollectedPackageId)
+    : null;
   const editingLocation = editingLocationId
     ? state.pickupLocations.find((location) => location.id === editingLocationId)
     : null;
@@ -931,7 +941,7 @@ export function LahavPackagesApp() {
 
   function statusSheetPackageMeta(pkg: DeliveryPackage) {
     const pickupLocation = getLocationName(state.pickupLocations, pkg.pickupLocationId);
-    const collectorName = getUserName(state.users, pkg.collectorUserId);
+    const collectorName = getPackageCollectorName(state.users, pkg);
     const bucket = getHomePackageStatusBucket(pkg.status);
 
     switch (bucket) {
@@ -1691,14 +1701,18 @@ export function LahavPackagesApp() {
     }
   }
 
-  async function setAdminPackageStatus(packageId: string, status: AdminPackageStatus) {
-    if (adminActionId) return;
+  async function setAdminPackageStatus(
+    packageId: string,
+    status: AdminPackageStatus,
+    externalCollectorName?: string,
+  ) {
+    if (adminActionId) return false;
 
     setAdminActionId(`status-package-${packageId}-${status}`);
     try {
       const nextState = await operationsRepository.setPackageStatusByAdmin(
         state,
-        { packageId, status },
+        { packageId, status, externalCollectorName },
         actionDeps,
       );
       applyRepositoryState(nextState);
@@ -1707,10 +1721,47 @@ export function LahavPackagesApp() {
           ? "החבילה הוחזרה לממתינה לאיסוף."
           : "החבילה עודכנה כנאספה.",
       );
-    } catch {
-      notify("לא הצלחנו לשנות את סטטוס החבילה. נסה/י שוב בעוד רגע.");
+      return true;
+    } catch (error) {
+      notify(
+        error instanceof Error && error.message === "collector-name-required"
+          ? "יש להזין את שם האוסף."
+          : "לא הצלחנו לשנות את סטטוס החבילה. נסה/י שוב בעוד רגע.",
+      );
+      return false;
     } finally {
       setAdminActionId(null);
+    }
+  }
+
+  function requestAdminCollectedStatus(pkg: DeliveryPackage) {
+    if (adminActionId || pkg.status === "collected") return;
+
+    if (pkg.status === "waiting" && !pkg.collectorUserId) {
+      setPendingAdminCollectedPackageId(pkg.id);
+      setAdminExternalCollectorName(pkg.externalCollectorName ?? "");
+      return;
+    }
+
+    void setAdminPackageStatus(pkg.id, "collected");
+  }
+
+  async function confirmAdminExternalCollection() {
+    if (!pendingAdminCollectedPackage || adminActionId) return;
+    const collectorName = adminExternalCollectorName.trim();
+    if (!collectorName) {
+      notify("יש להזין את שם האוסף.");
+      return;
+    }
+
+    const saved = await setAdminPackageStatus(
+      pendingAdminCollectedPackage.id,
+      "collected",
+      collectorName,
+    );
+    if (saved) {
+      setPendingAdminCollectedPackageId(null);
+      setAdminExternalCollectorName("");
     }
   }
   async function approveJoinRequest(requestId: string) {
@@ -2007,6 +2058,53 @@ export function LahavPackagesApp() {
                 type="button"
               >
                 {isStartingPickupRun ? "פותח איסוף..." : "אשר"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {pendingAdminCollectedPackage ? (
+        <div className="modal-backdrop" role="presentation">
+          <section
+            aria-labelledby="admin-collector-name-title"
+            aria-modal="true"
+            className="confirm-modal admin-collector-modal"
+            role="dialog"
+          >
+            <h2 id="admin-collector-name-title">מי אסף את החבילה?</h2>
+            <p>החבילה של {pendingAdminCollectedPackage.ownerName} תסומן כנאספה.</p>
+            <div className="field">
+              <label htmlFor="admin-external-collector-name">שם האוסף</label>
+              <input
+                autoComplete="off"
+                id="admin-external-collector-name"
+                onChange={(event) => setAdminExternalCollectorName(event.target.value)}
+                placeholder="שם מלא"
+                value={adminExternalCollectorName}
+              />
+            </div>
+            <div className="card-actions">
+              <button
+                className="button"
+                disabled={adminActionId !== null}
+                onClick={() => {
+                  setPendingAdminCollectedPackageId(null);
+                  setAdminExternalCollectorName("");
+                }}
+                type="button"
+              >
+                ביטול
+              </button>
+              <button
+                className="button primary"
+                disabled={adminActionId !== null || !adminExternalCollectorName.trim()}
+                onClick={confirmAdminExternalCollection}
+                type="button"
+              >
+                {adminActionId ===
+                `status-package-${pendingAdminCollectedPackage.id}-collected`
+                  ? "מעדכן..."
+                  : "סמן כנאספה"}
               </button>
             </div>
           </section>
@@ -3218,10 +3316,14 @@ export function LahavPackagesApp() {
 
           {adminListView === "packages"
             ? adminPackages.map((pkg) => {
-                const collectorName = getUserName(state.users, pkg.collectorUserId);
+                const collectorName = getPackageCollectorName(state.users, pkg);
                 const pickupLocationName = getLocationName(
                   state.pickupLocations,
                   pkg.pickupLocationId,
+                );
+                const recordedByName = getUserName(
+                  state.users,
+                  pkg.collectionRecordedByUserId,
                 );
                 return (
                   <div className="admin-card" key={pkg.id}>
@@ -3262,7 +3364,7 @@ export function LahavPackagesApp() {
                             pkg.status === "collected" ? "selected" : ""
                           }`}
                           disabled={adminActionId !== null || pkg.status === "collected"}
-                          onClick={() => setAdminPackageStatus(pkg.id, "collected")}
+                          onClick={() => requestAdminCollectedStatus(pkg)}
                           type="button"
                         >
                           נאספה
@@ -3273,6 +3375,10 @@ export function LahavPackagesApp() {
                       <strong>יומן חבילה</strong>
                       <span>נקודת איסוף: {pickupLocationName}</span>
                       <span>אסף/ה: {collectorName ?? "טרם נאספה"}</span>
+                      {pkg.collectedAt ? (
+                        <span>מועד איסוף: {formatHebrewDateTime(pkg.collectedAt)}</span>
+                      ) : null}
+                      {recordedByName ? <span>עודכן על ידי: {recordedByName}</span> : null}
                       {pkg.currentKibbutzLocationText ? (
                         <span>מסירה בקיבוץ: {pkg.currentKibbutzLocationText}</span>
                       ) : null}
@@ -3326,7 +3432,7 @@ export function LahavPackagesApp() {
   }
 
   function PackageCard({ pkg }: { pkg: DeliveryPackage }) {
-    const collectorName = getUserName(state.users, pkg.collectorUserId);
+    const collectorName = getPackageCollectorName(state.users, pkg);
     const detailBadge = homePackageDetailBadge(pkg);
     const homeStatusBucket = getHomePackageStatusBucket(pkg.status);
     const canOpenArrivalFromStatus =

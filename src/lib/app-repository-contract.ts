@@ -1,9 +1,9 @@
 import type {
   ActionDeps,
-  AdminPackageStatus,
   CreateJoinRequestInput,
   CreatePackageInput,
   CreatePickupLocationInput,
+  SetAdminPackageStatusInput,
   UpdatePackageInput,
   UpdatePickupLocationInput,
   UpdateArrivalInput,
@@ -117,7 +117,7 @@ export interface AppOperationsRepository {
 
   setPackageStatusByAdmin(
     state: AppState,
-    input: { packageId: string; status: AdminPackageStatus },
+    input: SetAdminPackageStatusInput,
     deps: ActionDeps,
   ): RepositoryStateResult;
 
