@@ -20,14 +20,25 @@ function israelCalendarDay(value: string | Date) {
 }
 
 export function isCollectedPackageExpired(
-  pkg: Pick<DeliveryPackage, "status" | "updatedAt" | "collectedAt">,
+  pkg: Pick<DeliveryPackage, "status" | "updatedAt" | "collectedAt" | "deliveredAt">,
   now = new Date(),
 ) {
-  if (pkg.status !== "collected") return false;
+  const expiresAtMidnight =
+    pkg.status === "collected" ||
+    pkg.status === "arrived" ||
+    pkg.status === "ready_for_handoff" ||
+    pkg.status === "delivered";
+  if (!expiresAtMidnight) return false;
 
-  const collectedDay = israelCalendarDay(pkg.collectedAt ?? pkg.updatedAt);
+  const statusTimestamp =
+    pkg.status === "collected"
+      ? pkg.collectedAt ?? pkg.updatedAt
+      : pkg.status === "delivered"
+        ? pkg.deliveredAt ?? pkg.updatedAt
+        : pkg.updatedAt;
+  const statusDay = israelCalendarDay(statusTimestamp);
   const currentDay = israelCalendarDay(now);
-  if (!collectedDay || !currentDay) return false;
+  if (!statusDay || !currentDay) return false;
 
-  return collectedDay < currentDay;
+  return statusDay < currentDay;
 }

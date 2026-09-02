@@ -30,18 +30,41 @@ describe("collected package expiration", () => {
     expect(isCollectedPackageExpired(pkg, new Date("2026-08-31T21:00:00.000Z"))).toBe(true);
   });
 
+  it("keeps a package delivered in the kibbutz visible before midnight in Israel", () => {
+    expect(
+      isCollectedPackageExpired(
+        { status: "arrived", updatedAt: "2026-08-31T20:30:00.000Z" },
+        new Date("2026-08-31T20:59:59.000Z"),
+      ),
+    ).toBe(false);
+  });
+
+  it("expires a package delivered in the kibbutz at the next Israeli midnight", () => {
+    expect(
+      isCollectedPackageExpired(
+        { status: "arrived", updatedAt: "2026-08-31T20:30:00.000Z" },
+        new Date("2026-08-31T21:00:00.000Z"),
+      ),
+    ).toBe(true);
+  });
+
+  it("uses the kibbutz-delivery update time instead of the earlier collection time", () => {
+    const pkg = {
+      status: "arrived" as const,
+      collectedAt: "2026-08-30T10:00:00.000Z",
+      updatedAt: "2026-08-31T20:30:00.000Z",
+    };
+
+    expect(isCollectedPackageExpired(pkg, new Date("2026-08-31T20:59:59.000Z"))).toBe(false);
+    expect(isCollectedPackageExpired(pkg, new Date("2026-08-31T21:00:00.000Z"))).toBe(true);
+  });
+
   it("does not expire packages in other statuses", () => {
     const now = new Date("2026-09-01T12:00:00.000Z");
 
     expect(
       isCollectedPackageExpired(
         { status: "waiting", updatedAt: "2026-08-31T18:00:00.000Z" },
-        now,
-      ),
-    ).toBe(false);
-    expect(
-      isCollectedPackageExpired(
-        { status: "arrived", updatedAt: "2026-08-31T18:00:00.000Z" },
         now,
       ),
     ).toBe(false);
