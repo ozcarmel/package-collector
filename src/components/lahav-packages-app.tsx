@@ -2576,12 +2576,14 @@ export function LahavPackagesApp() {
                       role="button"
                       tabIndex={0}
                     >
-                      <span
-                        className={
-                          shouldPreventNameEllipsis ? "pickup-card-name-no-ellipsis" : undefined
-                        }
-                      >
-                        {displayName}
+                      <span className="pickup-card-name-frame">
+                        <span
+                          className={
+                            shouldPreventNameEllipsis ? "pickup-card-name-no-ellipsis" : undefined
+                          }
+                        >
+                          {displayName}
+                        </span>
                       </span>
                       <strong>{locationPackageCount}</strong>
                     </div>
