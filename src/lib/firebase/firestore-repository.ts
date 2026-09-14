@@ -3,6 +3,7 @@ import {
   deleteField,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   query,
   setDoc,
@@ -131,6 +132,28 @@ export const firestoreRepository: AppOperationsRepository = {
     };
 
     if (!isOzAdmin) {
+      const currentUserSnapshot = await getDocFromServer(
+        doc(db, "users", state.currentUser.id),
+      );
+      const storedCurrentUser = currentUserSnapshot.data() as
+        | AppState["users"][number]
+        | undefined;
+
+      if (storedCurrentUser?.verificationStatus === "approved") {
+        return {
+          requestId: deps.createId("recognized"),
+          recognizedApprovedUser: true,
+          state: {
+            ...state,
+            currentUser: storedCurrentUser,
+            users: [
+              storedCurrentUser,
+              ...state.users.filter((user) => user.id !== storedCurrentUser.id),
+            ],
+          },
+        };
+      }
+
       const existingApprovedUser = await findApprovedUserWithPhone(db, input.phone, state.currentUser.id);
       if (existingApprovedUser) {
         const approvedSessionUser = await approveCurrentSessionFromExistingUser(

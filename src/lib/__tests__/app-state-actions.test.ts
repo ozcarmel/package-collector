@@ -95,6 +95,34 @@ describe("app state actions", () => {
     expect(result.state.joinRequests).toHaveLength(cloneState().joinRequests.length);
   });
 
+  it("restores an already approved session instead of creating another join request", () => {
+    const deps = createTestDeps();
+    const state = cloneState();
+    const approvedUser = state.users.find((user) => user.id === "u-demo-member");
+
+    expect(approvedUser).toBeDefined();
+    state.currentUser = {
+      ...approvedUser!,
+      fullName: "",
+      phone: "",
+      verificationStatus: "phone_pending",
+    };
+
+    const result = createJoinRequest(
+      state,
+      {
+        fullName: "Re-entered Name",
+        phone: "050-999-9999",
+      },
+      deps,
+    );
+
+    expect(result.recognizedApprovedUser).toBe(true);
+    expect(result.requestId).toBe("recognized-1");
+    expect(result.state.currentUser).toEqual(approvedUser);
+    expect(result.state.joinRequests).toHaveLength(state.joinRequests.length);
+  });
+
   it("treats Israeli local and international phone formats as the same approved phone", () => {
     const deps = createTestDeps();
     const result = createJoinRequest(

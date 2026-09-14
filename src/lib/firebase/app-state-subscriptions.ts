@@ -1,7 +1,7 @@
 import {
   collection,
   doc,
-  getDoc,
+  getDocFromServer,
   getDocs,
   query,
   where,
@@ -73,7 +73,8 @@ export function subscribeFirestoreAppState(
     isLoading = true;
 
     try {
-      const userSnapshot = await getDoc(doc(firestoreDb, "users", currentUser.id));
+      // Approval controls the entire UI, so never decide it from an offline/stale cache entry.
+      const userSnapshot = await getDocFromServer(doc(firestoreDb, "users", currentUser.id));
       const user = userSnapshot.exists() ? (userSnapshot.data() as AppUser) : currentUser;
       const ownRequestsSnapshot = await getDocs(
         query(collection(firestoreDb, "joinRequests"), where("userId", "==", currentUser.id)),
@@ -208,9 +209,22 @@ export function subscribeFirestoreAppState(
 
   void loadState();
   const intervalId = window.setInterval(loadState, 5000);
+  const refreshWhenVisible = () => {
+    if (document.visibilityState === "visible") {
+      void loadState();
+    }
+  };
+  const refreshAfterPageRestore = () => void loadState();
+
+  document.addEventListener("visibilitychange", refreshWhenVisible);
+  window.addEventListener("pageshow", refreshAfterPageRestore);
+  window.addEventListener("online", refreshAfterPageRestore);
 
   return () => {
     isDisposed = true;
     window.clearInterval(intervalId);
+    document.removeEventListener("visibilitychange", refreshWhenVisible);
+    window.removeEventListener("pageshow", refreshAfterPageRestore);
+    window.removeEventListener("online", refreshAfterPageRestore);
   };
 }

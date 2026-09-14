@@ -150,6 +150,24 @@ export function createJoinRequest(
     };
   }
 
+  const approvedCurrentUser = state.users.find(
+    (user) =>
+      state.currentUser.verificationStatus !== "approved" &&
+      user.id === state.currentUser.id &&
+      user.verificationStatus === "approved",
+  );
+
+  if (approvedCurrentUser) {
+    return {
+      requestId: deps.createId("recognized"),
+      recognizedApprovedUser: true,
+      state: {
+        ...state,
+        currentUser: approvedCurrentUser,
+      },
+    };
+  }
+
   const normalizedPhone = normalizePhone(input.phone);
   const duplicateApprovedUser = state.users.find(
     (user) =>
